@@ -1,0 +1,57 @@
+{
+  "name": "@lark.js/lark-code",
+  "version": "0.0.1",
+  "description": "LarkCode - dual-process local AI agent",
+  "type": "module",
+  "bin": {
+    "lark-code": "./dist/cli/main.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --fix ./scripts ./src ./tests",
+    "format": "prettier -w ./ --experimental-cli",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "doc": "tsx ./scripts/gen-protocol-doc.ts",
+    "dev": "tsx ./src/dev.ts",
+    "dev:core": "tsx ./src/core/app.ts",
+    "dev:tui": "tsx ./src/tui/bootstrap.ts",
+    "qa": "concurrently --names type,lint,test --prefix-colors blue,red,green \"pnpm typecheck\" \"pnpm lint\" \"pnpm test\" && pnpm format && echo \"Congratulations!\""
+  },
+  "packageManager": "pnpm@10.33.1",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
+    "dotenv": "^17.4.2",
+    "ink": "^7.0.5",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
+    "picomatch": "^4.0.4",
+    "pino": "^10.3.1",
+    "pino-roll": "^4.0.0",
+    "react": "^19.2.7",
+    "toml": "^4.1.1",
+    "zod": "^4.4.3",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/node": "^24.13.2",
+    "@types/picomatch": "^4.0.3",
+    "@types/react": "^19.2.17",
+    "@vitest/coverage-v8": "^4.1.8",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "eslint-plugin-unicorn": "^65.0.1",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.4",
+    "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.0",
+    "vitest": "^4.1.8"
+  }
+}

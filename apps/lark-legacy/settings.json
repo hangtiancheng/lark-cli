@@ -1,0 +1,36 @@
+{
+  "env": {
+    "BASE_URL": "http://localhost:11434",
+    "API_KEY": "",
+    "MODEL": "qwen3",
+    "DATA_DIR": ""
+  },
+  "rag": {
+    "embeddingModel": "nomic-embed-text",
+    "docsDir": "",
+    "dimension": 1024
+  },
+  "PROVIDER": "ollama",
+  "providers": [
+    {
+      "name": "ollama",
+      "baseUrl": "http://localhost:11434",
+      "models": ["qwen2.5", "qwen3", "qwen3.5", "gemma3"],
+      "embeddingModels": ["nomic-embed-text"]
+    }
+  ],
+  "codegen": {
+    "maxTokens": 8192,
+    "temperature": 0.2,
+    "cr": {
+      "model": "qwen2.5",
+      "maxTokens": 4096,
+      "temperature": 0.2
+    },
+    "route": {
+      "model": "qwen2.5",
+      "maxTokens": 100,
+      "temperature": 0
+    }
+  }
+}

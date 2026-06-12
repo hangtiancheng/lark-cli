@@ -1,0 +1,22 @@
+{
+  "name": "lark-cli",
+  "version": "0.0.1",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
+    "git:push": "pnpm git:commit && git push origin main",
+    "git:push:force": "git push -f origin main --set-upstream",
+    "git:remote": "git remote add origin git@github.com:hangtiancheng/lark-cli.git",
+    "git:init": "rm -rf ./.git && git init",
+    "git:reset": "pnpm git:init && pnpm git:remote && pnpm git:commit && pnpm git:push:force",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "husky": "^9.1.7"
+  },
+  "author": "https://github.com/hangtiancheng",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.1"
+}
