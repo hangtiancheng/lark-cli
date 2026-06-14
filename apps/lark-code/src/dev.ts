@@ -40,12 +40,14 @@ async function main(): Promise<void> {
   let daemon: ReturnType<typeof fork> | null = null;
 
   if (isDaemonRunning) {
-    console.log(`[dev] daemon already running at ${config.host}:${String(config.port)}`);
+    console.log(
+      `[dev] daemon already running at ${config.host}:${String(config.port)}`,
+    );
   } else {
     // Spawn daemon as a detached background process
     const daemonPath = path.resolve("src/core/app.ts");
     daemon = fork(daemonPath, [], {
-      detached: true,  // Detach so it survives parent exit
+      detached: true, // Detach so it survives parent exit
       stdio: "ignore",
       execArgv: ["--import", "tsx"],
     });
@@ -54,7 +56,9 @@ async function main(): Promise<void> {
 
     try {
       await waitForDaemon(config.host, config.port);
-      console.log(`[dev] daemon ready at ${config.host}:${String(config.port)}`);
+      console.log(
+        `[dev] daemon ready at ${config.host}:${String(config.port)}`,
+      );
     } catch (err) {
       console.error("[dev] daemon failed to start:", String(err));
       daemon.kill("SIGTERM");

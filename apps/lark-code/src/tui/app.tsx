@@ -89,9 +89,7 @@ export function App({ _config, client }: AppProps): React.JSX.Element {
         setStep((s) => s + 1);
       } else if (event["type"] === "llm.usage") {
         const inputTokens =
-          typeof event["input_tokens"] === "number"
-            ? event["input_tokens"]
-            : 0;
+          typeof event["input_tokens"] === "number" ? event["input_tokens"] : 0;
         const outputTokens =
           typeof event["output_tokens"] === "number"
             ? event["output_tokens"]
@@ -112,9 +110,7 @@ export function App({ _config, client }: AppProps): React.JSX.Element {
             ? event["params_preview"]
             : "";
         const toolUseId =
-          typeof event["tool_use_id"] === "string"
-            ? event["tool_use_id"]
-            : "";
+          typeof event["tool_use_id"] === "string" ? event["tool_use_id"] : "";
         setPermissionRequest({ toolName, paramsPreview, toolUseId });
         setRunStatus("waiting");
       } else if (event["type"] === "session.waiting_for_input") {
