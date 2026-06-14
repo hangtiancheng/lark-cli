@@ -81,5 +81,31 @@ export async function getContextWindowAsync(
   p: ProviderConfig,
   fetcher?: (p: ProviderConfig) => Promise<number>,
 ): Promise<number> {
-  return 0
+  // 1. Explicit config always wins.
+  if (p.context_window && p.context_window > 0) return p.context_window;
+
+  // 2. Only the anthropic protocol exposes /v1/models/{model}.
+  if (p.protocol === 'anthropic') {
+    const key = `${p.name}-${p.model}`;
+    let fetched = fetchedWindowCache.get(key);
+    if (fetched === undefined) {
+      try {
+        // Lazy import of the anthropic fetcher
+        // avoids a static config.ts ↔ anthropic.ts import cycle;
+        // tests pass `fetcher` directly and never hit this path.
+        const fn =
+          fetcher ??
+          (await import("../llm/anthropic.js")).fetchModelContextWindow;
+
+        fetched = await fn(p);
+      } catch (e) {
+        console.error(e);
+        fetched = 0;
+      }
+      fetchedWindowCache.set(key, fetched ?? 0);
+    }
+    if (fetched && fetched > 0) return fetched;
+  }
+  // 3. 4.
+  return lookupModelContextWindow(p.model);
 }
