@@ -1,45 +1,55 @@
-// TUI color theme — aligned with Tailwind CSS color palette
+// TUI color theme — Claude Code-inspired: warm amber accent on deep neutral background
+// Minimal chrome, flowing text, compact inline indicators — no heavy box borders
 export const theme = {
   // Primary palette — amber accent (Tailwind amber scale)
-  accent: "#f59e0b", // amber-500
-  accentDim: "#b45309", // amber-700
-  accentBright: "#fbbf24", // amber-400
+  accent: "#d4a017", // muted amber — softer than pure amber-500 for readability
+  accentDim: "#92400e", // amber-800 — for separator lines
+  accentBright: "#fbbf24", // amber-400 — for highlights only
 
-  // Backgrounds (Tailwind neutral scale)
+  // Backgrounds (Tailwind neutral scale — true dark)
   bg: "#0a0a0a", // neutral-950
-  bgPanel: "#171717", // neutral-900
-  bgInput: "#171717", // neutral-900
+  bgPanel: "#141414", // slightly lighter than bg for subtle contrast
+  bgInput: "#1a1a1a", // input area background
   bgSelected: "#262626", // neutral-800
 
   // Text hierarchy (Tailwind neutral scale)
-  text: "#e5e5e5", // neutral-200
-  textDim: "#737373", // neutral-500
-  textMuted: "#404040", // neutral-700
+  text: "#d4d4d4", // neutral-300 — primary content, slightly dimmer than pure white
+  textBright: "#f5f5f5", // neutral-100 — only for key emphasis points
+  textDim: "#737373", // neutral-500 — metadata, timestamps, labels
+  textMuted: "#525252", // neutral-600 — decorative elements, progress bars
 
   // Semantic colors (Tailwind semantic palette)
-  success: "#4ade80", // green-400
-  error: "#f87171", // red-400
+  success: "#34d399", // emerald-400 — softer than pure green
+  error: "#fb7185", // rose-400 — softer than pure red
   warning: "#fbbf24", // amber-400
   info: "#60a5fa", // blue-400
 
-  // Tool call palette
-  toolBg: "#171717", // neutral-900
-  toolBorder: "#262626", // neutral-800
-  toolProgress: "#f59e0b", // amber-500
+  // Tool call palette — inline, no borders
+  toolName: "#d4a017", // same as accent for tool name inline
+  toolRunning: "#fbbf24", // bright amber for spinner
+  toolSuccess: "#34d399", // emerald for ✓
+  toolFailed: "#fb7185", // rose for ✗
 
-  // Box-drawing characters for borders
-  border: {
-    topLeft: "╭",
-    topRight: "╮",
-    bottomLeft: "╰",
-    bottomRight: "╯",
-    horizontal: "─",
-    vertical: "│",
-    cross: "┼",
-    teeLeft: "┤",
-    teeRight: "├",
-    teeUp: "┴",
-    teeDown: "┬",
+  // Subagent palette
+  subagentAccent: "#a78bfa", // violet-400 — distinct from main accent
+  subagentDim: "#7c3aed", // violet-600
+
+  // Unicode indicators (Claude Code style — inline, no box borders)
+  indicator: {
+    runStart: "▶",
+    runEnd: "■",
+    step: "─",
+    toolRunning: "⏺",
+    toolSuccess: "✓",
+    toolFailed: "✗",
+    permission: "⚠",
+    session: "●",
+    subagent: "↳",
+    compact: "↻",
+    bullet: "•",
+    arrow: "▸",
+    dash: "╌",
+    thinDash: "╎",
   },
 } as const;
 

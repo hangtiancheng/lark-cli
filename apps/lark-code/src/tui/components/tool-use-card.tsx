@@ -1,4 +1,6 @@
-// ToolCallCard: renders a tool execution as a bordered card with progress bar
+// ToolUseCard: inline tool execution indicator — Claude Code style
+// No border boxes, just a compact line: icon toolName params duration
+// Success/failure output shown as continuation text below when expanded
 import React from "react";
 import { Box, Text } from "ink";
 
@@ -11,37 +13,31 @@ export interface ToolUseCardProps {
   readonly params?: Record<string, unknown>;
   readonly output?: string;
   readonly errorMessage?: string;
+  readonly expanded?: boolean;
 }
 
-// Map tool status to border color and status indicator
+// Map tool status to icon and color
 function toolStatusStyle(status: ToolUseCardProps["status"]): {
-  borderColor: string;
   icon: string;
   iconColor: string;
 } {
   switch (status) {
     case "running":
       return {
-        borderColor: theme.accent,
-        icon: "◐",
-        iconColor: theme.accentBright,
+        icon: theme.indicator.toolRunning,
+        iconColor: theme.toolRunning,
       };
     case "success":
       return {
-        borderColor: theme.success,
-        icon: "✓",
-        iconColor: theme.success,
+        icon: theme.indicator.toolSuccess,
+        iconColor: theme.toolSuccess,
       };
     case "failed":
-      return {
-        borderColor: theme.error,
-        icon: "✗",
-        iconColor: theme.error,
-      };
+      return { icon: theme.indicator.toolFailed, iconColor: theme.toolFailed };
   }
 }
 
-// Build a compact params preview string
+// Build a compact params preview string (max 3 key=value pairs)
 function paramsPreview(params?: Record<string, unknown>): string {
   if (!params || Object.keys(params).length === 0) return "";
   const entries = Object.entries(params).slice(0, 3);
@@ -61,48 +57,35 @@ export function ToolUseCard({
   params,
   output,
   errorMessage,
+  expanded,
 }: ToolUseCardProps): React.JSX.Element {
-  const { borderColor, icon, iconColor } = toolStatusStyle(status);
+  const { icon, iconColor } = toolStatusStyle(status);
   const preview = paramsPreview(params);
-  const duration = elapsedMs !== undefined ? formatDuration(elapsedMs) : "…";
+  const duration = elapsedMs !== undefined ? formatDuration(elapsedMs) : "";
+
+  // Auto-expand running tools, respect explicit expanded prop for completed tools
+  const isExpanded = expanded ?? status === "running";
 
   return (
-    <Box
-      borderStyle="single"
-      borderColor={borderColor}
-      paddingX={1}
-      flexDirection="column"
-      marginLeft={2}
-    >
+    <Box flexDirection="column" marginLeft={2}>
+      {/* Main tool indicator line */}
       <Box>
-        <Text color={iconColor}>{icon}</Text>
-        <Text color={theme.accent} bold>
-          {toolName}
-        </Text>
-        <Box flexGrow={1} justifyContent="flex-end">
-          <Text color={theme.textMuted}>{duration}</Text>
-        </Box>
+        <Text color={iconColor}>{icon} </Text>
+        <Text color={theme.toolName}>{toolName}</Text>
+        {isExpanded && preview ? (
+          <Text color={theme.textDim}> {truncate(preview, 50)}</Text>
+        ) : null}
+        {duration ? <Text color={theme.textMuted}> {duration}</Text> : null}
       </Box>
-      {preview ? (
-        <Box>
-          <Text color={theme.textDim}>{truncate(preview, 60)}</Text>
-        </Box>
-      ) : null}
-      {status === "running" ? (
-        <Box>
-          <Text color={theme.accent}>
-            {"▸"}
-            {"░".repeat(20)}
-          </Text>
-        </Box>
-      ) : null}
-      {status === "success" && output ? (
-        <Box>
+
+      {/* Output continuation (compact, no borders) - only when expanded */}
+      {isExpanded && status === "success" && output ? (
+        <Box marginLeft={3}>
           <Text color={theme.textDim}>{truncate(output, 120)}</Text>
         </Box>
       ) : null}
-      {status === "failed" && errorMessage ? (
-        <Box>
+      {isExpanded && status === "failed" && errorMessage ? (
+        <Box marginLeft={3}>
           <Text color={theme.error}>{truncate(errorMessage, 120)}</Text>
         </Box>
       ) : null}

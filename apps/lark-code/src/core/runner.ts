@@ -35,6 +35,12 @@ import { ToolRegistry } from "./tools/registry.js";
 import { TracingProvider } from "./trace/provider.js";
 import type { TraceWriter } from "./trace/writer.js";
 import { Compactor } from "./compact/compactor.js";
+import type { BaseTool } from "./tools/base.js";
+
+// Minimal interface for MCP server manager (avoids coupling to concrete class private fields)
+interface McpManagerLike {
+  getTools(): BaseTool[];
+}
 
 function now(): string {
   return new Date().toISOString();
@@ -54,6 +60,7 @@ export class AgentRunner {
   private _runsDir: string;
   private _trace: TraceWriter | undefined;
   private _permissionManager: PermissionManager | undefined;
+  private _mcpManager: McpManagerLike | undefined;
   private _taskRegistry = new BackgroundTaskRegistry();
 
   constructor(
@@ -65,6 +72,7 @@ export class AgentRunner {
       runsDir?: string;
       trace?: TraceWriter;
       permissionManager?: PermissionManager;
+      mcpManager?: McpManagerLike;
     },
   ) {
     this._config = config;
@@ -74,6 +82,7 @@ export class AgentRunner {
     this._runsDir = options?.runsDir ?? path.join("runs");
     this._trace = options?.trace;
     this._permissionManager = options?.permissionManager;
+    this._mcpManager = options?.mcpManager;
   }
 
   // Build tool registry
@@ -139,6 +148,15 @@ export class AgentRunner {
       }
       if (ok("agent_result")) {
         registry.register(new AgentResultTool(this._taskRegistry));
+      }
+    }
+
+    // MCP tools (from server manager, respects whitelist)
+    if (this._mcpManager) {
+      for (const mcpTool of this._mcpManager.getTools()) {
+        if (ok(mcpTool.name)) {
+          registry.register(mcpTool);
+        }
       }
     }
 

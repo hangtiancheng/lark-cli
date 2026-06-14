@@ -1,4 +1,6 @@
-// EventLog: scrollable event stream showing agent activity in real-time
+// EventLog: scrollable event stream — Claude Code style
+// No fixed height that causes occlusion; auto-grows and uses overflowY for scrolling
+// Keyboard navigation: j/k/arrows for scroll, G/g for jump
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Box, Text, useInput } from "ink";
 
@@ -7,11 +9,10 @@ import { EventCard, type AgentEvent } from "./event-card.js";
 
 export interface EventLogProps {
   readonly events: readonly AgentEvent[];
-  readonly height: number;
 }
 
 // Merge consecutive llm.token events into a single llm.text event
-// so the streaming output renders as flowing text rather than one-line-per-token
+// so streaming output renders as flowing text rather than one-line-per-token
 function mergeTokens(events: readonly AgentEvent[]): AgentEvent[] {
   const merged: AgentEvent[] = [];
   let tokenBuf: string[] = [];
@@ -44,26 +45,33 @@ function mergeTokens(events: readonly AgentEvent[]): AgentEvent[] {
   return merged;
 }
 
-// Scrollable event log with keyboard navigation (j/k or arrow keys)
-export function EventLog({ events, height }: EventLogProps): React.JSX.Element {
+export function EventLog({ events }: EventLogProps): React.JSX.Element {
   const displayEvents = useMemo(() => mergeTokens(events), [events]);
   const [scrollOffset, setScrollOffset] = useState(0);
-  const maxScroll = Math.max(0, displayEvents.length - height);
+  // Calculate visible line count from terminal height minus header+status+input (~5 lines)
+  // This avoids the previous fixed height=30 that caused visual occlusion on small terminals
+  const availableHeight = process.stdout.rows ? process.stdout.rows - 5 : 40;
+  const maxScroll = Math.max(0, displayEvents.length - availableHeight);
   const scrollRef = useRef(maxScroll);
 
-  // Auto-scroll to bottom when new events arrive
+  // Auto-scroll to bottom when new events arrive (only when already near bottom)
   useEffect(() => {
-    scrollRef.current = Math.max(0, displayEvents.length - height);
-    setScrollOffset(scrollRef.current);
-  }, [displayEvents.length, height]);
+    const newMax = Math.max(0, displayEvents.length - availableHeight);
+    // If user was already at bottom, keep auto-scrolling
+    setScrollOffset((prev) => {
+      if (prev >= scrollRef.current - 3) {
+        return newMax;
+      }
+      return prev;
+    });
+    scrollRef.current = newMax;
+  }, [displayEvents.length, availableHeight]);
 
   useInput((input, key) => {
     if (input === "j" || key.downArrow) {
-      const next = Math.min(scrollOffset + 1, maxScroll);
-      setScrollOffset(next);
+      setScrollOffset(Math.min(scrollOffset + 3, maxScroll));
     } else if (input === "k" || key.upArrow) {
-      const prev = Math.max(scrollOffset - 1, 0);
-      setScrollOffset(prev);
+      setScrollOffset(Math.max(scrollOffset - 3, 0));
     } else if (input === "G") {
       setScrollOffset(maxScroll);
     } else if (input === "g") {
@@ -73,28 +81,24 @@ export function EventLog({ events, height }: EventLogProps): React.JSX.Element {
 
   const visibleEvents = displayEvents.slice(
     scrollOffset,
-    scrollOffset + height,
+    scrollOffset + availableHeight,
   );
   const isAtBottom = scrollOffset >= maxScroll;
-  const isAtTop = scrollOffset === 0;
 
   return (
-    <Box flexDirection="column" width="100%">
-      <Box paddingX={1}>
-        <Text color={theme.textMuted}>EVENTS</Text>
-        <Box flexGrow={1} justifyContent="flex-end">
+    <Box flexDirection="column" flexGrow={1} width="100%">
+      {/* Scroll position indicator — compact, no "EVENTS" label */}
+      {displayEvents.length > availableHeight ? (
+        <Box paddingX={1}>
           <Text color={theme.textMuted}>
-            {isAtTop ? "▲ top" : ""}
-            {isAtBottom ? "" : " "}
-            {isAtBottom ? "▼ bottom" : ""}
-          </Text>
-          <Text color={theme.textMuted}>
-            {" "}
             {String(scrollOffset + 1)}/{String(displayEvents.length)}
+            {isAtBottom ? "" : " ↓"}
           </Text>
         </Box>
-      </Box>
-      <Box flexDirection="column" height={height} overflow="hidden">
+      ) : null}
+
+      {/* Event stream — no border, no fixed height overflow clipping */}
+      <Box flexDirection="column" flexGrow={1} overflowY="hidden">
         {visibleEvents.map((event, idx) => (
           <EventCard key={`${event.timestamp}-${String(idx)}`} event={event} />
         ))}

@@ -1,4 +1,5 @@
-// Header: brand, connection status, version — the top banner of the TUI
+// Header: minimal top banner — brand + connection dot + session label
+// Claude Code style: one compact line, no borders, no heavy chrome
 import React from "react";
 import { Box, Text } from "ink";
 
@@ -8,36 +9,36 @@ export interface HeaderProps {
   readonly version: string;
   readonly connected: boolean;
   readonly sessionTitle?: string;
+  readonly errorMessage?: string | null;
 }
 
 export function Header({
   version,
   connected,
   sessionTitle,
+  errorMessage,
 }: HeaderProps): React.JSX.Element {
-  const statusDot = connected ? "●" : "○";
-  const statusColor = connected ? theme.success : theme.error;
-  const statusLabel = connected ? "connected" : "disconnected";
+  const dot = connected ? theme.indicator.session : "○";
+  const dotColor = connected ? theme.success : theme.error;
 
   return (
-    <Box flexDirection="column" paddingX={1}>
-      <Box>
-        <Box flexGrow={1}>
-          <Text color={theme.accent} bold>
-            LARK
-          </Text>
-          <Text color={theme.textDim}> {version}</Text>
-        </Box>
-        <Box>
-          <Text color={statusColor}>{statusDot}</Text>
-          <Text color={theme.textDim}> {statusLabel}</Text>
-        </Box>
-      </Box>
+    <Box paddingX={1} marginBottom={0}>
+      <Text color={theme.accent} bold>
+        lark
+      </Text>
+      <Text color={theme.textDim}> v{version}</Text>
+      <Text color={dotColor}> {dot}</Text>
       {sessionTitle ? (
-        <Box>
-          <Text color={theme.textMuted}>─</Text>
-          <Text color={theme.textDim}> {sessionTitle}</Text>
-        </Box>
+        <Text color={theme.textMuted}> {sessionTitle}</Text>
+      ) : null}
+      <Box flexGrow={1}>
+        <Text color={theme.textMuted}>
+          {" "}
+          {theme.indicator.thinDash.repeat(2)}
+        </Text>
+      </Box>
+      {errorMessage ? (
+        <Text color={theme.error}> err:{errorMessage}</Text>
       ) : null}
     </Box>
   );

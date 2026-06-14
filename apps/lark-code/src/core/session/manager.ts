@@ -15,7 +15,6 @@ import type { SessionStore } from "./store.js";
 
 const SESSION_NOT_FOUND = -32010;
 const SESSION_CLOSED = -32011;
-const SESSION_BUSY = -32012;
 const PROVIDER_NOT_AVAILABLE = -32020;
 const COMPACTION_FAILED = -32021;
 
@@ -48,7 +47,7 @@ export class SessionManager {
   private _bus: EventBus;
   private _provider: LLMProvider | undefined;
   private _sessions = new Map<string, Session>();
-  private _locks = new Map<string, boolean>();
+  private _mutexes = new Map<string, PromiseMutex>();
   private _skillLoader = new SkillLoader();
 
   constructor(
@@ -68,7 +67,7 @@ export class SessionManager {
     const sid = `session-${randomUUID().replace(/-/g, "").slice(0, 12)}`;
     const session = createSession(sid, mode, title);
     this._sessions.set(sid, session);
-    this._locks.set(sid, false);
+    this._mutexes.set(sid, new PromiseMutex());
     this._store.writeMeta(session);
     await this._bus.publish({
       type: "session.created",
@@ -86,11 +85,10 @@ export class SessionManager {
     runId?: string,
   ): Promise<string> {
     const session = this._getSession(sid);
-    if (this._locks.get(sid)) {
-      throw new HandlerError(SESSION_BUSY, "session busy");
-    }
-
-    this._locks.set(sid, true);
+    const mutex = this._mutexes.get(sid);
+    if (!mutex)
+      throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
+    await mutex.acquire();
     try {
       if (session.status === "closed") {
         throw new HandlerError(SESSION_CLOSED, "session already closed");
@@ -173,32 +171,37 @@ export class SessionManager {
       this._store.writeMeta(session);
       return resolvedRunId;
     } finally {
-      this._locks.set(sid, false);
+      mutex.release();
     }
   }
 
-  // Close the specified session
+  // Close the specified session (no mutex needed — just a quick metadata update)
   async close(sid: string): Promise<void> {
     const session = this._getSession(sid);
-    if (this._locks.get(sid)) {
-      throw new HandlerError(SESSION_BUSY, "session busy");
+    const mutex = this._mutexes.get(sid);
+    if (!mutex)
+      throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
+    await mutex.acquire();
+    try {
+      session.status = "closed";
+      session.updatedAt = now();
+      this._store.writeMeta(session);
+      await this._bus.publish({
+        type: "session.closed",
+        session_id: sid,
+        timestamp: session.updatedAt,
+      });
+    } finally {
+      mutex.release();
     }
-    session.status = "closed";
-    session.updatedAt = now();
-    this._store.writeMeta(session);
-    await this._bus.publish({
-      type: "session.closed",
-      session_id: sid,
-      timestamp: session.updatedAt,
-    });
   }
 
   // Manually compact the session thread, persisting the summary into thread.jsonl
   async compact(sid: string, focus = ""): Promise<SessionCompactResult> {
     this._getSession(sid);
-    if (this._locks.get(sid)) {
-      throw new HandlerError(SESSION_BUSY, "session busy");
-    }
+    const mutex = this._mutexes.get(sid);
+    if (!mutex)
+      throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
     if (!this._provider) {
       throw new HandlerError(
         PROVIDER_NOT_AVAILABLE,
@@ -206,7 +209,7 @@ export class SessionManager {
       );
     }
 
-    this._locks.set(sid, true);
+    await mutex.acquire();
     try {
       const messages = this._store.readMessages(sid);
       const sessionDir = this._store.sessionDir(sid);
@@ -242,7 +245,7 @@ export class SessionManager {
         ),
       };
     } finally {
-      this._locks.set(sid, false);
+      mutex.release();
     }
   }
 
@@ -258,5 +261,36 @@ export class SessionManager {
     if (!session)
       throw new HandlerError(SESSION_NOT_FOUND, "session not found");
     return session;
+  }
+}
+
+// Promise-based mutex: guarantees async mutual exclusion without busy-spinning
+// Replaces the previous boolean flag approach which could not prevent concurrent
+// async operations from both seeing _locks.get(sid) === false simultaneously
+class PromiseMutex {
+  private _queue: {
+    resolve: () => void;
+  }[] = [];
+  private _locked = false;
+
+  // Acquire the lock; waits if another holder is active
+  async acquire(): Promise<void> {
+    if (!this._locked) {
+      this._locked = true;
+      return;
+    }
+    return new Promise<void>((resolve) => {
+      this._queue.push({ resolve });
+    });
+  }
+
+  // Release the lock; wakes the next waiter in FIFO order
+  release(): void {
+    const next = this._queue.shift();
+    if (next) {
+      next.resolve();
+    } else {
+      this._locked = false;
+    }
   }
 }

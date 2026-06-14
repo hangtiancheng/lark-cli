@@ -198,4 +198,5 @@ lark-vscode/lark-vscode-*.vsix
 tsconfig.tsbuildinfo
 **/tsconfig.tsbuildinfo
 
-.home-lark/
+*Claude/
+code-review.md

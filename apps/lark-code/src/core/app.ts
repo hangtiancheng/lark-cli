@@ -1,9 +1,12 @@
 // lark-core daemon entry: load config, start TCP server, register handlers, wait for shutdown signal
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
+import type net from "node:net";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 
 import { version } from "../index.js";
+import { eventsFile } from "./runs.js";
 import {
   AgentRunCommandSchema,
   AgentRunResultSchema,
@@ -174,6 +177,7 @@ export class CoreApp {
   }
 
   // event.subscribe handler
+  // Replay matching events from events.jsonl then subscribe to live stream
   private async _subscribeHandler(
     params: Record<string, unknown>,
   ): Promise<unknown> {
@@ -181,11 +185,89 @@ export class CoreApp {
     const cmd = EventSubscribeCommandSchema.parse(params);
     const writer = getConnectionWriter();
     if (!this._broadcaster) throw new Error("broadcaster not initialized");
+
+    let replayedCount = 0;
+    if (cmd.replay_from_run !== null) {
+      replayedCount = await this._replayEvents(
+        cmd.replay_from_run,
+        writer,
+        cmd.topics,
+      );
+    }
+
     const subId = this._broadcaster.subscribe(writer, cmd.topics, cmd.scope);
     return EventSubscribeResultSchema.parse({
       subscription_id: subId,
-      replayed_count: 0,
+      replayed_count: replayedCount,
     });
+  }
+
+  // Replay matching events from events.jsonl history file
+  private async _replayEvents(
+    runId: string,
+    socket: net.Socket,
+    topics: string[],
+  ): Promise<number> {
+    let eventsPath = eventsFilePath(runId);
+
+    // Fallback: search under ~/.lark/sessions/*/runs/{runId}/events.jsonl
+    if (!existsSync(eventsPath)) {
+      const sessionsDir = path.join(homedir(), ".lark", "sessions");
+      if (existsSync(sessionsDir)) {
+        try {
+          const sessionIds = readdirSync(sessionsDir);
+          for (const sessionId of sessionIds) {
+            const candidate = path.join(
+              sessionsDir,
+              sessionId,
+              "runs",
+              runId,
+              "events.jsonl",
+            );
+            if (existsSync(candidate)) {
+              eventsPath = candidate;
+              break;
+            }
+          }
+        } catch {
+          // Ignore errors reading sessions directory
+        }
+      }
+    }
+
+    if (!existsSync(eventsPath)) return 0;
+
+    try {
+      const content = readFileSync(eventsPath, "utf-8");
+      const lines = content.split("\n");
+      let count = 0;
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const parsed: unknown = JSON.parse(line);
+          if (!isRecord(parsed)) continue;
+          const event = parsed;
+          const eventType =
+            typeof event["type"] === "string" ? event["type"] : "";
+          if (!matchTopic(eventType, topics)) continue;
+          const envelope =
+            JSON.stringify({
+              kind: "event",
+              event,
+            }) + "\n";
+          socket.write(envelope);
+          count++;
+        } catch {
+          // Skip malformed JSON lines
+        }
+      }
+      if (count > 0) {
+        await new Promise<void>((resolve) => socket.once("drain", resolve));
+      }
+      return count;
+    } catch {
+      return 0;
+    }
   }
 
   // Start the daemon
@@ -227,7 +309,7 @@ export class CoreApp {
     // MCP
     this._mcpManager = new McpServerManager();
     if (config.mcp.servers.length > 0) {
-      this._mcpManager.startAll(config.mcp.servers);
+      void this._mcpManager.startAll(config.mcp.servers);
     }
 
     this._sessions = new SessionManager(
@@ -239,6 +321,7 @@ export class CoreApp {
           ...(this._permissionManager
             ? { permissionManager: this._permissionManager }
             : {}),
+          ...(this._mcpManager ? { mcpManager: this._mcpManager } : {}),
         }),
       this._bus,
       provider,
@@ -277,13 +360,34 @@ export class CoreApp {
     await shutdownPromise;
 
     logger.info("shutting down");
-    this._mcpManager.stopAll();
+    await this._mcpManager.stopAll();
     await server.stop();
     if (this._trace) await this._trace.stop();
 
     process.off("SIGINT", onSignal);
     process.off("SIGTERM", onSignal);
   }
+}
+
+// Return the full path to the events.jsonl file for a given run ID
+// Resolves relative paths against the lark working directory
+function eventsFilePath(runId: string): string {
+  const rel = eventsFile(runId);
+  return path.resolve(rel);
+}
+
+// Check whether an event type matches any of the subscribed topic patterns
+// Supports wildcard suffix: "run.*" matches "run.started", "run.finished", etc.
+function matchTopic(eventType: string, topics: string[]): boolean {
+  for (const topic of topics) {
+    if (topic.endsWith("*")) {
+      const prefix = topic.slice(0, -1);
+      if (eventType.startsWith(prefix)) return true;
+    } else {
+      if (eventType === topic) return true;
+    }
+  }
+  return false;
 }
 
 // Daemon entry point

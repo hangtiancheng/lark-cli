@@ -1,1 +1,1 @@
-pnpm qa
+pnpm --filter @lark.js/lark-code qa

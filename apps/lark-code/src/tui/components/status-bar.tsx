@@ -1,4 +1,5 @@
-// StatusBar: bottom bar showing run progress, step count, token usage
+// StatusBar: compact inline status — Claude Code style, no borders
+// Shows: status label | step | tokens | elapsed | context% — all in one line
 import React from "react";
 import { Box, Text } from "ink";
 
@@ -9,24 +10,46 @@ export interface StatusBarProps {
   readonly step: number;
   readonly totalTokens: number;
   readonly elapsedMs: number;
+  readonly contextPercent?: number;
 }
 
 // Map run status to display color and label
 function statusInfo(status: StatusBarProps["runStatus"]): {
   color: string;
   label: string;
+  icon: string;
 } {
   switch (status) {
     case "idle":
-      return { color: theme.textDim, label: "idle" };
+      return {
+        color: theme.textDim,
+        label: "idle",
+        icon: theme.indicator.bullet,
+      };
     case "running":
-      return { color: theme.accentBright, label: "running" };
+      return {
+        color: theme.accentBright,
+        label: "running",
+        icon: theme.indicator.toolRunning,
+      };
     case "waiting":
-      return { color: theme.warning, label: "waiting for permission" };
+      return {
+        color: theme.warning,
+        label: "waiting",
+        icon: theme.indicator.permission,
+      };
     case "success":
-      return { color: theme.success, label: "complete" };
+      return {
+        color: theme.success,
+        label: "done",
+        icon: theme.indicator.toolSuccess,
+      };
     case "failed":
-      return { color: theme.error, label: "failed" };
+      return {
+        color: theme.error,
+        label: "failed",
+        icon: theme.indicator.toolFailed,
+      };
   }
 }
 
@@ -35,34 +58,29 @@ export function StatusBar({
   step,
   totalTokens,
   elapsedMs,
+  contextPercent,
 }: StatusBarProps): React.JSX.Element {
-  const { color, label } = statusInfo(runStatus);
+  const { color, label, icon } = statusInfo(runStatus);
+  const ctxPct =
+    contextPercent !== undefined
+      ? `${String(Math.round(contextPercent * 100))}%`
+      : "";
 
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="single"
-      borderColor={theme.toolBorder}
-      paddingX={1}
-    >
-      <Box>
-        <Box flexGrow={1}>
-          <Text color={theme.textMuted}>STATUS</Text>
-          <Text color={color}> {label}</Text>
-        </Box>
-        <Box>
-          <Text color={theme.textMuted}>STEP</Text>
-          <Text color={theme.textDim}> {String(step)}</Text>
-        </Box>
-        <Box marginLeft={2}>
-          <Text color={theme.textMuted}>TOKENS</Text>
-          <Text color={theme.textDim}> {totalTokens.toLocaleString()}</Text>
-        </Box>
-        <Box marginLeft={2}>
-          <Text color={theme.textMuted}>ELAPSED</Text>
-          <Text color={theme.textDim}> {formatDuration(elapsedMs)}</Text>
-        </Box>
-      </Box>
+    <Box paddingX={1}>
+      <Text color={color}>
+        {icon} {label}
+      </Text>
+      {step > 0 ? (
+        <Text color={theme.textDim}> step:{String(step)}</Text>
+      ) : null}
+      {totalTokens > 0 ? (
+        <Text color={theme.textDim}> tok:{totalTokens.toLocaleString()}</Text>
+      ) : null}
+      {elapsedMs > 0 ? (
+        <Text color={theme.textDim}> {formatDuration(elapsedMs)}</Text>
+      ) : null}
+      {ctxPct ? <Text color={theme.textMuted}> ctx:{ctxPct}</Text> : null}
     </Box>
   );
 }

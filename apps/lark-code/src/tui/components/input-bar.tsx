@@ -1,4 +1,5 @@
-// InputBar: text input area for sending messages to the agent
+// InputBar: text input area — Claude Code style, minimal chrome
+// Single-line border with accent color, compact label, no double borders
 import React from "react";
 import { Box, Text } from "ink";
 import TextInput from "ink-text-input";
@@ -21,29 +22,20 @@ export function InputBar({
   placeholder = "Type a message…",
 }: InputBarProps): React.JSX.Element {
   const borderColor = disabled ? theme.textMuted : theme.accent;
-  const labelColor = disabled ? theme.textMuted : theme.accent;
+  const label = disabled ? "running" : "input";
 
   return (
-    <Box
-      borderStyle="single"
-      borderColor={borderColor}
-      paddingX={1}
-      flexDirection="column"
-    >
-      <Box>
-        <Text color={labelColor} bold>
-          {disabled ? "RUNNING" : "INPUT"}
-        </Text>
-      </Box>
-      <Box>
-        <TextInput
-          value={value}
-          onChange={onChange}
-          onSubmit={onSubmit}
-          placeholder={placeholder}
-          showCursor={!disabled}
-        />
-      </Box>
+    <Box borderStyle="single" borderColor={borderColor} paddingX={1}>
+      <Text color={borderColor} bold>
+        {label}{" "}
+      </Text>
+      <TextInput
+        value={value}
+        onChange={onChange}
+        onSubmit={onSubmit}
+        placeholder={placeholder}
+        showCursor={!disabled}
+      />
     </Box>
   );
 }
