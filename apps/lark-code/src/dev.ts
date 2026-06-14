@@ -34,23 +34,32 @@ function waitForDaemon(
 async function main(): Promise<void> {
   const config = getConfig();
 
-  // Spawn daemon as a detached background process
-  const daemonPath = path.resolve("src/core/app.ts");
-  const daemon = fork(daemonPath, [], {
-    detached: false,
-    stdio: "ignore",
-    execArgv: ["--import", "tsx"],
-  });
+  // Check if daemon is already running
+  const isDaemonRunning = await isPortInUse(config.host, config.port);
 
-  daemon.unref();
+  let daemon: ReturnType<typeof fork> | null = null;
 
-  try {
-    await waitForDaemon(config.host, config.port);
-    console.log(`[dev] daemon ready at ${config.host}:${String(config.port)}`);
-  } catch (err) {
-    console.error("[dev] daemon failed to start:", String(err));
-    daemon.kill("SIGTERM");
-    process.exit(1);
+  if (isDaemonRunning) {
+    console.log(`[dev] daemon already running at ${config.host}:${String(config.port)}`);
+  } else {
+    // Spawn daemon as a detached background process
+    const daemonPath = path.resolve("src/core/app.ts");
+    daemon = fork(daemonPath, [], {
+      detached: true,  // Detach so it survives parent exit
+      stdio: "ignore",
+      execArgv: ["--import", "tsx"],
+    });
+
+    daemon.unref();
+
+    try {
+      await waitForDaemon(config.host, config.port);
+      console.log(`[dev] daemon ready at ${config.host}:${String(config.port)}`);
+    } catch (err) {
+      console.error("[dev] daemon failed to start:", String(err));
+      daemon.kill("SIGTERM");
+      process.exit(1);
+    }
   }
 
   // Run TUI in foreground (has raw mode access to terminal)
@@ -62,20 +71,35 @@ async function main(): Promise<void> {
     exitCode = 1;
   }
 
-  // Cleanup: kill daemon on TUI exit
-  daemon.kill("SIGTERM");
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(() => {
-      daemon.kill("SIGKILL");
-      resolve();
-    }, 3000);
-    daemon.on("exit", () => {
-      clearTimeout(timer);
-      resolve();
+  // Cleanup: kill daemon on TUI exit (only if we started it)
+  if (daemon) {
+    daemon.kill("SIGTERM");
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        daemon.kill("SIGKILL");
+        resolve();
+      }, 3000);
+      daemon.on("exit", () => {
+        clearTimeout(timer);
+        resolve();
+      });
     });
-  });
+  }
 
   process.exit(exitCode);
+}
+
+// Check if a port is already in use
+function isPortInUse(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const sock = createConnection({ host, port }, () => {
+      sock.destroy();
+      resolve(true);
+    });
+    sock.on("error", () => {
+      resolve(false);
+    });
+  });
 }
 
 void main();

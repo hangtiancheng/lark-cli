@@ -31,6 +31,7 @@ export class SocketClient {
     }
   >();
   private _eventHandlers: EventHandler[] = [];
+  private _disconnectResolve: (() => void) | null = null;
 
   constructor(host: string, port: number) {
     this._host = host;
@@ -44,8 +45,39 @@ export class SocketClient {
         this._startReading();
         resolve();
       });
-      this._socket.on("error", reject);
+      this._socket.on("error", (err) => {
+        reject(err);
+        // Also signal disconnect for waitForDisconnect() callers
+        this._signalDisconnect();
+      });
     });
+  }
+
+  // Returns a promise that resolves when the connection drops
+  // Used by the auto-reconnect loop to detect mid-session disconnections
+  waitForDisconnect(): Promise<void> {
+    // If socket is already null or destroyed, resolve immediately
+    if (!this._socket || this._socket.destroyed) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      this._disconnectResolve = resolve;
+    });
+  }
+
+  // Block until the connection drops (used by CLI commands to keep processing events)
+  // Equivalent to waitForDisconnect() — _startReading() already handles message dispatch
+  async runEventLoop(): Promise<void> {
+    return this.waitForDisconnect();
+  }
+
+  // Signal that the connection has been lost
+  private _signalDisconnect(): void {
+    if (this._disconnectResolve) {
+      this._disconnectResolve();
+      this._disconnectResolve = null;
+    }
   }
 
   // Start reading lines from the socket and dispatching responses/events
@@ -66,18 +98,20 @@ export class SocketClient {
         pending.reject(new Error("connection closed"));
       }
       this._pending.clear();
+      this._signalDisconnect();
     });
   }
 
-  // Close TCP connection
+  // Close TCP connection and reset internal state for reconnection
   close(): void {
     if (this._socket) {
       this._socket.destroy();
       this._socket = null;
     }
+    this._pending.clear();
   }
 
-  // Register callback for server-pushed events
+  // Register callback for server-pushed events (persists across reconnections)
   onEvent(handler: EventHandler): void {
     this._eventHandlers.push(handler);
   }
@@ -105,33 +139,6 @@ export class SocketClient {
 
     this._socket.write(JSON.stringify(request) + "\n", "utf-8");
     return promise;
-  }
-
-  // Continuously read server messages, dispatch RPC responses or events
-  async runEventLoop(): Promise<void> {
-    if (!this._socket) {
-      throw new Error("not connected - call connect() first");
-    }
-
-    const rl = createInterface({
-      input: this._socket,
-      terminal: false,
-    });
-
-    return new Promise<void>((resolve) => {
-      rl.on("line", (line) => {
-        void this._dispatch(line);
-      });
-
-      rl.on("close", () => {
-        // Connection closed, cancel all pending requests
-        for (const [, pending] of this._pending) {
-          pending.reject(new Error("connection closed"));
-        }
-        this._pending.clear();
-        resolve();
-      });
-    });
   }
 
   // Parse a single message line and route to pending promise or event handler
