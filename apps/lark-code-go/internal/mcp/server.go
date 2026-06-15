@@ -10,21 +10,21 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/tools"
 )
 
-// ServerManager 管理多个 MCP 服务器连接
+// ServerManager manages multiple MCP server connections.
 type ServerManager struct {
 	mu      sync.RWMutex
 	clients map[string]*Client
 	tools   []tools.Tool
 }
 
-// NewServerManager 创建 MCP 服务器管理器
+// NewServerManager creates a new MCP server manager.
 func NewServerManager() *ServerManager {
 	return &ServerManager{
 		clients: make(map[string]*Client),
 	}
 }
 
-// StartAll 启动所有配置的 MCP 服务器
+// StartAll starts all configured MCP servers.
 func (m *ServerManager) StartAll(ctx context.Context, servers []config.McpServerConfig) error {
 	for _, srv := range servers {
 		if srv.Transport != "stdio" {
@@ -38,7 +38,7 @@ func (m *ServerManager) StartAll(ctx context.Context, servers []config.McpServer
 			continue
 		}
 
-		// 发现工具
+		// Discover available tools
 		toolDefs, err := client.ListTools(ctx)
 		if err != nil {
 			slog.Error("failed to list MCP tools", "server", srv.Name, "error", err)
@@ -59,7 +59,7 @@ func (m *ServerManager) StartAll(ctx context.Context, servers []config.McpServer
 	return nil
 }
 
-// StopAll 停止所有 MCP 服务器
+// StopAll stops all running MCP servers.
 func (m *ServerManager) StopAll() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -72,21 +72,21 @@ func (m *ServerManager) StopAll() {
 	m.tools = nil
 }
 
-// GetTools 返回所有 MCP 工具
+// GetTools returns all tools from connected MCP servers.
 func (m *ServerManager) GetTools() []tools.Tool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.tools
 }
 
-// McpTool 将 MCP 工具定义适配为 Tool 接口
+// McpTool adapts an MCP tool definition to the Tool interface.
 type McpTool struct {
 	serverName string
 	def        ToolDef
 	client     *Client
 }
 
-// NewMcpTool 创建 MCP 工具适配器
+// NewMcpTool creates a new MCP tool adapter.
 func NewMcpTool(serverName string, def ToolDef, client *Client) *McpTool {
 	return &McpTool{
 		serverName: serverName,
@@ -130,7 +130,7 @@ func (t *McpTool) Invoke(ctx context.Context, params map[string]any) (*tools.Too
 	return &tools.ToolResult{Content: text}, nil
 }
 
-// extractMCPContent 从 MCP 响应内容中提取文本
+// extractMCPContent extracts text content from MCP response items.
 func extractMCPContent(items []ContentItem) string {
 	var parts []string
 	for _, item := range items {

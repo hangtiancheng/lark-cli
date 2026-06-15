@@ -7,6 +7,20 @@ import { readFileSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return Object.fromEntries(value.entries());
+  }
+  return {};
+}
+
 describe("TracingProvider", () => {
   // Feature: Verify TracingProvider wraps LLMProvider and writes trace records
   // Design: Create TracingProvider with mock provider, call chat(), confirm trace records are written
@@ -86,8 +100,8 @@ describe("TracingProvider", () => {
 
     // Verify the wrapped provider received the actual messages
     expect(capturedMessages).toHaveLength(1);
-    expect((capturedMessages[0] as Record<string, unknown>)["role"]).toBe("user");
-    expect((capturedMessages[0] as Record<string, unknown>)["content"]).toBe("test message");
+    expect(asRecord(capturedMessages[0])["role"]).toBe("user");
+    expect(asRecord(capturedMessages[0])["content"]).toBe("test message");
     void writer.stop();
     rmSync(dir, { recursive: true });
   });
@@ -121,9 +135,15 @@ describe("TracingProvider", () => {
     const tracer = new TracingProvider(mockProvider, writer, true);
     const bus = new EventBus();
 
-    await tracer.chat([{ role: "user", content: "hello world" }], [], bus, "r1", {
-      step: 1,
-    });
+    await tracer.chat(
+      [{ role: "user", content: "hello world" }],
+      [],
+      bus,
+      "r1",
+      {
+        step: 1,
+      },
+    );
 
     void writer.stop();
 
@@ -161,7 +181,12 @@ describe("TracingProvider", () => {
     const tracer = new TracingProvider(mockProvider, writer, false);
     const bus = new EventBus();
 
-    await tracer.chat([{ role: "user", content: "secret message" }], [], bus, "r1");
+    await tracer.chat(
+      [{ role: "user", content: "secret message" }],
+      [],
+      bus,
+      "r1",
+    );
 
     void writer.stop();
 

@@ -45,7 +45,7 @@ func TestLoadContextFileLargeContent(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "large.md")
 
-	// 10KB 内容
+	// 10KB content
 	content := ""
 	for i := 0; i < 1000; i++ {
 		content += "line " + string(rune('A'+i%26)) + "\n"

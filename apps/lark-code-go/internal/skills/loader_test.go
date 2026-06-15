@@ -51,7 +51,7 @@ func TestLoaderResolveNotFound(t *testing.T) {
 func TestLoaderResolveProjectLevel(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// 创建项目级 skill
+	// Create a project-level skill
 	skillsDir := filepath.Join(tmpDir, ".lark", "skills")
 	os.MkdirAll(skillsDir, 0o755)
 
@@ -87,7 +87,7 @@ func TestLoaderProjectOverridesBuiltin(t *testing.T) {
 	skillsDir := filepath.Join(tmpDir, ".lark", "skills")
 	os.MkdirAll(skillsDir, 0o755)
 
-	// 覆盖内置 init skill
+	// Override the built-in init skill
 	os.WriteFile(filepath.Join(skillsDir, "init.md"), []byte("---\ndescription: Custom init\n---\nCustom init prompt"), 0o644)
 
 	loader := skills.NewLoader()
@@ -142,7 +142,7 @@ func TestParseSkillFileWithoutFrontmatter(t *testing.T) {
 	skillsDir := filepath.Join(tmpDir, ".lark", "skills")
 	os.MkdirAll(skillsDir, 0o755)
 
-	// 没有 frontmatter 的 skill
+	// Skill without frontmatter
 	os.WriteFile(filepath.Join(skillsDir, "simple.md"), []byte("Just a simple prompt"), 0o644)
 
 	loader := skills.NewLoader()

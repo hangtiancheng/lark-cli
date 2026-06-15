@@ -8,27 +8,27 @@ import (
 	"github.com/google/uuid"
 )
 
-// TaskEntry 表示一个后台任务
+// TaskEntry represents a background subagent task.
 type TaskEntry struct {
 	RunID  string
 	Status string // "running", "success", "failed"
 	Result string
 }
 
-// Registry 追踪后台 subagent 任务
+// Registry tracks background subagent tasks.
 type Registry struct {
 	mu    sync.RWMutex
 	tasks map[string]*TaskEntry
 }
 
-// NewRegistry 创建后台任务注册表
+// NewRegistry creates a new background task registry.
 func NewRegistry() *Registry {
 	return &Registry{
 		tasks: make(map[string]*TaskEntry),
 	}
 }
 
-// Register 注册一个新的后台任务
+// Register registers a new background task as running.
 func (r *Registry) Register(runID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -38,7 +38,7 @@ func (r *Registry) Register(runID string) {
 	}
 }
 
-// Complete 标记任务完成
+// Complete marks a task as successfully completed.
 func (r *Registry) Complete(runID, result string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -48,7 +48,7 @@ func (r *Registry) Complete(runID, result string) {
 	}
 }
 
-// Fail 标记任务失败
+// Fail marks a task as failed with the given reason.
 func (r *Registry) Fail(runID, reason string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -58,7 +58,7 @@ func (r *Registry) Fail(runID, reason string) {
 	}
 }
 
-// Get 获取任务状态
+// Get retrieves the task entry by run ID.
 func (r *Registry) Get(runID string) (*TaskEntry, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -66,7 +66,7 @@ func (r *Registry) Get(runID string) (*TaskEntry, bool) {
 	return entry, ok
 }
 
-// GenerateRunID 生成新的 run ID
+// GenerateRunID generates a new unique run ID.
 func GenerateRunID() string {
 	return fmt.Sprintf("run-%s", uuid.New().String()[:12])
 }

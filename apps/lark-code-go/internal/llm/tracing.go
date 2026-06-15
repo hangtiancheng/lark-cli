@@ -7,14 +7,14 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/trace"
 )
 
-// TracingProvider 包装 Provider，记录请求和响应到 TraceWriter
+// TracingProvider wraps a Provider to record requests and responses to a TraceWriter.
 type TracingProvider struct {
 	inner          Provider
 	writer         *trace.Writer
 	includePayload bool
 }
 
-// NewTracingProvider 创建 TracingProvider
+// NewTracingProvider creates a new TracingProvider that decorates the inner Provider with tracing.
 func NewTracingProvider(inner Provider, writer *trace.Writer, includePayload bool) *TracingProvider {
 	return &TracingProvider{
 		inner:          inner,
@@ -23,11 +23,11 @@ func NewTracingProvider(inner Provider, writer *trace.Writer, includePayload boo
 	}
 }
 
-// Chat 调用内部 Provider 并记录追踪数据
+// Chat delegates to the inner Provider and records trace data for the request and response.
 func (p *TracingProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmResponse, error) {
 	start := time.Now()
 
-	// 记录请求
+	// Record the outgoing request.
 	p.writer.Write(trace.Record{
 		TS:        start.UTC().Format(time.RFC3339Nano),
 		Direction: "out",
@@ -58,7 +58,7 @@ func (p *TracingProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmRespo
 		return nil, err
 	}
 
-	// 记录响应
+	// Record the response.
 	p.writer.Write(trace.Record{
 		TS:        time.Now().UTC().Format(time.RFC3339Nano),
 		Direction: "in",
@@ -72,7 +72,7 @@ func (p *TracingProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmRespo
 	return resp, nil
 }
 
-// requestData 提取请求数据用于追踪
+// requestData extracts request metadata for trace recording.
 func (p *TracingProvider) requestData(req *ChatRequest) map[string]any {
 	data := map[string]any{
 		"step":       req.Step,
@@ -90,7 +90,7 @@ func (p *TracingProvider) requestData(req *ChatRequest) map[string]any {
 	return data
 }
 
-// responseData 提取响应数据用于追踪
+// responseData extracts response metadata for trace recording.
 func (p *TracingProvider) responseData(resp *LlmResponse, elapsed time.Duration) map[string]any {
 	data := map[string]any{
 		"stop_reason": resp.StopReason,

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// ExecutionContext 维护一次 agent run 的消息状态和系统提示
+// ExecutionContext maintains message state and the system prompt for a single agent run.
 type ExecutionContext struct {
 	sessionID    string
 	messages     []map[string]any
@@ -17,7 +17,7 @@ type ExecutionContext struct {
 	steps        int
 }
 
-// RunStatus 表示 run 的状态
+// RunStatus represents the lifecycle state of an agent run.
 type RunStatus string
 
 const (
@@ -27,7 +27,7 @@ const (
 	StatusCanceled RunStatus = "canceled"
 )
 
-// NewExecutionContext 创建执行上下文
+// NewExecutionContext creates a new execution context with existing messages and system prompt.
 func NewExecutionContext(sessionID string, existingMessages []map[string]any, systemPrompt string) *ExecutionContext {
 	msgs := make([]map[string]any, len(existingMessages))
 	copy(msgs, existingMessages)
@@ -39,52 +39,52 @@ func NewExecutionContext(sessionID string, existingMessages []map[string]any, sy
 	}
 }
 
-// Messages 返回当前完整消息列表（只读副本）
+// Messages returns a read-only copy of the current full message list.
 func (ec *ExecutionContext) Messages() []map[string]any {
 	result := make([]map[string]any, len(ec.messages))
 	copy(result, ec.messages)
 	return result
 }
 
-// NewMessages 返回本次 run 新增的消息
+// NewMessages returns only the messages added during the current run.
 func (ec *ExecutionContext) NewMessages() []map[string]any {
 	result := make([]map[string]any, len(ec.newMessages))
 	copy(result, ec.newMessages)
 	return result
 }
 
-// SystemPrompt 返回系统提示
+// SystemPrompt returns the assembled system prompt.
 func (ec *ExecutionContext) SystemPrompt() string {
 	return ec.systemPrompt
 }
 
-// Status 返回当前状态
+// Status returns the current run status.
 func (ec *ExecutionContext) Status() RunStatus {
 	return ec.status
 }
 
-// Reason 返回状态原因
+// Reason returns the reason associated with the current status.
 func (ec *ExecutionContext) Reason() string {
 	return ec.reason
 }
 
-// Steps 返回已执行步数
+// Steps returns the number of steps executed so far.
 func (ec *ExecutionContext) Steps() int {
 	return ec.steps
 }
 
-// SetStatus 设置状态和原因
+// SetStatus updates the run status and its associated reason.
 func (ec *ExecutionContext) SetStatus(status RunStatus, reason string) {
 	ec.status = status
 	ec.reason = reason
 }
 
-// IncrementStep 增加步数计数
+// IncrementStep increments the step counter by one.
 func (ec *ExecutionContext) IncrementStep() {
 	ec.steps++
 }
 
-// AddUserMessage 添加用户消息
+// AddUserMessage appends a user message to the conversation.
 func (ec *ExecutionContext) AddUserMessage(content string) {
 	msg := map[string]any{
 		"role":    "user",
@@ -94,7 +94,7 @@ func (ec *ExecutionContext) AddUserMessage(content string) {
 	ec.newMessages = append(ec.newMessages, msg)
 }
 
-// AddAssistantMessage 添加 assistant 回复消息（含 thinking/text/tool_use blocks）
+// AddAssistantMessage appends an assistant response message containing thinking, text, and/or tool_use blocks.
 func (ec *ExecutionContext) AddAssistantMessage(contentBlocks []map[string]any) {
 	msg := map[string]any{
 		"role":    "assistant",
@@ -104,7 +104,7 @@ func (ec *ExecutionContext) AddAssistantMessage(contentBlocks []map[string]any) 
 	ec.newMessages = append(ec.newMessages, msg)
 }
 
-// AddToolResults 添加工具调用结果消息
+// AddToolResults appends tool call result messages to the conversation.
 func (ec *ExecutionContext) AddToolResults(results []map[string]any) {
 	msg := map[string]any{
 		"role":    "user",
@@ -114,13 +114,13 @@ func (ec *ExecutionContext) AddToolResults(results []map[string]any) {
 	ec.newMessages = append(ec.newMessages, msg)
 }
 
-// ReplaceMessages 替换整个消息列表（用于压缩后）
+// ReplaceMessages replaces the entire message list (used after context compaction).
 func (ec *ExecutionContext) ReplaceMessages(messages []map[string]any) {
 	ec.messages = make([]map[string]any, len(messages))
 	copy(ec.messages, messages)
 }
 
-// BuildSystemPrompt 组装完整的系统提示，包括全局/项目上下文和 session notes
+// BuildSystemPrompt assembles the full system prompt from global context, project context, session notes, and optional override.
 func BuildSystemPrompt(globalCtx, projectCtx, sessionNotes, override string) string {
 	if override != "" {
 		return override
@@ -142,7 +142,7 @@ func BuildSystemPrompt(globalCtx, projectCtx, sessionNotes, override string) str
 	return strings.Join(parts, "\n")
 }
 
-// LoadContextFile 加载上下文文件，不存在时返回空字符串
+// LoadContextFile reads a context file from disk, returning an empty string if the file does not exist.
 func LoadContextFile(path string) string {
 	resolved := path
 	if strings.HasPrefix(resolved, "~/") {

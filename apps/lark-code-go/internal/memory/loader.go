@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-// LoadContextFile 加载 .lark/context.md 文件
+// LoadContextFile reads a .lark/context.md file from disk.
 func LoadContextFile(path string) string {
 	data, err := os.ReadFile(path)
 	if err != nil {

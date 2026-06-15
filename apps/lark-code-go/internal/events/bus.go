@@ -9,19 +9,19 @@ import (
 
 const subscriberBufferSize = 256
 
-// EventBus 提供 channel-based 的进程内发布/订阅
+// EventBus provides a channel-based in-process publish/subscribe mechanism.
 type EventBus struct {
 	mu          sync.RWMutex
 	subscribers []chan bus.Event
 	closed      bool
 }
 
-// NewEventBus 创建一个新的 EventBus
+// NewEventBus creates a new EventBus instance.
 func NewEventBus() *EventBus {
 	return &EventBus{}
 }
 
-// Subscribe 注册一个新订阅者，返回接收事件的 channel
+// Subscribe registers a new subscriber and returns a channel for receiving events.
 func (b *EventBus) Subscribe() <-chan bus.Event {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -31,7 +31,7 @@ func (b *EventBus) Subscribe() <-chan bus.Event {
 	return ch
 }
 
-// Unsubscribe 移除指定订阅者的 channel
+// Unsubscribe removes the specified subscriber's channel.
 func (b *EventBus) Unsubscribe(ch <-chan bus.Event) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -45,7 +45,7 @@ func (b *EventBus) Unsubscribe(ch <-chan bus.Event) {
 	}
 }
 
-// Publish 向所有订阅者发送事件（非阻塞，满则丢弃并记日志）
+// Publish sends an event to all subscribers (non-blocking; drops and logs if channel is full).
 func (b *EventBus) Publish(evt bus.Event) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -64,7 +64,7 @@ func (b *EventBus) Publish(evt bus.Event) {
 	}
 }
 
-// Close 关闭所有订阅者 channel
+// Close closes all subscriber channels.
 func (b *EventBus) Close() {
 	b.mu.Lock()
 	defer b.mu.Unlock()

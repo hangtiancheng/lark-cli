@@ -16,7 +16,7 @@ const (
 	retryBaseSeconds = 1
 )
 
-// InvokeTool 驱动单个工具调用的完整生命周期
+// InvokeTool drives the full lifecycle of a single tool call, including retries and event publishing.
 func InvokeTool(
 	ctx context.Context,
 	registry *Registry,
@@ -28,7 +28,7 @@ func InvokeTool(
 ) *ToolResult {
 	now := time.Now().UTC().Format(time.RFC3339)
 
-	// 发布开始事件
+	// Publish the tool call started event
 	busInst.Publish(&bus.ToolCallStartedEvent{
 		Type:      "tool.call_started",
 		RunID:     runID,
@@ -38,14 +38,14 @@ func InvokeTool(
 		TS:        now,
 	})
 
-	// 查找工具
+	// Look up the tool in the registry
 	tool, ok := registry.Get(toolName)
 	if !ok {
 		return fail(busInst, runID, toolCallID, toolName, ErrorTypeRuntime,
 			fmt.Sprintf("unknown tool: %s", toolName), 0, 1)
 	}
 
-	// 带超时的执行 + 重试
+	// Execute with timeout and retry logic
 	start := time.Now()
 	var result *ToolResult
 	for attempt := 1; attempt <= maxRetries+1; attempt++ {
@@ -62,7 +62,7 @@ func InvokeTool(
 			}
 		}
 
-		// 成功则返回
+		// Return immediately on success
 		if !result.IsError {
 			elapsed := int(time.Since(start).Milliseconds())
 			busInst.Publish(&bus.ToolCallFinishedEvent{
@@ -77,14 +77,14 @@ func InvokeTool(
 			return result
 		}
 
-		// 不可重试的错误直接返回
+		// Non-retryable errors are returned immediately
 		if !isRetryable(result.ErrorType) {
 			return fail(busInst, runID, toolCallID, toolName,
 				result.ErrorType, result.Content,
 				int(time.Since(start).Milliseconds()), attempt)
 		}
 
-		// 重试前等待
+		// Apply exponential backoff before retrying
 		if attempt <= maxRetries {
 			backoff := time.Duration(retryBaseSeconds*(1<<(attempt-1))) * time.Second
 			slog.Warn("tool invocation retrying",
@@ -99,13 +99,13 @@ func InvokeTool(
 		}
 	}
 
-	// 所有重试都失败
+	// All retry attempts exhausted; return the last error
 	return fail(busInst, runID, toolCallID, toolName,
 		result.ErrorType, result.Content,
 		int(time.Since(start).Milliseconds()), maxRetries+1)
 }
 
-// fail 发布失败事件并返回错误结果
+// fail publishes a tool call failure event and returns an error result.
 func fail(
 	busInst *events.EventBus,
 	runID, toolCallID, toolName, errorClass, message string,
@@ -129,7 +129,7 @@ func fail(
 	}
 }
 
-// isRetryable 判断错误类型是否可重试
+// isRetryable determines whether the given error type warrants a retry attempt.
 func isRetryable(errorType string) bool {
 	return errorType == ErrorTypeRuntime || errorType == ErrorTypeRateLimited
 }

@@ -2,7 +2,7 @@ package bus
 
 import "encoding/json"
 
-// JSON-RPC 2.0 错误码常量
+// JSON-RPC 2.0 standard error code constants.
 const (
 	ParseError     = -32700
 	InvalidRequest = -32600
@@ -11,7 +11,7 @@ const (
 	InternalError  = -32603
 )
 
-// JsonRpcRequest 表示客户端发送的 JSON-RPC 2.0 请求
+// JsonRpcRequest represents a JSON-RPC 2.0 request sent by the client.
 type JsonRpcRequest struct {
 	Jsonrpc string          `json:"jsonrpc"`
 	ID      string          `json:"id"`
@@ -19,34 +19,34 @@ type JsonRpcRequest struct {
 	Params  json.RawMessage `json:"params,omitempty"`
 }
 
-// JsonRpcSuccess 表示服务端返回的成功响应
+// JsonRpcSuccess represents a successful JSON-RPC 2.0 response returned by the server.
 type JsonRpcSuccess struct {
 	Jsonrpc string      `json:"jsonrpc"`
 	ID      string      `json:"id"`
 	Result  interface{} `json:"result"`
 }
 
-// JsonRpcErrorObject 表示 JSON-RPC 错误对象
+// JsonRpcErrorObject represents a JSON-RPC 2.0 error object within an error response.
 type JsonRpcErrorObject struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// JsonRpcError 表示服务端返回的错误响应
+// JsonRpcError represents an error JSON-RPC 2.0 response returned by the server.
 type JsonRpcError struct {
 	Jsonrpc string             `json:"jsonrpc"`
 	ID      string             `json:"id,omitempty"`
 	Error   JsonRpcErrorObject `json:"error"`
 }
 
-// EventPushEnvelope 表示服务端推送的事件信封
+// EventPushEnvelope represents a server-pushed event wrapper delivered to subscribed clients.
 type EventPushEnvelope struct {
 	Kind  string          `json:"kind"`
 	Event json.RawMessage `json:"event"`
 }
 
-// MakeSuccess 构造 JSON-RPC 成功响应
+// MakeSuccess constructs a JSON-RPC 2.0 success response with the given ID and result.
 func MakeSuccess(id string, result interface{}) *JsonRpcSuccess {
 	return &JsonRpcSuccess{
 		Jsonrpc: "2.0",
@@ -55,7 +55,7 @@ func MakeSuccess(id string, result interface{}) *JsonRpcSuccess {
 	}
 }
 
-// MakeError 构造 JSON-RPC 错误响应
+// MakeError constructs a JSON-RPC 2.0 error response with the given ID, error code, message, and optional data.
 func MakeError(id string, code int, message string, data interface{}) *JsonRpcError {
 	return &JsonRpcError{
 		Jsonrpc: "2.0",
@@ -68,7 +68,7 @@ func MakeError(id string, code int, message string, data interface{}) *JsonRpcEr
 	}
 }
 
-// MakeEventPush 构造事件推送信封
+// MakeEventPush constructs an event push envelope wrapping the given event payload.
 func MakeEventPush(event interface{}) (*EventPushEnvelope, error) {
 	data, err := json.Marshal(event)
 	if err != nil {

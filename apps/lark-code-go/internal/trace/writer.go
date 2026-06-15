@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// Record 表示单条追踪记录
+// Record represents a single trace record written to the NDJSON trace file.
 type Record struct {
 	TS        string         `json:"ts"`
 	Direction string         `json:"direction"`
@@ -20,7 +20,7 @@ type Record struct {
 	Data      map[string]any `json:"data,omitempty"`
 }
 
-// Writer 异步写入追踪记录到 NDJSON 文件
+// Writer asynchronously writes trace records to an NDJSON file via a buffered queue.
 type Writer struct {
 	path  string
 	mu    sync.Mutex
@@ -29,7 +29,8 @@ type Writer struct {
 	done  chan struct{}
 }
 
-// NewWriter 创建 TraceWriter
+// NewWriter creates a new trace Writer that appends to the file at the given path.
+// Parent directories are created automatically if they do not exist.
 func NewWriter(path string) (*Writer, error) {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -52,7 +53,7 @@ func NewWriter(path string) (*Writer, error) {
 	return w, nil
 }
 
-// Write 将记录入队（非阻塞）
+// Write enqueues a trace record for asynchronous writing. If the queue is full, the record is dropped.
 func (w *Writer) Write(rec Record) {
 	select {
 	case w.queue <- rec:
@@ -61,7 +62,7 @@ func (w *Writer) Write(rec Record) {
 	}
 }
 
-// Stop 关闭 writer，刷新队列
+// Stop closes the writer, flushes any queued records, and closes the underlying file.
 func (w *Writer) Stop() {
 	close(w.queue)
 	<-w.done
@@ -74,7 +75,7 @@ func (w *Writer) Stop() {
 	}
 }
 
-// writeLoop 消费队列并写入文件
+// writeLoop consumes records from the queue and writes them to the file as NDJSON lines.
 func (w *Writer) writeLoop() {
 	defer close(w.done)
 

@@ -11,7 +11,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/tools"
 )
 
-// mockProvider 是一个确定性的 LLM provider，用于测试
+// mockProvider is a deterministic LLM provider for testing.
 type mockProvider struct {
 	responses []*llm.LlmResponse
 	callIndex int
@@ -30,7 +30,7 @@ func (m *mockProvider) Chat(ctx context.Context, req *llm.ChatRequest) (*llm.Llm
 	return resp, nil
 }
 
-// mockTool 是一个简单的测试工具
+// mockTool is a simple test tool.
 type mockTool struct {
 	name   string
 	result string
@@ -245,7 +245,7 @@ func TestAgentLoopToolUse(t *testing.T) {
 		t.Errorf("expected 2 steps, got %d", outcome.Steps)
 	}
 
-	// 验证消息中包含 tool_result
+	// Verify that messages contain the tool_result
 	msgs := ec.Messages()
 	found := false
 	for _, msg := range msgs {
@@ -400,7 +400,7 @@ func TestAgentLoopEventPublishing(t *testing.T) {
 
 	loop.Run(context.Background(), ec, "run-events")
 
-	// 使用阻塞式接收 + 超时收集所有事件
+	// Use blocking receive with timeout to collect all events
 	var eventTypes []string
 	timeout := time.After(2 * time.Second)
 	for {
@@ -428,7 +428,7 @@ check:
 	}
 }
 
-// mockBlockingProvider 阻塞直到 context 被取消
+// mockBlockingProvider blocks until the context is cancelled.
 type mockBlockingProvider struct{}
 
 func (m *mockBlockingProvider) Chat(ctx context.Context, req *llm.ChatRequest) (*llm.LlmResponse, error) {
@@ -436,7 +436,7 @@ func (m *mockBlockingProvider) Chat(ctx context.Context, req *llm.ChatRequest) (
 	return nil, ctx.Err()
 }
 
-// contains 检查字符串是否包含子串
+// contains checks whether s contains substr.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
 }

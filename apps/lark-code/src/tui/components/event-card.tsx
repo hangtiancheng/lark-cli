@@ -2,7 +2,7 @@
 // Claude Code style: inline indicators, no heavy borders, flowing text layout
 import React from "react";
 import { Box, Text } from "ink";
-import { marked } from "marked";
+import { marked, type MarkedExtension } from "marked";
 import { markedTerminal } from "marked-terminal";
 
 import { theme, truncate } from "../theme.js";
@@ -10,7 +10,8 @@ import { isRecord } from "../../core/bus/envelope.js";
 import { ToolUseCard } from "./tool-use-card.js";
 
 // Configure marked with terminal renderer (cached, created once)
-marked.use(markedTerminal());
+// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+marked.use(markedTerminal() as MarkedExtension);
 
 // Normalized event representation for rendering
 export interface AgentEvent {
@@ -123,7 +124,8 @@ export function EventCard({
 
     case "llm.text": {
       const text = typeof data["text"] === "string" ? data["text"] : "";
-      const rendered = String(marked.parse(text));
+      const parsed = marked.parse(text);
+      const rendered = typeof parsed === "string" ? parsed : "";
       return (
         <Box paddingX={1}>
           <Text wrap="wrap">{rendered}</Text>

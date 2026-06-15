@@ -150,7 +150,9 @@ describe("SessionManager", () => {
       expect.unreachable("should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(HandlerError);
-      expect((err as HandlerError).code).toBe(-32011);
+      if (err instanceof HandlerError) {
+        expect(err.code).toBe(-32011);
+      }
     }
     rmSync(dir, { recursive: true });
   });
@@ -175,7 +177,9 @@ describe("SessionManager", () => {
       expect.unreachable("should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(HandlerError);
-      expect((err as HandlerError).code).toBe(-32010);
+      if (err instanceof HandlerError) {
+        expect(err.code).toBe(-32010);
+      }
     }
     rmSync(dir, { recursive: true });
   });
@@ -233,7 +237,9 @@ describe("SessionManager", () => {
       expect.unreachable("should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(HandlerError);
-      expect((err as HandlerError).code).toBe(-32012);
+      if (err instanceof HandlerError) {
+        expect(err.code).toBe(-32012);
+      }
     }
 
     // Wait for first message to complete

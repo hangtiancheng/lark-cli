@@ -14,7 +14,7 @@ const (
 	bashMaxOutput      = 64 * 1024 // 64KB
 )
 
-// BashTool 执行 shell 命令
+// BashTool executes shell commands and returns their output.
 type BashTool struct{}
 
 func NewBashTool() *BashTool { return &BashTool{} }
@@ -67,7 +67,7 @@ func (t *BashTool) Invoke(ctx context.Context, params map[string]any) (*ToolResu
 		output += stderr.String()
 	}
 
-	// 截断输出
+	// Truncate output if it exceeds the maximum allowed size
 	if len(output) > bashMaxOutput {
 		output = output[:bashMaxOutput] + "\n... (output truncated)"
 	}
@@ -81,7 +81,7 @@ func (t *BashTool) Invoke(ctx context.Context, params map[string]any) (*ToolResu
 			}, nil
 		}
 
-		// 非零退出码 -> IsError=true, 附加 [exit N] 标注
+		// Non-zero exit code: set IsError=true and append [exit N] annotation
 		exitCode := -1
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()

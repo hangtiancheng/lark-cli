@@ -5,14 +5,14 @@ import (
 	"fmt"
 )
 
-// Event 是所有事件类型的接口
+// Event is the interface that all event types must implement.
 type Event interface {
 	EventType() string
 }
 
 // -- Lifecycle Events --
 
-// CoreStartedEvent 在 daemon 启动时发布
+// CoreStartedEvent is published when the daemon starts.
 type CoreStartedEvent struct {
 	Type       string `json:"type"`
 	ListenAddr string `json:"listen_addr"`
@@ -21,7 +21,7 @@ type CoreStartedEvent struct {
 
 func (e *CoreStartedEvent) EventType() string { return "core.started" }
 
-// RunStartedEvent 在 agent run 开始时发布
+// RunStartedEvent is published when an agent run begins.
 type RunStartedEvent struct {
 	Type  string `json:"type"`
 	RunID string `json:"run_id"`
@@ -31,7 +31,7 @@ type RunStartedEvent struct {
 
 func (e *RunStartedEvent) EventType() string { return "run.started" }
 
-// RunFinishedEvent 在 agent run 结束时发布
+// RunFinishedEvent is published when an agent run ends.
 type RunFinishedEvent struct {
 	Type   string `json:"type"`
 	RunID  string `json:"run_id"`
@@ -45,7 +45,7 @@ func (e *RunFinishedEvent) EventType() string { return "run.finished" }
 
 // -- Step Events --
 
-// StepStartedEvent 在 ReAct 循环每步开始时发布
+// StepStartedEvent is published at the beginning of each ReAct loop step.
 type StepStartedEvent struct {
 	Type  string `json:"type"`
 	RunID string `json:"run_id"`
@@ -55,7 +55,7 @@ type StepStartedEvent struct {
 
 func (e *StepStartedEvent) EventType() string { return "step.started" }
 
-// StepFinishedEvent 在 ReAct 循环每步结束时发布
+// StepFinishedEvent is published at the end of each ReAct loop step.
 type StepFinishedEvent struct {
 	Type  string `json:"type"`
 	RunID string `json:"run_id"`
@@ -67,7 +67,7 @@ func (e *StepFinishedEvent) EventType() string { return "step.finished" }
 
 // -- Tool Events --
 
-// ToolCallStartedEvent 在工具调用开始时发布
+// ToolCallStartedEvent is published when a tool invocation begins.
 type ToolCallStartedEvent struct {
 	Type      string         `json:"type"`
 	RunID     string         `json:"run_id"`
@@ -79,7 +79,7 @@ type ToolCallStartedEvent struct {
 
 func (e *ToolCallStartedEvent) EventType() string { return "tool.call_started" }
 
-// ToolCallFinishedEvent 在工具调用成功完成时发布
+// ToolCallFinishedEvent is published when a tool invocation completes successfully.
 type ToolCallFinishedEvent struct {
 	Type      string `json:"type"`
 	RunID     string `json:"run_id"`
@@ -92,7 +92,7 @@ type ToolCallFinishedEvent struct {
 
 func (e *ToolCallFinishedEvent) EventType() string { return "tool.call_finished" }
 
-// ToolCallFailedEvent 在工具调用失败时发布
+// ToolCallFailedEvent is published when a tool invocation fails.
 type ToolCallFailedEvent struct {
 	Type         string `json:"type"`
 	RunID        string `json:"run_id"`
@@ -109,7 +109,7 @@ func (e *ToolCallFailedEvent) EventType() string { return "tool.call_failed" }
 
 // -- LLM Events --
 
-// LlmTokenEvent 在 LLM 流式输出每个 token 时发布
+// LlmTokenEvent is published for each token streamed from the LLM.
 type LlmTokenEvent struct {
 	Type  string `json:"type"`
 	RunID string `json:"run_id"`
@@ -119,7 +119,7 @@ type LlmTokenEvent struct {
 
 func (e *LlmTokenEvent) EventType() string { return "llm.token" }
 
-// LlmUsageEvent 在 LLM 调用完成时发布 token 用量
+// LlmUsageEvent is published when an LLM call completes, reporting token usage statistics.
 type LlmUsageEvent struct {
 	Type                     string  `json:"type"`
 	RunID                    string  `json:"run_id"`
@@ -133,7 +133,7 @@ type LlmUsageEvent struct {
 
 func (e *LlmUsageEvent) EventType() string { return "llm.usage" }
 
-// LlmModelSelectedEvent 在 LLM 模型选定后发布
+// LlmModelSelectedEvent is published when an LLM model has been selected for use.
 type LlmModelSelectedEvent struct {
 	Type     string `json:"type"`
 	RunID    string `json:"run_id"`
@@ -146,7 +146,7 @@ func (e *LlmModelSelectedEvent) EventType() string { return "llm.model_selected"
 
 // -- Log Event --
 
-// LogLineEvent 发布系统日志行
+// LogLineEvent is published for each system log line.
 type LogLineEvent struct {
 	Type    string `json:"type"`
 	RunID   string `json:"run_id"`
@@ -160,7 +160,7 @@ func (e *LogLineEvent) EventType() string { return "log.line" }
 
 // -- Session Events --
 
-// SessionCreatedEvent 在 session 创建时发布
+// SessionCreatedEvent is published when a new session is created.
 type SessionCreatedEvent struct {
 	Type      string `json:"type"`
 	SessionID string `json:"session_id"`
@@ -170,7 +170,7 @@ type SessionCreatedEvent struct {
 
 func (e *SessionCreatedEvent) EventType() string { return "session.created" }
 
-// SessionMessageReceivedEvent 在收到用户消息时发布
+// SessionMessageReceivedEvent is published when a user message is received.
 type SessionMessageReceivedEvent struct {
 	Type      string `json:"type"`
 	SessionID string `json:"session_id"`
@@ -180,7 +180,7 @@ type SessionMessageReceivedEvent struct {
 
 func (e *SessionMessageReceivedEvent) EventType() string { return "session.message_received" }
 
-// SessionWaitingForInputEvent 在 session 等待用户输入时发布
+// SessionWaitingForInputEvent is published when a session is waiting for user input.
 type SessionWaitingForInputEvent struct {
 	Type      string `json:"type"`
 	SessionID string `json:"session_id"`
@@ -190,7 +190,7 @@ type SessionWaitingForInputEvent struct {
 
 func (e *SessionWaitingForInputEvent) EventType() string { return "session.waiting_for_input" }
 
-// SessionResumedEvent 在 session 从等待状态恢复时发布
+// SessionResumedEvent is published when a session resumes from a waiting state.
 type SessionResumedEvent struct {
 	Type      string `json:"type"`
 	SessionID string `json:"session_id"`
@@ -199,7 +199,7 @@ type SessionResumedEvent struct {
 
 func (e *SessionResumedEvent) EventType() string { return "session.resumed" }
 
-// SessionClosedEvent 在 session 关闭时发布
+// SessionClosedEvent is published when a session is closed.
 type SessionClosedEvent struct {
 	Type      string `json:"type"`
 	SessionID string `json:"session_id"`
@@ -210,7 +210,7 @@ func (e *SessionClosedEvent) EventType() string { return "session.closed" }
 
 // -- Context Compaction Event --
 
-// ContextCompactedEvent 在上下文压缩完成时发布
+// ContextCompactedEvent is published when context compaction has been completed.
 type ContextCompactedEvent struct {
 	Type           string `json:"type"`
 	SessionID      string `json:"session_id"`
@@ -224,7 +224,7 @@ func (e *ContextCompactedEvent) EventType() string { return "context.compacted" 
 
 // -- Permission Events --
 
-// PermissionRequestedEvent 在需要用户审批时发布
+// PermissionRequestedEvent is published when user approval is required for a tool invocation.
 type PermissionRequestedEvent struct {
 	Type         string         `json:"type"`
 	RunID        string         `json:"run_id"`
@@ -238,7 +238,7 @@ type PermissionRequestedEvent struct {
 
 func (e *PermissionRequestedEvent) EventType() string { return "permission.requested" }
 
-// PermissionGrantedEvent 在权限被批准时发布
+// PermissionGrantedEvent is published when a permission request is approved.
 type PermissionGrantedEvent struct {
 	Type      string `json:"type"`
 	RunID     string `json:"run_id"`
@@ -249,7 +249,7 @@ type PermissionGrantedEvent struct {
 
 func (e *PermissionGrantedEvent) EventType() string { return "permission.granted" }
 
-// PermissionDeniedEvent 在权限被拒绝时发布
+// PermissionDeniedEvent is published when a permission request is denied.
 type PermissionDeniedEvent struct {
 	Type      string `json:"type"`
 	RunID     string `json:"run_id"`
@@ -262,7 +262,7 @@ func (e *PermissionDeniedEvent) EventType() string { return "permission.denied" 
 
 // -- Subagent Events --
 
-// SubagentStartedEvent 在子 agent 启动时发布
+// SubagentStartedEvent is published when a subagent is launched.
 type SubagentStartedEvent struct {
 	Type        string `json:"type"`
 	RunID       string `json:"run_id"`
@@ -273,7 +273,7 @@ type SubagentStartedEvent struct {
 
 func (e *SubagentStartedEvent) EventType() string { return "subagent.started" }
 
-// SubagentFinishedEvent 在子 agent 完成时发布
+// SubagentFinishedEvent is published when a subagent completes.
 type SubagentFinishedEvent struct {
 	Type        string `json:"type"`
 	RunID       string `json:"run_id"`
@@ -286,7 +286,7 @@ func (e *SubagentFinishedEvent) EventType() string { return "subagent.finished" 
 
 // -- Skill Event --
 
-// SkillInvokedEvent 在 skill 被调用时发布
+// SkillInvokedEvent is published when a skill is invoked.
 type SkillInvokedEvent struct {
 	Type      string `json:"type"`
 	SkillName string `json:"skill_name"`
@@ -299,7 +299,7 @@ func (e *SkillInvokedEvent) EventType() string { return "skill.invoked" }
 
 // -- Discriminated Union Serialization --
 
-// eventTypes 注册所有事件类型名到构造函数的映射
+// eventTypes maps event type names to their constructor functions for discriminated union deserialization.
 var eventTypes = map[string]func() Event{
 	"core.started":              func() Event { return &CoreStartedEvent{} },
 	"run.started":               func() Event { return &RunStartedEvent{} },
@@ -327,12 +327,12 @@ var eventTypes = map[string]func() Event{
 	"skill.invoked":             func() Event { return &SkillInvokedEvent{} },
 }
 
-// MarshalEvent 将事件序列化为 JSON
+// MarshalEvent serializes an event to JSON.
 func MarshalEvent(evt Event) ([]byte, error) {
 	return json.Marshal(evt)
 }
 
-// UnmarshalEvent 从 JSON 反序列化事件（根据 type 字段做 discriminated union）
+// UnmarshalEvent deserializes an event from JSON using the "type" field as a discriminated union key.
 func UnmarshalEvent(data []byte) (Event, error) {
 	var probe struct {
 		Type string `json:"type"`

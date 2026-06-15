@@ -11,10 +11,10 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/bus"
 )
 
-// EventHandler 处理服务端推送的事件
+// EventHandler processes events pushed by the server.
 type EventHandler func(event json.RawMessage) error
 
-// Client 是 TCP NDJSON JSON-RPC 客户端
+// Client is a TCP-based NDJSON JSON-RPC client.
 type Client struct {
 	host string
 	port int
@@ -35,7 +35,7 @@ type pendingResult struct {
 	err    *bus.JsonRpcErrorObject
 }
 
-// NewClient 创建 TCP 客户端
+// NewClient creates a new TCP client.
 func NewClient(host string, port int) *Client {
 	return &Client{
 		host:         host,
@@ -45,7 +45,7 @@ func NewClient(host string, port int) *Client {
 	}
 }
 
-// Connect 建立 TCP 连接并启动读取循环
+// Connect establishes a TCP connection and starts the read loop.
 func (c *Client) Connect() error {
 	addr := net.JoinHostPort(c.host, fmt.Sprintf("%d", c.port))
 	conn, err := net.Dial("tcp", addr)
@@ -57,12 +57,12 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-// WaitForDisconnect 返回一个 channel，在连接断开时关闭
+// WaitForDisconnect returns a channel that is closed when the connection is lost.
 func (c *Client) WaitForDisconnect() <-chan struct{} {
 	return c.disconnectCh
 }
 
-// Close 关闭连接
+// Close shuts down the connection.
 func (c *Client) Close() {
 	c.closeMu.Lock()
 	defer c.closeMu.Unlock()
@@ -85,12 +85,12 @@ func (c *Client) Close() {
 	c.pendingMu.Unlock()
 }
 
-// OnEvent 注册事件处理器（跨重连持久化）
+// OnEvent registers an event handler (persists across reconnections).
 func (c *Client) OnEvent(handler EventHandler) {
 	c.eventHandlers = append(c.eventHandlers, handler)
 }
 
-// SendCommand 发送 JSON-RPC 命令并等待响应
+// SendCommand sends a JSON-RPC command and waits for the response.
 func (c *Client) SendCommand(method string, params any) (json.RawMessage, error) {
 	if c.conn == nil {
 		return nil, fmt.Errorf("not connected")
@@ -149,7 +149,7 @@ func (c *Client) SendCommand(method string, params any) (json.RawMessage, error)
 	return result.result, nil
 }
 
-// readLoop 从连接读取消息并分发
+// readLoop reads messages from the connection and dispatches them.
 func (c *Client) readLoop() {
 	scanner := bufio.NewScanner(c.conn)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024)
@@ -162,10 +162,10 @@ func (c *Client) readLoop() {
 		c.dispatch(line)
 	}
 
-	// 连接断开
+	// Connection lost.
 	c.signalDisconnect()
 
-	// 拒绝所有 pending 请求
+	// Reject all pending requests.
 	c.pendingMu.Lock()
 	for id, ch := range c.pending {
 		close(ch)
@@ -174,14 +174,14 @@ func (c *Client) readLoop() {
 	c.pendingMu.Unlock()
 }
 
-// dispatch 解析消息并路由到 pending 或 event handler
+// dispatch parses incoming messages and routes them to pending request channels or event handlers.
 func (c *Client) dispatch(line []byte) {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(line, &raw); err != nil {
 		return
 	}
 
-	// 检查是否为事件推送
+	// Check if the message is an event push.
 	if kindRaw, ok := raw["kind"]; ok {
 		var kind string
 		if err := json.Unmarshal(kindRaw, &kind); err == nil && kind == "event" {
@@ -194,7 +194,7 @@ func (c *Client) dispatch(line []byte) {
 		}
 	}
 
-	// 检查是否为 JSON-RPC 响应
+	// Check if the message is a JSON-RPC response.
 	if idRaw, ok := raw["id"]; ok {
 		var id string
 		if err := json.Unmarshal(idRaw, &id); err != nil {
@@ -226,7 +226,7 @@ func (c *Client) dispatch(line []byte) {
 	}
 }
 
-// signalDisconnect 通知连接断开
+// signalDisconnect notifies listeners that the connection has been lost.
 func (c *Client) signalDisconnect() {
 	c.closeMu.Lock()
 	defer c.closeMu.Unlock()

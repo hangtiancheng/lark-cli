@@ -22,13 +22,13 @@ const compactSystemPrompt = `You are a conversation compactor. Summarize the con
 
 Be concise but preserve all critical information. Focus on what the assistant learned and decided, not the process.`
 
-// Compactor 使用 LLM 进行上下文压缩
+// Compactor uses an LLM to compact and summarize conversation context.
 type Compactor struct {
 	provider llm.Provider
 	bus      *events.EventBus
 }
 
-// NewCompactor 创建压缩器
+// NewCompactor creates a new Compactor instance.
 func NewCompactor(provider llm.Provider, busInst *events.EventBus) *Compactor {
 	return &Compactor{
 		provider: provider,
@@ -36,7 +36,8 @@ func NewCompactor(provider llm.Provider, busInst *events.EventBus) *Compactor {
 	}
 }
 
-// Compact 压缩对话消息
+// Compact compacts conversation messages by summarizing them with an LLM.
+// It returns the compacted messages, original token count, summary token count, and any error.
 func (c *Compactor) Compact(
 	ctx context.Context,
 	messages []map[string]any,
@@ -44,7 +45,7 @@ func (c *Compactor) Compact(
 	runID string,
 	focus string,
 ) ([]map[string]any, int, int, error) {
-	// 构造压缩请求
+	// Build the compaction request
 	var userContent strings.Builder
 	userContent.WriteString("Summarize the following conversation")
 	if focus != "" {
@@ -79,11 +80,11 @@ func (c *Compactor) Compact(
 		return nil, 0, 0, fmt.Errorf("compaction LLM call failed: %w", err)
 	}
 
-	// 估算 token 数（粗略：4 字符 ≈ 1 token）
+	// Estimate token count (rough approximation: 4 chars ≈ 1 token)
 	originalTokens := estimateTokens(messages)
 	summaryTokens := len(resp.Text) / 4
 
-	// 构造压缩后的消息
+	// Build the compacted messages
 	compacted := []map[string]any{
 		{
 			"role":    "user",
@@ -95,7 +96,7 @@ func (c *Compactor) Compact(
 		},
 	}
 
-	// 发布压缩事件
+	// Publish the compaction event
 	c.bus.Publish(&bus.ContextCompactedEvent{
 		Type:           "context.compacted",
 		SessionID:      sessionID,
@@ -108,7 +109,7 @@ func (c *Compactor) Compact(
 	return compacted, originalTokens, summaryTokens, nil
 }
 
-// extractText 从消息内容中提取纯文本
+// extractText extracts plain text from message content, which may be a string or an array of blocks.
 func extractText(content any) string {
 	switch c := content.(type) {
 	case string:
@@ -130,7 +131,7 @@ func extractText(content any) string {
 	}
 }
 
-// estimateTokens 粗略估算消息的 token 数
+// estimateTokens roughly estimates the token count of messages using a 4-chars-per-token heuristic.
 func estimateTokens(messages []map[string]any) int {
 	total := 0
 	for _, msg := range messages {

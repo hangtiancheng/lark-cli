@@ -53,9 +53,9 @@ func TestPolicyStoreEvaluateAllowPattern(t *testing.T) {
 }
 
 func TestPolicyStoreEvaluateOutsideCWD(t *testing.T) {
-	// 验证 OUTSIDE_CWD 覆盖 allow_patterns：
-	// 即使 allow_patterns 匹配（应该返回 AutoAllow），
-	// 如果路径在 CWD 之外，仍然返回 AllowOnce（强制 ASK）
+	// Verify OUTSIDE_CWD overrides allow_patterns:
+	// Even when allow_patterns matches (would return AutoAllow),
+	// if the path is outside CWD, it still returns AllowOnce (force ASK)
 
 	store := &permissions.PolicyStore{
 		Tools: map[string]*permissions.ToolPolicy{
@@ -65,13 +65,13 @@ func TestPolicyStoreEvaluateOutsideCWD(t *testing.T) {
 		},
 	}
 
-	// 路径在 cwd 之内 + allow_patterns 匹配 -> AutoAllow
+	// Path inside CWD + allow_patterns matches -> AutoAllow
 	decision := store.Evaluate("read_file", map[string]any{"path": "/tmp/test.txt"}, "/tmp")
 	if decision != permissions.DecisionAutoAllow {
 		t.Errorf("expected AutoAllow for inside CWD with allow_patterns, got %s", decision)
 	}
 
-	// 路径在 cwd 之外 + allow_patterns 匹配 -> AllowOnce（OUTSIDE_CWD 覆盖 allow）
+	// Path outside CWD + allow_patterns matches -> AllowOnce (OUTSIDE_CWD overrides allow)
 	decision = store.Evaluate("read_file", map[string]any{"path": "/etc/passwd"}, "/tmp")
 	if decision != permissions.DecisionAllowOnce {
 		t.Errorf("expected AllowOnce for outside CWD overriding allow_patterns, got %s", decision)
@@ -128,7 +128,7 @@ func TestManagerCheckAndWaitUserApproval(t *testing.T) {
 	eb := events.NewEventBus()
 	defer eb.Close()
 
-	// 监听权限请求事件
+	// Subscribe to permission request events
 	ch := eb.Subscribe()
 
 	mgr := permissions.NewManager(store, eb, 10.0, "/tmp", "")
@@ -145,7 +145,7 @@ func TestManagerCheckAndWaitUserApproval(t *testing.T) {
 		close(done)
 	}()
 
-	// 等待 permission.requested 事件
+	// Wait for the permission.requested event
 	select {
 	case evt := <-ch:
 		if evt.EventType() != "permission.requested" {
@@ -155,7 +155,7 @@ func TestManagerCheckAndWaitUserApproval(t *testing.T) {
 		t.Fatal("timed out waiting for permission.requested event")
 	}
 
-	// 响应允许
+	// Respond with allow
 	ok := mgr.Respond("tool-use-1", "allow_once")
 	if !ok {
 		t.Error("Respond returned false")
@@ -202,7 +202,7 @@ func TestManagerSessionCache(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		// 第一次请求：用户选择 always_allow
+		// First request: user selects always_allow
 		_, err := mgr.CheckAndWait("bash", "tool-use-1", map[string]any{"command": "ls"}, "session-1", "run-1")
 		if err != nil {
 			t.Errorf("first call error: %v", err)
@@ -210,12 +210,12 @@ func TestManagerSessionCache(t *testing.T) {
 		close(done)
 	}()
 
-	// 等待并响应 always_allow
+	// Wait and respond with always_allow
 	time.Sleep(50 * time.Millisecond)
 	mgr.Respond("tool-use-1", "always_allow")
 	<-done
 
-	// 第二次请求相同参数应该直接返回缓存
+	// Second request with same parameters should return from cache directly
 	decision, err := mgr.CheckAndWait("bash", "tool-use-2", map[string]any{"command": "ls"}, "session-1", "run-1")
 	if err != nil {
 		t.Fatalf("cached call error: %v", err)
@@ -232,7 +232,7 @@ func TestManagerCancelSession(t *testing.T) {
 
 	mgr := permissions.NewManager(store, eb, 30.0, "/tmp", "")
 
-	// session-1 的请求
+	// session-1's request
 	sess1Done := make(chan struct{})
 	go func() {
 		decision, err := mgr.CheckAndWait("bash", "tool-use-s1", map[string]any{"command": "ls"}, "session-1", "run-1")
@@ -242,7 +242,7 @@ func TestManagerCancelSession(t *testing.T) {
 		close(sess1Done)
 	}()
 
-	// session-2 的请求
+	// session-2's request
 	sess2Done := make(chan struct{})
 	sess2Decision := make(chan permissions.Decision, 1)
 	go func() {
@@ -251,14 +251,14 @@ func TestManagerCancelSession(t *testing.T) {
 		close(sess2Done)
 	}()
 
-	// 等待两个请求都到达
+	// Wait for both requests to arrive
 	time.Sleep(100 * time.Millisecond)
 
-	// 只取消 session-1
+	// Only cancel session-1
 	mgr.CancelSession("session-1")
 	<-sess1Done
 
-	// session-2 不应被取消，响应它
+	// session-2 should not be cancelled; respond to it
 	time.Sleep(50 * time.Millisecond)
 	ok := mgr.Respond("tool-use-s2", "allow_once")
 	if !ok {
@@ -266,7 +266,7 @@ func TestManagerCancelSession(t *testing.T) {
 	}
 	<-sess2Done
 
-	// 验证 session-2 收到了 allow_once
+	// Verify session-2 received allow_once
 	select {
 	case d := <-sess2Decision:
 		if d != permissions.DecisionAllowOnce {
@@ -297,7 +297,7 @@ func TestManagerPersistAlwaysDecision(t *testing.T) {
 	mgr.Respond("tool-use-1", "always_allow")
 	<-done
 
-	// 验证文件已写入
+	// Verify the file was written
 	loaded, err := permissions.LoadPolicy(policyPath)
 	if err != nil {
 		t.Fatalf("failed to load policy: %v", err)

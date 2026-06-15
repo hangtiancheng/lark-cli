@@ -145,7 +145,7 @@ func (m *model) connect() tea.Cmd {
 			return errorMsg{err: fmt.Sprintf("connect failed: %s", err)}
 		}
 
-		// 订阅事件
+		// Subscribe to server-side events
 		client.OnEvent(func(event json.RawMessage) error {
 			var evt struct {
 				Type string `json:"type"`
@@ -160,7 +160,7 @@ func (m *model) connect() tea.Cmd {
 			return nil
 		})
 
-		// 创建 session
+		// Create a new session on the daemon
 		result, err := client.SendCommand("session.create", map[string]any{
 			"mode":  "chat",
 			"title": "TUI Session",

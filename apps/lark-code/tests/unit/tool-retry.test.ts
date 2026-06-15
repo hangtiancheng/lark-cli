@@ -6,6 +6,20 @@ import { toolSuccess, toolError } from "../../src/core/tools/base.js";
 import { EventBus } from "../../src/core/events/bus.js";
 import type { ToolUseBlock } from "../../src/core/llm/types.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return Object.fromEntries(value.entries());
+  }
+  return {};
+}
+
 describe("Tool Retry", () => {
   // Feature: Verify invokeTool retries on runtime_error
   // Design: Create tool that fails twice then succeeds, confirm it's retried
@@ -145,7 +159,11 @@ describe("Tool Retry", () => {
       inputSchema: { type: "object" as const, properties: {} },
       invoke: () => {
         callCount++;
-        return new Promise((resolve) => setTimeout(() => { resolve(toolSuccess("done")); }, 10000));
+        return new Promise((resolve) =>
+          setTimeout(() => {
+            resolve(toolSuccess("done"));
+          }, 10000),
+        );
       },
     };
     const registry = new ToolRegistry();
@@ -159,7 +177,9 @@ describe("Tool Retry", () => {
       type: "tool_use",
       caller: { type: "direct" },
     };
-    const result = await invokeTool(registry, toolUse, bus, "r1", { timeout: 50 });
+    const result = await invokeTool(registry, toolUse, bus, "r1", {
+      timeout: 50,
+    });
 
     expect(callCount).toBe(1); // No retry on timeout
     expect(result.isError).toBe(true);
@@ -169,7 +189,7 @@ describe("Tool Retry", () => {
   // Feature: Verify error_class in tool.call_failed events
   // Design: Failing tool publishes events with correct error_class
   test("publishes failed events with correct error_class", async () => {
-    let callCount = 0; // TODO: Add `callCount` tests
+    let callCount = 0; // TODO: You may want to add `callCount` tests
     const tool: BaseTool = {
       name: "err_tool",
       description: "Error tool",
@@ -198,12 +218,13 @@ describe("Tool Retry", () => {
     await invokeTool(registry, toolUse, bus, "r1");
 
     const failedEvents = events.filter(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "tool.call_failed",
+      (e: unknown) => asRecord(e)["type"] === "tool.call_failed",
     );
     expect(failedEvents.length).toBeGreaterThan(0);
     for (const fe of failedEvents) {
-      expect((fe as Record<string, unknown>)["error_class"]).toBe("runtime_error");
+      expect(asRecord(fe)["error_class"]).toBe("runtime_error");
     }
+    expect(callCount).toBe(3); // MAX_RETRIES=2, so 3 total attempts
   });
 
   // Feature: Verify RateLimitedError exception triggers retry
@@ -244,10 +265,10 @@ describe("Tool Retry", () => {
     expect(callCount).toBe(2);
     expect(result.isError).toBe(false);
     const failedEvents = events.filter(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "tool.call_failed",
+      (e: unknown) => asRecord(e)["type"] === "tool.call_failed",
     );
     expect(failedEvents.length).toBe(1);
-    expect((failedEvents[0] as Record<string, unknown>)["error_class"]).toBe("rate_limited");
+    expect(asRecord(failedEvents[0])["error_class"]).toBe("rate_limited");
   });
 
   // Feature: Verify runtime exceptions trigger retry

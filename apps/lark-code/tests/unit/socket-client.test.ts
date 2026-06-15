@@ -3,6 +3,20 @@ import { SocketClient } from "../../src/core/transport/socket-client.js";
 import { SocketServer } from "../../src/core/transport/socket-server.js";
 import net from "node:net";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return Object.fromEntries(value.entries());
+  }
+  return {};
+}
+
 describe("SocketClient", () => {
   // Feature: Verify SocketClient connects to server
   // Design: Start server, create client, connect, confirm connection succeeds
@@ -91,17 +105,18 @@ describe("SocketClient", () => {
 
     // Push an event via broadcaster
     await broadcaster.handle({
-      type: "test.event",
-      data: "hello",
+      type: "session.created",
+      session_id: "test-session",
+      mode: "chat",
       timestamp: new Date().toISOString(),
-    } as never);
+    });
 
     // Wait a bit for the event to be received
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(events.length).toBeGreaterThan(0);
     const testEvent = events.find(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "test.event",
+      (e: unknown) => asRecord(e)["type"] === "session.created",
     );
     expect(testEvent).toBeDefined();
 

@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: 用 planner→executor→reviewer 三阶段 Multi-agent 工作流完成复杂任务
+description: Complete a complex task using a three-stage planner→executor→reviewer multi-agent workflow
 allowed_tools:
   - spawn_agent
   - agent_result
@@ -9,37 +9,37 @@ allowed_tools:
   - task_list
 ---
 
-你是一位 Multi-agent 协调者。请用三阶段工作流完成以下目标：
+You are a multi-agent orchestrator. Complete the following objective using a three-stage workflow:
 
 $ARGUMENTS
 
-执行步骤（严格按顺序）：
+Execution steps (follow strictly in order):
 
-**阶段 1：规划（planner）**
-调用 spawn_agent，参数：
+**Stage 1: Planning (planner)**
+Call `spawn_agent` with the following arguments:
 
-- description: "规划任务"
+- description: "Planning task"
 - subagent_type: "planner"
-- prompt: 包含完整目标描述，要求 planner 输出有序的执行步骤列表，每步包含明确的成功标准
+- prompt: Include the full objective description. Require the planner to produce an ordered list of execution steps, each with a clear success criterion.
 
-**阶段 2：执行（executor）**
-将 planner 的完整输出作为上下文，调用 spawn_agent，参数：
+**Stage 2: Execution (executor)**
+Pass the planner's full output as context and call `spawn_agent` with the following arguments:
 
-- description: "执行计划"
+- description: "Execute the plan"
 - subagent_type: "executor"
-- prompt: 包含原始目标 + planner 输出的完整执行计划，要求 executor 逐步执行并汇报每步结果
+- prompt: Include the original objective plus the complete execution plan from the planner. Require the executor to carry out each step sequentially and report results for each step.
 
-**阶段 3：审查（reviewer）**
-将 executor 的完整输出作为上下文，调用 spawn_agent，参数：
+**Stage 3: Review (reviewer)**
+Pass the executor's full output as context and call `spawn_agent` with the following arguments:
 
-- description: "审查结果"
+- description: "Review results"
 - subagent_type: "reviewer"
-- prompt: 包含原始目标 + executor 的执行结果，要求 reviewer 核查目标是否达成、指出遗漏或问题
+- prompt: Include the original objective plus the executor's results. Require the reviewer to verify whether the objective has been met and to identify any gaps or issues.
 
-**汇报**
-完成三阶段后，向用户汇报：
+**Report**
+After completing all three stages, report to the user:
 
-1. 规划摘要（planner 制定了什么计划）
-2. 执行摘要（executor 完成了什么，产出了什么）
-3. 审查结论（reviewer 的最终评估）
-4. 整体是否成功，以及遗留问题（如有）
+1. Planning summary (what plan the planner devised).
+2. Execution summary (what the executor accomplished and what was produced).
+3. Review conclusion (the reviewer's final assessment).
+4. Overall success or failure, and any outstanding issues (if applicable).

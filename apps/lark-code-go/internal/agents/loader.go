@@ -8,7 +8,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// Profile 表示一个 agent 角色配置
+// Profile represents an agent role configuration with system prompt and tool permissions.
 type Profile struct {
 	Name         string   `toml:"name"`
 	Description  string   `toml:"description"`
@@ -17,7 +17,7 @@ type Profile struct {
 	Model        string   `toml:"model"`
 }
 
-// LoadProfile 从 TOML 文件加载 agent profile
+// LoadProfile loads an agent profile from a TOML file.
 func LoadProfile(path string) (*Profile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -32,7 +32,7 @@ func LoadProfile(path string) (*Profile, error) {
 	return &profile, nil
 }
 
-// LoadBuiltinProfile 加载内置 agent profile
+// LoadBuiltinProfile loads a built-in agent profile by name.
 func LoadBuiltinProfile(name string) (*Profile, error) {
 	builtins := map[string]*Profile{
 		"planner": {
@@ -62,7 +62,7 @@ func LoadBuiltinProfile(name string) (*Profile, error) {
 	return profile, nil
 }
 
-// LoadFromDir 从目录加载所有 agent profiles
+// LoadFromDir loads all .toml agent profiles from the specified directory.
 func LoadFromDir(dir string) ([]*Profile, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

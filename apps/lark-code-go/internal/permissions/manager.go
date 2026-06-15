@@ -10,13 +10,13 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/events"
 )
 
-// pendingEntry 追踪一个待审批请求的 session 和响应 channel
+// pendingEntry tracks a pending approval request's session and response channel.
 type pendingEntry struct {
 	sessionID string
 	ch        chan string
 }
 
-// Manager 管理工具调用的权限审批
+// Manager manages the permission approval workflow for tool invocations.
 type Manager struct {
 	policy     *PolicyStore
 	bus        *events.EventBus
@@ -26,10 +26,10 @@ type Manager struct {
 
 	mu      sync.Mutex
 	pending map[string]*pendingEntry // tool_use_id -> pendingEntry
-	session map[string]Decision      // 会话级缓存
+	session map[string]Decision      // Session-level permission cache
 }
 
-// NewManager 创建权限管理器
+// NewManager creates a new permission Manager.
 func NewManager(policy *PolicyStore, busInst *events.EventBus, timeoutS float64, cwd string, policyPath string) *Manager {
 	if policy == nil {
 		policy = &PolicyStore{Tools: make(map[string]*ToolPolicy)}
@@ -45,7 +45,7 @@ func NewManager(policy *PolicyStore, busInst *events.EventBus, timeoutS float64,
 	}
 }
 
-// CheckAndWait 检查权限并在需要时等待用户审批
+// CheckAndWait checks permissions and blocks until user approval is received or timeout occurs.
 func (m *Manager) CheckAndWait(
 	toolName string,
 	toolUseID string,
@@ -53,7 +53,7 @@ func (m *Manager) CheckAndWait(
 	sessionID string,
 	runID string,
 ) (Decision, error) {
-	// 检查会话缓存
+	// Check the session-level permission cache
 	cacheKey := toolName + ":" + fmt.Sprintf("%v", params)
 	m.mu.Lock()
 	if cached, ok := m.session[cacheKey]; ok {
@@ -62,7 +62,7 @@ func (m *Manager) CheckAndWait(
 	}
 	m.mu.Unlock()
 
-	// 评估策略
+	// Evaluate the permission policy
 	decision := m.policy.Evaluate(toolName, params, m.cwd)
 
 	switch decision {
@@ -72,7 +72,7 @@ func (m *Manager) CheckAndWait(
 		return DecisionDenyOnce, nil
 	}
 
-	// 需要用户审批
+	// User approval required
 	ch := make(chan string, 1)
 	entry := &pendingEntry{sessionID: sessionID, ch: ch}
 	m.mu.Lock()
@@ -85,7 +85,7 @@ func (m *Manager) CheckAndWait(
 		m.mu.Unlock()
 	}()
 
-	// 发布权限请求事件
+	// Publish the permission request event
 	paramPreview := buildParamPreview(params)
 	m.bus.Publish(&bus.PermissionRequestedEvent{
 		Type:         "permission.requested",
@@ -98,7 +98,7 @@ func (m *Manager) CheckAndWait(
 		TS:           time.Now().UTC().Format(time.RFC3339),
 	})
 
-	// 等待响应或超时
+	// Wait for user response or timeout
 	var timeoutCh <-chan time.Time
 	if m.timeoutS > 0 {
 		timeoutCh = time.After(time.Duration(m.timeoutS * float64(time.Second)))
@@ -107,16 +107,16 @@ func (m *Manager) CheckAndWait(
 	select {
 	case d := <-ch:
 		decision := Decision(d)
-		// 缓存 "always" 决策
+		// Cache 'always' decisions for the session
 		if decision == DecisionAlwaysAllow || decision == DecisionAlwaysDeny {
 			m.mu.Lock()
 			m.session[cacheKey] = decision
 			m.mu.Unlock()
-			// 持久化到 policy.toml
+			// Persist to policy.toml
 			m.persistAlwaysDecision(toolName, decision)
 		}
 
-		// 发布决策事件
+		// Publish the permission decision event
 		if decision == DecisionAllowOnce || decision == DecisionAlwaysAllow || decision == DecisionAutoAllow {
 			m.bus.Publish(&bus.PermissionGrantedEvent{
 				Type:      "permission.granted",
@@ -148,7 +148,7 @@ func (m *Manager) CheckAndWait(
 	}
 }
 
-// Respond 响应用户的权限决策
+// Respond processes the user's permission decision for a pending request.
 func (m *Manager) Respond(toolUseID string, decision string) bool {
 	m.mu.Lock()
 	entry, ok := m.pending[toolUseID]
@@ -162,7 +162,7 @@ func (m *Manager) Respond(toolUseID string, decision string) bool {
 	return true
 }
 
-// CancelSession 取消指定 session 的所有待审批请求（按 sessionID 精确过滤）
+// CancelSession cancels all pending permission requests for the specified session.
 func (m *Manager) CancelSession(sessionID string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -175,18 +175,18 @@ func (m *Manager) CancelSession(sessionID string) {
 		case entry.ch <- "deny_once":
 			delete(m.pending, toolUseID)
 		default:
-			// channel 已满或已关闭
+			// Channel is full or already closed
 		}
 	}
 }
 
-// persistAlwaysDecision 持久化 always 决策到 policy.toml
+// persistAlwaysDecision saves an 'always' decision to policy.toml.
 func (m *Manager) persistAlwaysDecision(toolName string, decision Decision) {
 	if m.policyPath == "" {
 		return
 	}
 
-	// 更新内存中的 policy
+	// Update the in-memory policy
 	policy, ok := m.policy.Tools[toolName]
 	if !ok {
 		policy = &ToolPolicy{}
@@ -200,13 +200,13 @@ func (m *Manager) persistAlwaysDecision(toolName string, decision Decision) {
 		policy.DenyPatterns = appendUnique(policy.DenyPatterns, "*")
 	}
 
-	// 写入文件
+	// Write the updated policy to disk
 	if err := SavePolicy(m.policyPath, m.policy); err != nil {
 		slog.Warn("failed to persist policy", "error", err, "tool", toolName, "decision", decision)
 	}
 }
 
-// appendUnique 向切片追加不重复的元素
+// appendUnique appends an item to the slice only if it is not already present.
 func appendUnique(slice []string, item string) []string {
 	for _, s := range slice {
 		if s == item {
@@ -216,7 +216,7 @@ func appendUnique(slice []string, item string) []string {
 	return append(slice, item)
 }
 
-// buildParamPreview 构造参数预览字符串
+// buildParamPreview constructs a human-readable parameter preview string.
 func buildParamPreview(params map[string]any) string {
 	if len(params) == 0 {
 		return ""

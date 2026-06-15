@@ -1,6 +1,37 @@
 import { describe, expect, test } from "vitest";
 import { AnthropicProvider } from "../../src/core/llm/provider.js";
 import { EventBus } from "../../src/core/events/bus.js";
+import type Anthropic from "@anthropic-ai/sdk";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return Object.fromEntries(value.entries());
+  }
+  return {};
+}
+
+function isAnthropic(value: unknown): value is Anthropic {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (!("messages" in value)) {
+    return false;
+  }
+  if (!isRecord(value["messages"])) {
+    return false;
+  }
+  if (!("stream" in value["messages"])) {
+    return false;
+  }
+  return typeof value["messages"]["stream"] === "function";
+}
 
 // Mock MessageStream: emits text events and returns a final message
 function makeMockStream(opts: {
@@ -36,7 +67,7 @@ function makeMockStream(opts: {
       }
       return stream;
     },
-    async finalMessage() {
+    finalMessage() {
       if (opts.throwError) throw opts.throwError;
 
       // Emit all text chunks
@@ -77,11 +108,24 @@ function makeMockClient(
   };
 }
 
+// Helper: create AnthropicProvider with mock client (type-safe wrapper)
+function makeProvider(
+  model: string,
+  streamFactory: () => ReturnType<typeof makeMockStream>,
+): AnthropicProvider {
+  const mockClient = makeMockClient(streamFactory);
+  if (!isAnthropic(mockClient)) {
+    throw new Error("Mock client failed Anthropic type guard");
+  }
+  return new AnthropicProvider(model, mockClient);
+}
+
 // Helper: collect events from bus
 function collectEvents(bus: EventBus): unknown[] {
   const events: unknown[] = [];
-  bus.subscribe(async (e) => {
+  bus.subscribe((e) => {
     events.push(e);
+    return Promise.resolve();
   });
   return events;
 }
@@ -102,10 +146,9 @@ describe("AnthropicProvider", () => {
   });
 
   test("succeeds with injected client", () => {
-    const client = makeMockClient(() =>
+    const provider = makeProvider("claude-sonnet-4-6", () =>
       makeMockStream({ textChunks: ["hello"] }),
     );
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     expect(provider).toBeDefined();
     expect(typeof provider.chat).toBe("function");
   });
@@ -113,44 +156,41 @@ describe("AnthropicProvider", () => {
   // --- chat() event publishing ---
 
   test("chat publishes llm.model_selected event", async () => {
-    const client = makeMockClient(() => makeMockStream({ textChunks: ["hi"] }));
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
+    const provider = makeProvider("claude-sonnet-4-6", () =>
+      makeMockStream({ textChunks: ["hi"] }),
+    );
     const bus = new EventBus();
     const events = collectEvents(bus);
 
     await provider.chat([], [], bus, "run-1");
 
     const selected = events.find(
-      (e: unknown) =>
-        (e as Record<string, unknown>)["type"] === "llm.model_selected",
+      (e: unknown) => asRecord(e)["type"] === "llm.model_selected",
     );
     expect(selected).toBeDefined();
-    expect((selected as Record<string, unknown>)["model"]).toBe(
-      "claude-sonnet-4-6",
-    );
+    expect(asRecord(selected)["model"]).toBe("claude-sonnet-4-6");
   });
 
   test("chat publishes llm.token events per chunk", async () => {
-    const client = makeMockClient(() =>
+    const provider = makeProvider("claude-sonnet-4-6", () =>
       makeMockStream({ textChunks: ["Hello", " ", "world"] }),
     );
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
     const events = collectEvents(bus);
 
     await provider.chat([], [], bus, "run-1");
 
     const tokens = events.filter(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "llm.token",
+      (e: unknown) => asRecord(e)["type"] === "llm.token",
     );
     expect(tokens).toHaveLength(3);
-    expect((tokens[0] as Record<string, unknown>)["token"]).toBe("Hello");
-    expect((tokens[1] as Record<string, unknown>)["token"]).toBe(" ");
-    expect((tokens[2] as Record<string, unknown>)["token"]).toBe("world");
+    expect(asRecord(tokens[0])["token"]).toBe("Hello");
+    expect(asRecord(tokens[1])["token"]).toBe(" ");
+    expect(asRecord(tokens[2])["token"]).toBe("world");
   });
 
   test("chat publishes llm.usage event with correct counts", async () => {
-    const client = makeMockClient(() =>
+    const provider = makeProvider("claude-sonnet-4-6", () =>
       makeMockStream({
         textChunks: ["test"],
         usage: {
@@ -161,29 +201,27 @@ describe("AnthropicProvider", () => {
         },
       }),
     );
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
     const events = collectEvents(bus);
 
     await provider.chat([], [], bus, "run-1");
 
     const usage = events.find(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "llm.usage",
-    ) as Record<string, unknown>;
+      (e: unknown) => asRecord(e)["type"] === "llm.usage",
+    );
     expect(usage).toBeDefined();
-    expect(usage["input_tokens"]).toBe(100);
-    expect(usage["output_tokens"]).toBe(50);
-    expect(usage["cache_read_input_tokens"]).toBe(30);
-    expect(usage["cache_creation_input_tokens"]).toBe(10);
+    expect(asRecord(usage)["input_tokens"]).toBe(100);
+    expect(asRecord(usage)["output_tokens"]).toBe(50);
+    expect(asRecord(usage)["cache_read_input_tokens"]).toBe(30);
+    expect(asRecord(usage)["cache_creation_input_tokens"]).toBe(10);
   });
 
   // --- chat() response parsing ---
 
   test("chat returns correct stopReason", async () => {
-    const client = makeMockClient(() =>
+    const provider = makeProvider("claude-sonnet-4-6", () =>
       makeMockStream({ textChunks: ["done"], stopReason: "end_turn" }),
     );
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -191,10 +229,9 @@ describe("AnthropicProvider", () => {
   });
 
   test("chat accumulates text from tokens", async () => {
-    const client = makeMockClient(() =>
+    const provider = makeProvider("claude-sonnet-4-6", () =>
       makeMockStream({ textChunks: ["Hello", " ", "world", "!"] }),
     );
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -202,7 +239,7 @@ describe("AnthropicProvider", () => {
   });
 
   test("chat extracts tool_use blocks", async () => {
-    const client = makeMockClient(() =>
+    const provider = makeProvider("claude-sonnet-4-6", () =>
       makeMockStream({
         textChunks: [],
         stopReason: "tool_use",
@@ -212,7 +249,6 @@ describe("AnthropicProvider", () => {
         ],
       }),
     );
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -223,13 +259,12 @@ describe("AnthropicProvider", () => {
   });
 
   test("chat extracts thinking blocks", async () => {
-    const client = makeMockClient(() =>
+    const provider = makeProvider("claude-sonnet-4-6", () =>
       makeMockStream({
         textChunks: ["answer"],
         thinkingBlocks: [{ thinking: "Let me think about this..." }],
       }),
     );
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -240,8 +275,9 @@ describe("AnthropicProvider", () => {
   });
 
   test("chat returns empty text for no tokens", async () => {
-    const client = makeMockClient(() => makeMockStream({ textChunks: [] }));
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
+    const provider = makeProvider("claude-sonnet-4-6", () =>
+      makeMockStream({ textChunks: [] }),
+    );
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -252,15 +288,22 @@ describe("AnthropicProvider", () => {
 
   test("non-retryable error propagates immediately without retry", async () => {
     let callCount = 0;
-    const client = makeMockClient(() => {
-      callCount++;
-      return makeMockStream({
-        throwError: Object.assign(new Error("401 Unauthorized"), {
-          code: "AUTH_ERROR",
-        }),
-      });
-    });
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
+    const mockClient = {
+      messages: {
+        stream: () => {
+          callCount++;
+          return makeMockStream({
+            throwError: Object.assign(new Error("401 Unauthorized"), {
+              code: "AUTH_ERROR",
+            }),
+          });
+        },
+      },
+    };
+    if (!isAnthropic(mockClient)) {
+      throw new Error("Mock client failed Anthropic type guard");
+    }
+    const provider = new AnthropicProvider("claude-sonnet-4-6", mockClient);
     const bus = new EventBus();
 
     await expect(provider.chat([], [], bus, "run-1")).rejects.toThrow(
@@ -271,7 +314,7 @@ describe("AnthropicProvider", () => {
 
   test("network error triggers retry", async () => {
     let callCount = 0;
-    const client = {
+    const mockClient = {
       messages: {
         stream: () => {
           callCount++;
@@ -288,7 +331,10 @@ describe("AnthropicProvider", () => {
         },
       },
     };
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
+    if (!isAnthropic(mockClient)) {
+      throw new Error("Mock client failed Anthropic type guard");
+    }
+    const provider = new AnthropicProvider("claude-sonnet-4-6", mockClient);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -298,7 +344,7 @@ describe("AnthropicProvider", () => {
 
   test("token events emit during retry attempts", async () => {
     let callCount = 0;
-    const client = {
+    const mockClient = {
       messages: {
         stream: () => {
           callCount++;
@@ -313,26 +359,34 @@ describe("AnthropicProvider", () => {
         },
       },
     };
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
+    if (!isAnthropic(mockClient)) {
+      throw new Error("Mock client failed Anthropic type guard");
+    }
+    const provider = new AnthropicProvider("claude-sonnet-4-6", mockClient);
     const bus = new EventBus();
     const events = collectEvents(bus);
 
     await provider.chat([], [], bus, "run-1");
 
     // Token events from attempt 2 should be present (fix verified)
-    const tokens = events.filter((e: unknown) => e.type === "llm.token");
+    const tokens = events.filter(
+      (e: unknown) => asRecord(e)["type"] === "llm.token",
+    );
     expect(tokens.length).toBeGreaterThanOrEqual(1);
   });
 
   test("exhausted retries throw the last error", async () => {
-    const client = makeMockClient(() =>
+    const mockClient = makeMockClient(() =>
       makeMockStream({
         throwError: Object.assign(new Error("ECONNRESET"), {
           code: "ECONNRESET",
         }),
       }),
     );
-    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
+    if (!isAnthropic(mockClient)) {
+      throw new Error("Mock client failed Anthropic type guard");
+    }
+    const provider = new AnthropicProvider("claude-sonnet-4-6", mockClient);
     const bus = new EventBus();
 
     await expect(provider.chat([], [], bus, "run-1")).rejects.toThrow(

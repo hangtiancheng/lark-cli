@@ -140,7 +140,7 @@ func TestBashToolTimeout(t *testing.T) {
 
 func TestBashToolOutputTruncation(t *testing.T) {
 	tool := tools.NewBashTool()
-	// 生成超过 64KB 的输出
+	// Generate output exceeding 64KB
 	result, err := tool.Invoke(context.Background(), map[string]any{
 		"command": "dd if=/dev/zero bs=1024 count=100 2>/dev/null | tr '\\0' 'A'",
 	})
@@ -225,7 +225,7 @@ func TestReadFileToolPathTraversal(t *testing.T) {
 func TestReadFileToolLargeFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "large.txt")
-	// 写入 600KB 数据（超过 512KB 限制）
+	// Write 600KB of data (exceeds 512KB limit)
 	data := strings.Repeat("X", 600*1024)
 	if err := os.WriteFile(testFile, []byte(data), 0o644); err != nil {
 		t.Fatal(err)
@@ -264,7 +264,7 @@ func TestWriteFileToolSuccess(t *testing.T) {
 		t.Errorf("unexpected error: %s", result.Content)
 	}
 
-	// 验证文件内容
+	// Verify the file content
 	data, err := os.ReadFile(targetPath)
 	if err != nil {
 		t.Fatalf("failed to read written file: %v", err)
@@ -343,7 +343,7 @@ func TestWriteFileToolContentTooLarge(t *testing.T) {
 
 func TestListDirToolSuccess(t *testing.T) {
 	tmpDir := t.TempDir()
-	// 创建测试目录结构
+	// Create test directory structure
 	os.MkdirAll(filepath.Join(tmpDir, "subdir"), 0o755)
 	os.WriteFile(filepath.Join(tmpDir, "file.txt"), []byte("data"), 0o644)
 
@@ -410,7 +410,7 @@ func TestNoteSaveToolSuccess(t *testing.T) {
 		t.Errorf("unexpected error: %s", result.Content)
 	}
 
-	// 验证文件已写入
+	// Verify the notes file was written
 	notesPath := filepath.Join(tmpDir, "notes.md")
 	data, err := os.ReadFile(notesPath)
 	if err != nil {
@@ -495,13 +495,13 @@ func TestTaskManagerCRUD(t *testing.T) {
 func TestTaskManagerNextIDPersistence(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// 第一批：创建 3 个任务
+	// First batch: create 3 tasks
 	mgr1 := tools.NewTaskManager(tmpDir)
 	mgr1.Create("task 1", "")
 	mgr1.Create("task 2", "")
 	mgr1.Create("task 3", "")
 
-	// 第二批：新建 TaskManager 实例，ID 应该从 4 开始
+	// Second batch: new TaskManager instance, ID should start from 4
 	mgr2 := tools.NewTaskManager(tmpDir)
 	task4 := mgr2.Create("task 4", "")
 	if task4.ID != "4" {
@@ -522,13 +522,13 @@ func TestTaskManagerBlockedByAutoClear(t *testing.T) {
 		t.Fatalf("failed to set blocked_by: %v", err)
 	}
 
-	// 验证 blocked_by 设置成功
+	// Verify blocked_by was set successfully
 	got2, _ := mgr.Get(task2.ID)
 	if len(got2.BlockedBy) != 1 || got2.BlockedBy[0] != task1.ID {
 		t.Errorf("expected blocked_by=[%s], got %v", task1.ID, got2.BlockedBy)
 	}
 
-	// 完成 task1 -> task2 的 blocked_by 应被自动清理
+	// Complete task1 -> task2's blocked_by should be auto-cleared
 	_, err = mgr.Update(task1.ID, "completed", nil)
 	if err != nil {
 		t.Fatalf("failed to complete task1: %v", err)
@@ -545,13 +545,13 @@ func TestTaskManagerStatusValidation(t *testing.T) {
 	mgr := tools.NewTaskManager(tmpDir)
 	task := mgr.Create("test", "")
 
-	// 有效状态
+	// Valid status
 	_, err := mgr.Update(task.ID, "in_progress", nil)
 	if err != nil {
 		t.Errorf("expected no error for valid status, got %v", err)
 	}
 
-	// 无效状态
+	// Invalid status
 	_, err = mgr.Update(task.ID, "invalid_status", nil)
 	if err == nil {
 		t.Error("expected error for invalid status")
@@ -562,7 +562,7 @@ func TestTaskManagerFormatList(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := tools.NewTaskManager(tmpDir)
 
-	// 空列表
+	// Empty list
 	result := mgr.FormatList()
 	if result != "no tasks" {
 		t.Errorf("expected 'no tasks', got %q", result)

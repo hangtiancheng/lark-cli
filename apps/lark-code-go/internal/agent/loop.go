@@ -13,15 +13,15 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/tools"
 )
 
-// LoopConfig 控制 AgentLoop 的运行参数
+// LoopConfig controls the runtime parameters of the AgentLoop.
 type LoopConfig struct {
 	MaxSteps         int
-	CompactThreshold float64 // context_pct 达到此比例时自动压缩 (0.0-1.0)
-	ToolResultLimit  int     // tool_result 字符数限制
-	ToolResultKeep   int     // 截断后保留的字符数
+	CompactThreshold float64 // Automatically compact when context_pct reaches this threshold (0.0-1.0)
+	ToolResultLimit  int     // Maximum character limit for tool_result content
+	ToolResultKeep   int     // Number of characters to retain after truncation
 }
 
-// DefaultLoopConfig 返回默认的循环配置
+// DefaultLoopConfig returns the default loop configuration.
 func DefaultLoopConfig() *LoopConfig {
 	return &LoopConfig{
 		MaxSteps:         20,
@@ -31,12 +31,12 @@ func DefaultLoopConfig() *LoopConfig {
 	}
 }
 
-// ToolInvoker 是工具调用的抽象接口，允许注入不同的实现
+// ToolInvoker is an abstraction for tool invocation, allowing pluggable implementations.
 type ToolInvoker interface {
 	Invoke(ctx context.Context, registry *tools.Registry, toolCallID, toolName string, params map[string]any) *tools.ToolResult
 }
 
-// DefaultToolInvoker 使用 tools.InvokeTool 的默认实现
+// DefaultToolInvoker is the default implementation that delegates to tools.InvokeTool.
 type DefaultToolInvoker struct {
 	Bus   *events.EventBus
 	RunID string
@@ -46,7 +46,7 @@ func (d *DefaultToolInvoker) Invoke(ctx context.Context, registry *tools.Registr
 	return tools.InvokeTool(ctx, registry, toolCallID, toolName, params, d.Bus, d.RunID)
 }
 
-// AgentLoop 驱动 plan-act-observe 循环
+// AgentLoop drives the plan-act-observe (ReAct) loop.
 type AgentLoop struct {
 	cfg       *LoopConfig
 	provider  llm.Provider
@@ -56,15 +56,15 @@ type AgentLoop struct {
 	invoker   ToolInvoker
 }
 
-// RunOutcome 是 AgentLoop.Run() 的返回值
+// RunOutcome is the return value of AgentLoop.Run().
 type RunOutcome struct {
 	Status RunStatus
 	Reason string
 	Steps  int
-	Text   string // 最后一次 assistant 文本输出
+	Text   string // The last assistant text output
 }
 
-// NewAgentLoop 创建 agent 循环
+// NewAgentLoop creates a new agent loop.
 func NewAgentLoop(
 	cfg *LoopConfig,
 	provider llm.Provider,
@@ -81,18 +81,18 @@ func NewAgentLoop(
 	}
 }
 
-// SetInvoker 设置工具调用器（用于测试或自定义）
+// SetInvoker sets the tool invoker (for testing or custom implementations).
 func (al *AgentLoop) SetInvoker(invoker ToolInvoker) {
 	al.invoker = invoker
 }
 
-// Run 执行 agent 循环，直到 end_turn、max_steps 或 context cancellation
+// Run executes the agent loop until end_turn, max_steps is reached, or the context is cancelled.
 func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string) (*RunOutcome, error) {
 	if al.invoker == nil {
 		al.invoker = &DefaultToolInvoker{Bus: al.bus, RunID: runID}
 	}
 
-	// 发布 run.started
+	// Publish the run.started event
 	al.bus.Publish(&bus.RunStartedEvent{
 		Type:  "run.started",
 		RunID: runID,
@@ -105,7 +105,7 @@ func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string
 	for step := 1; step <= al.cfg.MaxSteps; step++ {
 		ec.IncrementStep()
 
-		// 检查取消
+		// Check for context cancellation
 		select {
 		case <-ctx.Done():
 			ec.SetStatus(StatusCanceled, "cancelled")
@@ -113,7 +113,7 @@ func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string
 		default:
 		}
 
-		// 发布 step.started
+		// Publish the step.started event
 		al.bus.Publish(&bus.StepStartedEvent{
 			Type:  "step.started",
 			RunID: runID,
@@ -121,7 +121,7 @@ func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string
 			TS:    time.Now().UTC().Format(time.RFC3339),
 		})
 
-		// 构建 LLM 请求
+		// Build the LLM chat request
 		chatReq := &llm.ChatRequest{
 			Messages:    ec.Messages(),
 			ToolSchemas: al.registry.ToolSchemas(),
@@ -131,7 +131,7 @@ func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string
 			Bus:         al.bus,
 		}
 
-		// 调用 LLM
+		// Invoke the LLM
 		resp, err := al.provider.Chat(ctx, chatReq)
 		if err != nil {
 			ec.SetStatus(StatusFailed, "llm_error")
@@ -139,12 +139,12 @@ func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string
 			return al.finish(ec, runID, lastText, err), err
 		}
 
-		// 构建 assistant 内容块
+		// Build assistant content blocks from the response
 		contentBlocks := buildContentBlocks(resp)
 		ec.AddAssistantMessage(contentBlocks)
 		lastText = resp.Text
 
-		// 处理 stop_reason
+		// Handle the stop_reason from the LLM response
 		switch resp.StopReason {
 		case "end_turn":
 			ec.SetStatus(StatusSuccess, "end_turn")
@@ -152,7 +152,7 @@ func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string
 			return al.finish(ec, runID, lastText, nil), nil
 
 		case "max_tokens":
-			// max_tokens 容错：如果有未完成的 tool_calls，注入合成错误
+			// max_tokens tolerance: inject synthetic errors for pending tool calls
 			if len(resp.ToolCalls) > 0 {
 				slog.Warn("max_tokens reached with pending tool calls, injecting synthetic errors",
 					"step", step, "run_id", runID, "tool_calls", len(resp.ToolCalls))
@@ -179,7 +179,7 @@ func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string
 				return al.finish(ec, runID, lastText, nil), nil
 			}
 
-			// 执行工具调用
+			// Execute tool calls
 			toolResults := make([]map[string]any, 0, len(resp.ToolCalls))
 			for _, tc := range resp.ToolCalls {
 				result := al.invoker.Invoke(ctx, al.registry, tc.ID, tc.Name, tc.Input)
@@ -194,13 +194,13 @@ func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string
 
 			al.publishStepFinished(runID, step)
 
-			// 自动压缩检查
+			// Check if auto-compaction is needed
 			if resp.Usage != nil && al.shouldCompact(resp.Usage.ContextPct) {
 				al.tryAutoCompact(ctx, ec, runID)
 			}
 
 		default:
-			// 未知 stop_reason，尝试继续
+			// Unknown stop_reason; attempt to continue
 			slog.Warn("unknown stop_reason", "reason", resp.StopReason, "step", step)
 			al.publishStepFinished(runID, step)
 			if len(resp.ToolCalls) == 0 {
@@ -210,12 +210,12 @@ func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string
 		}
 	}
 
-	// 超过最大步数
+	// Maximum step count exceeded
 	ec.SetStatus(StatusFailed, "exceeded_max_steps")
 	return al.finish(ec, runID, lastText, fmt.Errorf("exceeded max steps: %d", al.cfg.MaxSteps)), nil
 }
 
-// shouldCompact 判断是否需要自动压缩
+// shouldCompact determines whether auto-compaction should be triggered.
 func (al *AgentLoop) shouldCompact(contextPct float64) bool {
 	if al.compactor == nil || al.cfg.CompactThreshold <= 0 {
 		return false
@@ -223,7 +223,7 @@ func (al *AgentLoop) shouldCompact(contextPct float64) bool {
 	return contextPct >= al.cfg.CompactThreshold
 }
 
-// tryAutoCompact 尝试自动压缩对话上下文
+// tryAutoCompact attempts to automatically compact the conversation context.
 func (al *AgentLoop) tryAutoCompact(ctx context.Context, ec *ExecutionContext, runID string) {
 	if al.compactor == nil {
 		return
@@ -239,7 +239,7 @@ func (al *AgentLoop) tryAutoCompact(ctx context.Context, ec *ExecutionContext, r
 	slog.Info("auto-compaction applied", "run_id", runID)
 }
 
-// buildContentBlocks 从 LLM 响应构建 assistant 内容块
+// buildContentBlocks constructs assistant content blocks from the LLM response.
 func buildContentBlocks(resp *llm.LlmResponse) []map[string]any {
 	var blocks []map[string]any
 
@@ -273,7 +273,7 @@ func buildContentBlocks(resp *llm.LlmResponse) []map[string]any {
 	return blocks
 }
 
-// extractGoal 从上下文中提取目标（最后一条用户消息）
+// extractGoal extracts the goal from the context (the last user message).
 func extractGoal(ec *ExecutionContext) string {
 	msgs := ec.Messages()
 	for i := len(msgs) - 1; i >= 0; i-- {
@@ -286,7 +286,7 @@ func extractGoal(ec *ExecutionContext) string {
 	return ""
 }
 
-// publishStepFinished 发布 step.finished 事件
+// publishStepFinished publishes the step.finished event.
 func (al *AgentLoop) publishStepFinished(runID string, step int) {
 	al.bus.Publish(&bus.StepFinishedEvent{
 		Type:  "step.finished",
@@ -296,7 +296,7 @@ func (al *AgentLoop) publishStepFinished(runID string, step int) {
 	})
 }
 
-// finish 发布 run.finished 并返回 outcome
+// finish publishes run.finished and returns the outcome.
 func (al *AgentLoop) finish(ec *ExecutionContext, runID, lastText string, err error) *RunOutcome {
 	reason := ec.Reason()
 	status := string(ec.Status())

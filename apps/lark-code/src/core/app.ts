@@ -373,7 +373,9 @@ export class CoreApp {
       await Promise.race([
         Promise.allSettled(this._runningRuns),
         new Promise<void>((resolve) =>
-          setTimeout(() => { resolve(); }, 5000),
+          setTimeout(() => {
+            resolve();
+          }, 5000),
         ),
       ]);
     }

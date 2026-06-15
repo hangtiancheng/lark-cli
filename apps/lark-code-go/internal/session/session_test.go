@@ -98,13 +98,13 @@ func TestStoreReadNotes(t *testing.T) {
 	sess := session.NewSession("session-notes", session.ModeChat, "")
 	_ = store.WriteMeta(sess)
 
-	// 初始无 notes
+	// Initially no notes
 	notes := store.ReadNotes("session-notes")
 	if notes != "" {
 		t.Errorf("expected empty notes, got %q", notes)
 	}
 
-	// 写入 notes
+	// Write notes
 	notesPath := filepath.Join(store.SessionDir("session-notes"), "notes.md")
 	_ = os.WriteFile(notesPath, []byte("# Notes\n- item 1"), 0o644)
 
@@ -119,11 +119,11 @@ func TestStoreWriteCompacted(t *testing.T) {
 	sess := session.NewSession("session-compact", session.ModeChat, "")
 	_ = store.WriteMeta(sess)
 
-	// 写入原始消息
+	// Write original messages
 	_ = store.AppendMessage("session-compact", "user", "old msg 1", "run-1")
 	_ = store.AppendMessage("session-compact", "assistant", "old reply 1", "run-1")
 
-	// 压缩
+	// Compact
 	compacted := []map[string]any{
 		{"role": "user", "content": "[Previous conversation summarized]"},
 		{"role": "assistant", "content": "Summary of old conversation"},
@@ -133,7 +133,7 @@ func TestStoreWriteCompacted(t *testing.T) {
 		t.Fatalf("WriteCompacted failed: %v", err)
 	}
 
-	// 验证压缩后的消息
+	// Verify compacted messages
 	messages, err := store.ReadMessages("session-compact")
 	if err != nil {
 		t.Fatalf("ReadMessages failed: %v", err)
@@ -151,11 +151,11 @@ func TestStoreTrimOrphanToolUse(t *testing.T) {
 	sess := session.NewSession("session-orphan", session.ModeChat, "")
 	_ = store.WriteMeta(sess)
 
-	// 写入正常消息对
+	// Write normal message pair
 	_ = store.AppendMessage("session-orphan", "user", "hello", "run-1")
 	_ = store.AppendMessage("session-orphan", "assistant", "hi", "run-1")
 
-	// 写入孤立的 tool_use（assistant 消息包含 tool_use 但没有后续 tool_result）
+	// Write orphaned tool_use (assistant message with tool_use but no subsequent tool_result)
 	assistantWithToolUse := map[string]any{
 		"role": "assistant",
 		"content": []any{
@@ -174,7 +174,7 @@ func TestStoreTrimOrphanToolUse(t *testing.T) {
 		t.Fatalf("ReadMessages failed: %v", err)
 	}
 
-	// 孤立的 tool_use 应该被裁剪
+	// Orphaned tool_use should be trimmed
 	if len(messages) != 2 {
 		t.Errorf("expected 2 messages after trimming orphan, got %d", len(messages))
 	}
@@ -232,7 +232,7 @@ func TestManagerSendMessage(t *testing.T) {
 		t.Errorf("expected run ID 'run-123', got %s", runID)
 	}
 
-	// 验证标题自动设置
+	// Verify title auto-set
 	updated, _ := mgr.GetSession(sess.ID)
 	if updated.Title == "" {
 		t.Error("expected auto-set title from first message")
@@ -250,7 +250,7 @@ func TestManagerSendMessageAutoTitle(t *testing.T) {
 
 	sess, _ := mgr.Create(session.ModeChat, "")
 
-	// 发送长消息
+	// Send a long message
 	longMsg := "This is a very long message that should be truncated when used as the session title because it exceeds the maximum length"
 	_, _ = mgr.SendMessage(sess.ID, longMsg)
 
@@ -366,7 +366,7 @@ func TestManagerEventPublishing(t *testing.T) {
 
 	sess, _ := mgr.Create(session.ModeChat, "")
 
-	// 消费 session.created 事件
+	// Consume the session.created event
 	select {
 	case evt := <-ch:
 		if evt.EventType() != "session.created" {

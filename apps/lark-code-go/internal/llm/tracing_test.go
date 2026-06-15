@@ -12,7 +12,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/trace"
 )
 
-// mockProvider 返回确定性响应
+// mockProvider returns deterministic responses.
 type mockProvider struct {
 	resp *llm.LlmResponse
 	err  error
@@ -66,7 +66,7 @@ func TestTracingProviderSuccess(t *testing.T) {
 
 	w.Stop()
 
-	// 验证追踪文件包含 request 和 response
+	// Verify the trace file contains both request and response records.
 	data, err := os.ReadFile(tracePath)
 	if err != nil {
 		t.Fatalf("failed to read trace: %v", err)
@@ -176,7 +176,7 @@ func TestTracingProviderIncludePayload(t *testing.T) {
 	var reqRec map[string]any
 	json.Unmarshal([]byte(lines[0]), &reqRec)
 
-	// includePayload=true 应该包含 system 字段
+	// includePayload=true should include the system field.
 	reqData, _ := reqRec["data"].(map[string]any)
 	if _, ok := reqData["system"]; !ok {
 		t.Error("expected 'system' in request data when includePayload=true")

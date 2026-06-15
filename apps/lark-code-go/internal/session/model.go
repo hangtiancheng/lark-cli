@@ -2,7 +2,7 @@ package session
 
 import "time"
 
-// SessionMode 定义 session 模式
+// SessionMode defines the operating mode for a session.
 type SessionMode string
 
 const (
@@ -10,7 +10,7 @@ const (
 	ModeChat    SessionMode = "chat"
 )
 
-// SessionStatus 定义 session 状态
+// SessionStatus defines the lifecycle state of a session.
 type SessionStatus string
 
 const (
@@ -19,7 +19,7 @@ const (
 	StatusClosed          SessionStatus = "closed"
 )
 
-// Session 表示一个对话 session
+// Session represents a conversation session with mode, status, and metadata.
 type Session struct {
 	ID        string        `json:"id"`
 	Mode      SessionMode   `json:"mode"`
@@ -30,7 +30,7 @@ type Session struct {
 	RunIDs    []string      `json:"run_ids"`
 }
 
-// NewSession 创建新 session
+// NewSession creates a new Session with the given parameters.
 func NewSession(id string, mode SessionMode, title string) *Session {
 	now := time.Now().UTC().Format(time.RFC3339)
 	return &Session{

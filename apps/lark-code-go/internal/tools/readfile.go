@@ -12,7 +12,7 @@ const (
 	readFileMaxSize = 512 * 1024 // 512KB
 )
 
-// ReadFileTool 读取文件内容
+// ReadFileTool reads the contents of a file within the working directory.
 type ReadFileTool struct {
 	cwd string
 }
@@ -42,10 +42,10 @@ func (t *ReadFileTool) Invoke(ctx context.Context, params map[string]any) (*Tool
 		return &ToolResult{Content: "path parameter is required", IsError: true, ErrorType: ErrorTypeSchema}, nil
 	}
 
-	// 解析路径
+	// Resolve the path relative to the working directory
 	resolved := t.resolvePath(path)
 
-	// 安全检查：防止路径遍历
+	// Security check: prevent path traversal attacks
 	if !isPathSafe(t.cwd, resolved) {
 		return &ToolResult{
 			Content:   "path traversal detected",
@@ -75,7 +75,7 @@ func (t *ReadFileTool) resolvePath(path string) string {
 	return filepath.Join(t.cwd, path)
 }
 
-// WriteFileTool 写入文件内容
+// WriteFileTool writes content to a file, creating parent directories as needed.
 type WriteFileTool struct {
 	cwd string
 }
@@ -131,7 +131,7 @@ func (t *WriteFileTool) Invoke(ctx context.Context, params map[string]any) (*Too
 		}, nil
 	}
 
-	// 自动创建目录
+	// Automatically create parent directories if they do not exist
 	dir := filepath.Dir(resolved)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return &ToolResult{Content: fmt.Sprintf("failed to create directory: %s", err), IsError: true, ErrorType: ErrorTypeRuntime}, nil
@@ -151,7 +151,7 @@ func (t *WriteFileTool) resolvePath(path string) string {
 	return filepath.Join(t.cwd, path)
 }
 
-// isPathSafe 检查路径是否在 cwd 内（防止路径遍历）
+// isPathSafe verifies that the target path is within the working directory to prevent path traversal.
 func isPathSafe(cwd, target string) bool {
 	rel, err := filepath.Rel(cwd, target)
 	if err != nil {

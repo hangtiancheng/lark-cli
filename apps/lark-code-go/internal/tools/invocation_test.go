@@ -10,7 +10,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/tools"
 )
 
-// mockToolForInvocation 是一个可控的测试工具
+// mockToolForInvocation is a controllable test tool
 type mockToolForInvocation struct {
 	name    string
 	result  string
@@ -73,7 +73,7 @@ func TestInvokeToolRetry(t *testing.T) {
 	eb := events.NewEventBus()
 	defer eb.Close()
 
-	// 第一次失败，第二次成功
+	// First call fails, second succeeds
 	callCount := 0
 	reg := tools.NewRegistry()
 
@@ -130,7 +130,7 @@ func TestInvokeToolNonRetryableError(t *testing.T) {
 	if result.ErrorType != tools.ErrorTypeSchema {
 		t.Errorf("expected schema error, got %s", result.ErrorType)
 	}
-	// schema_error 不可重试，应该只调用 1 次
+	// schema_error is not retryable, should only be called once
 	if callCount != 1 {
 		t.Errorf("expected 1 call (no retry for schema_error), got %d", callCount)
 	}
@@ -147,7 +147,7 @@ func TestInvokeToolEventPublishing(t *testing.T) {
 
 	tools.InvokeTool(context.Background(), reg, "tc-1", "echo", map[string]any{}, eb, "run-1")
 
-	// 应该有 tool.call_started 和 tool.call_finished 事件
+	// Should have tool.call_started and tool.call_finished events
 	eventTypes := drainEvents(ch, 5)
 
 	hasStarted := false

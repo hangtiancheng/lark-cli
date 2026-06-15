@@ -6,6 +6,21 @@ import type { BaseTool } from "../../src/core/tools/base.js";
 import { toolSuccess, toolError } from "../../src/core/tools/base.js";
 import { EventBus } from "../../src/core/events/bus.js";
 import type { ToolUseBlock } from "../../src/core/llm/types.js";
+import type { PermissionManager } from "../../src/core/permissions/manager.js";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isPermissionManager(value: unknown): value is PermissionManager {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value["evaluate"] === "function" &&
+    typeof value["checkAndWait"] === "function" &&
+    typeof value["respond"] === "function" &&
+    typeof value["cancelSession"] === "function"
+  );
+}
 
 describe("Tool Invocation", () => {
   // Feature: Verify invokeTool calls tool and returns result
@@ -128,7 +143,8 @@ describe("Tool Invocation", () => {
       description: "Validated tool",
       inputSchema: { type: "object" as const, properties: {} },
       paramsModel: z.object({ name: z.string() }),
-      invoke: (params) => Promise.resolve(toolSuccess(`Hello ${params.name}`)),
+      invoke: (params) =>
+        Promise.resolve(toolSuccess(`Hello ${String(params["name"])}`)),
     };
     const registry = new ToolRegistry();
     registry.register(tool);
@@ -155,7 +171,12 @@ describe("Tool Invocation", () => {
       name: "slow_tool",
       description: "Slow tool",
       inputSchema: { type: "object" as const, properties: {} },
-      invoke: () => new Promise((resolve) => setTimeout(() => { resolve(toolSuccess("done")); }, 10000)),
+      invoke: () =>
+        new Promise((resolve) =>
+          setTimeout(() => {
+            resolve(toolSuccess("done"));
+          }, 10000),
+        ),
     };
     const registry = new ToolRegistry();
     registry.register(tool);
@@ -168,7 +189,9 @@ describe("Tool Invocation", () => {
       type: "tool_use",
       caller: { type: "direct" },
     };
-    const result = await invokeTool(registry, toolUse, bus, "r1", { timeout: 50 });
+    const result = await invokeTool(registry, toolUse, bus, "r1", {
+      timeout: 50,
+    });
 
     expect(result.isError).toBe(true);
     expect(result.errorType).toBe("timeout");
@@ -257,14 +280,19 @@ describe("Tool Invocation", () => {
 
     // Mock PermissionManager that always denies
     const mockPermissionManager = {
-      evaluate: () => "ask" as const,
-      checkAndWait: async () => [false, "deny_once"] as [boolean, string],
-      respond: () => {},
-      cancelSession: () => {},
+      evaluate: (): "ask" => "ask",
+      checkAndWait: (): Promise<[boolean, string]> =>
+        Promise.resolve([false, "deny_once"]),
+      respond: (_toolUseId: string, _decision: string): void => undefined,
+      cancelSession: (_sessionId: string): void => undefined,
     };
 
+    if (!isPermissionManager(mockPermissionManager)) {
+      throw new Error("Invalid PermissionManager mock");
+    }
+
     const result = await invokeTool(registry, toolUse, bus, "r1", {
-      permissionManager: mockPermissionManager as never,
+      permissionManager: mockPermissionManager,
       sessionId: "s1",
     });
 

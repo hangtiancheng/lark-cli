@@ -1,6 +1,8 @@
 package compact
 
-// TruncateToolResults 截断过大的 tool_result 内容
+// TruncateToolResults truncates oversized tool_result content blocks within messages.
+// Messages whose content exceeds limitChars are truncated to keepChars, preserving a truncation marker.
+// Non-tool_result blocks are left unchanged.
 func TruncateToolResults(messages []map[string]any, limitChars, keepChars int) []map[string]any {
 	if limitChars <= 0 {
 		return messages
@@ -29,7 +31,7 @@ func TruncateToolResults(messages []map[string]any, limitChars, keepChars int) [
 				continue
 			}
 
-			// 截断 tool_result 的 text 内容
+			// Truncate the text content of the tool_result block
 			truncated := truncateBlock(m, limitChars, keepChars)
 			newContent = append(newContent, truncated)
 		}
@@ -44,7 +46,7 @@ func TruncateToolResults(messages []map[string]any, limitChars, keepChars int) [
 	return result
 }
 
-// truncateBlock 截断单个 tool_result 块
+// truncateBlock truncates a single tool_result block if its content exceeds limitChars.
 func truncateBlock(block map[string]any, limitChars, keepChars int) map[string]any {
 	result := make(map[string]any)
 	for k, v := range block {

@@ -10,7 +10,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/llm"
 )
 
-// mockCompactProvider 返回固定摘要文本
+// mockCompactProvider is a mock LLM provider that returns a fixed summary text.
 type mockCompactProvider struct {
 	summary string
 	err     error
@@ -133,7 +133,7 @@ func TestCompactorEventPublishing(t *testing.T) {
 
 	compactor.Compact(context.Background(), messages, "session-1", "run-1", "")
 
-	// 应该发布 context.compacted 事件
+	// Should publish a context.compacted event
 	found := false
 	timeout := make(chan struct{})
 	go func() {

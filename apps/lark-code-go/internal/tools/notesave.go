@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-// NoteSaveTool 将笔记追加到 session 的 notes.md 文件
+// NoteSaveTool appends a note entry to the current session's notes.md file.
 type NoteSaveTool struct {
 	sessionDir string
 	runID      string

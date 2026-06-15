@@ -41,7 +41,7 @@ func TestWriterCreateAndWrite(t *testing.T) {
 
 	w.Stop()
 
-	// 验证文件内容
+	// Verify file contents
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("failed to read trace file: %v", err)
@@ -52,7 +52,7 @@ func TestWriterCreateAndWrite(t *testing.T) {
 		t.Fatalf("expected 2 lines, got %d", len(lines))
 	}
 
-	// 验证每行是有效 JSON
+	// Verify each line is valid JSON
 	var rec1 map[string]any
 	if err := json.Unmarshal([]byte(lines[0]), &rec1); err != nil {
 		t.Fatalf("invalid JSON on line 1: %v", err)
@@ -77,7 +77,7 @@ func TestWriterAppendMode(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "trace.ndjson")
 
-	// 第一次写入
+	// First write
 	w1, err := trace.NewWriter(path)
 	if err != nil {
 		t.Fatalf("NewWriter failed: %v", err)
@@ -85,7 +85,7 @@ func TestWriterAppendMode(t *testing.T) {
 	w1.Write(trace.Record{TS: "1", Direction: "out", Layer: "a", Kind: "x"})
 	w1.Stop()
 
-	// 第二次写入（追加模式）
+	// Second write (append mode)
 	w2, err := trace.NewWriter(path)
 	if err != nil {
 		t.Fatalf("NewWriter failed: %v", err)
@@ -129,12 +129,12 @@ func TestWriterStopFlushes(t *testing.T) {
 		t.Fatalf("NewWriter failed: %v", err)
 	}
 
-	// 写入多条记录
+	// Write multiple records
 	for i := 0; i < 10; i++ {
 		w.Write(trace.Record{TS: "1", Direction: "out", Layer: "test", Kind: "test"})
 	}
 
-	// Stop 应该刷新队列
+	// Stop should flush the queue
 	w.Stop()
 
 	data, err := os.ReadFile(path)

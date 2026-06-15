@@ -67,7 +67,7 @@ func TestRegistryFail(t *testing.T) {
 
 func TestRegistryCompleteNonexistent(t *testing.T) {
 	reg := subagent.NewRegistry()
-	// 不应该 panic
+	// Should not panic
 	reg.Complete("nonexistent", "result")
 	reg.Fail("nonexistent", "reason")
 }

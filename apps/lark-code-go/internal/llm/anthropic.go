@@ -24,7 +24,7 @@ var retryBackoff = [3]time.Duration{
 	4 * time.Second,
 }
 
-// modelContextWindows 记录各模型的上下文窗口大小
+// modelContextWindows maps model identifiers to their context window sizes.
 var modelContextWindows = map[string]int{
 	"claude-sonnet-4-6":          200_000,
 	"claude-opus-4-6":            200_000,
@@ -34,13 +34,13 @@ var modelContextWindows = map[string]int{
 	"claude-3-opus-20240229":     200_000,
 }
 
-// AnthropicProvider 实现 Provider 接口，通过 Anthropic SDK 调用 Claude
+// AnthropicProvider implements the Provider interface using the Anthropic SDK to call Claude models.
 type AnthropicProvider struct {
 	model  string
 	client *anthropic.Client
 }
 
-// NewAnthropicProvider 创建 AnthropicProvider
+// NewAnthropicProvider creates a new AnthropicProvider for the specified model.
 func NewAnthropicProvider(model string, opts ...option.RequestOption) *AnthropicProvider {
 	client := anthropic.NewClient(opts...)
 	return &AnthropicProvider{
@@ -49,9 +49,9 @@ func NewAnthropicProvider(model string, opts ...option.RequestOption) *Anthropic
 	}
 }
 
-// Chat 调用 Anthropic API 进行流式对话
+// Chat invokes the Anthropic API for a streaming conversation.
 func (p *AnthropicProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmResponse, error) {
-	// 发布模型选择事件
+	// Publish the model selection event.
 	if req.Bus != nil {
 		req.Bus.Publish(&bus.LlmModelSelectedEvent{
 			Type:     "llm.model_selected",
@@ -62,7 +62,7 @@ func (p *AnthropicProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmRes
 		})
 	}
 
-	// 构造系统提示
+	// Build system prompt blocks.
 	var systemBlocks []anthropic.TextBlockParam
 	if req.System != "" {
 		systemBlocks = append(systemBlocks, anthropic.TextBlockParam{
@@ -72,7 +72,7 @@ func (p *AnthropicProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmRes
 		})
 	}
 
-	// 构造消息
+	// Convert raw messages to Anthropic format.
 	messages := make([]anthropic.MessageParam, 0, len(req.Messages))
 	for _, msg := range req.Messages {
 		mp, err := convertMessageParam(msg)
@@ -82,10 +82,10 @@ func (p *AnthropicProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmRes
 		messages = append(messages, mp)
 	}
 
-	// 构造工具
+	// Convert tool schemas to Anthropic format.
 	tools := convertToolSchemas(req.ToolSchemas)
 
-	// 构造请求参数
+	// Assemble the request parameters.
 	params := anthropic.MessageNewParams{
 		Model:     anthropic.Model(p.model),
 		MaxTokens: defaultMaxTokens,
@@ -94,7 +94,7 @@ func (p *AnthropicProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmRes
 		Tools:     tools,
 	}
 
-	// 重试循环
+	// Retry loop with exponential backoff.
 	var lastErr error
 	for attempt := 0; attempt <= maxStreamRetries; attempt++ {
 		resp, err := p.doStream(ctx, req, params, attempt == 0)
@@ -118,7 +118,7 @@ func (p *AnthropicProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmRes
 	return nil, fmt.Errorf("anthropic stream failed after %d retries: %w", maxStreamRetries, lastErr)
 }
 
-// doStream 执行单次流式请求
+// doStream performs a single streaming API request.
 func (p *AnthropicProvider) doStream(
 	ctx context.Context,
 	req *ChatRequest,
@@ -130,7 +130,7 @@ func (p *AnthropicProvider) doStream(
 		_ = stream.Close()
 	}()
 
-	// 累积完整消息
+	// Accumulate the complete message from stream events.
 	accumulated := anthropic.Message{}
 	now := time.Now().UTC().Format(time.RFC3339)
 
@@ -141,7 +141,7 @@ func (p *AnthropicProvider) doStream(
 			slog.Warn("failed to accumulate stream event", "error", err)
 		}
 
-		// 流式发布 token 事件（仅首次尝试）
+		// Publish token events during streaming (first attempt only).
 		if publishTokens {
 			if delta := event.AsContentBlockDelta(); delta.Delta.Type == "text_delta" {
 				text := delta.Delta.Text
@@ -161,25 +161,25 @@ func (p *AnthropicProvider) doStream(
 		return nil, err
 	}
 
-	// 提取结果
+	// Extract the response result.
 	resp := &LlmResponse{
 		StopReason: string(accumulated.StopReason),
 		Text:       "",
 		Usage:      &UsageStats{},
 	}
 
-	// 提取 usage
+	// Extract token usage statistics.
 	resp.Usage.InputTokens = int(accumulated.Usage.InputTokens)
 	resp.Usage.OutputTokens = int(accumulated.Usage.OutputTokens)
 	resp.Usage.CacheReadInputTokens = int(accumulated.Usage.CacheReadInputTokens)
 	resp.Usage.CacheCreationInputTokens = int(accumulated.Usage.CacheCreationInputTokens)
 
-	// 计算 context_pct
+	// Calculate context window utilization percentage.
 	if ctxWindow, ok := modelContextWindows[p.model]; ok && ctxWindow > 0 {
 		resp.Usage.ContextPct = float64(resp.Usage.InputTokens) / float64(ctxWindow)
 	}
 
-	// 发布 usage 事件
+	// Publish the usage event.
 	if req.Bus != nil {
 		req.Bus.Publish(&bus.LlmUsageEvent{
 			Type:                     "llm.usage",
@@ -193,7 +193,7 @@ func (p *AnthropicProvider) doStream(
 		})
 	}
 
-	// 解析 content blocks
+	// Parse content blocks from the accumulated response.
 	for _, block := range accumulated.Content {
 		switch b := block.AsAny().(type) {
 		case anthropic.TextBlock:
@@ -222,7 +222,7 @@ func (p *AnthropicProvider) doStream(
 	return resp, nil
 }
 
-// convertMessageParam 将 raw map 转换为 anthropic.MessageParam
+// convertMessageParam converts a raw map to an anthropic.MessageParam.
 func convertMessageParam(msg map[string]any) (anthropic.MessageParam, error) {
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -235,7 +235,7 @@ func convertMessageParam(msg map[string]any) (anthropic.MessageParam, error) {
 	return mp, nil
 }
 
-// convertToolSchemas 将 raw tool schema 转换为 anthropic.ToolUnionParam
+// convertToolSchemas converts raw tool schema maps to anthropic.ToolUnionParam slices.
 func convertToolSchemas(schemas []map[string]any) []anthropic.ToolUnionParam {
 	tools := make([]anthropic.ToolUnionParam, 0, len(schemas))
 	for _, schema := range schemas {
@@ -256,7 +256,7 @@ func convertToolSchemas(schemas []map[string]any) []anthropic.ToolUnionParam {
 	return tools
 }
 
-// convertInputSchema 将 map 转换为 anthropic.ToolInputSchemaParam
+// convertInputSchema converts a raw map to an anthropic.ToolInputSchemaParam.
 func convertInputSchema(schema map[string]any) anthropic.ToolInputSchemaParam {
 	if schema == nil {
 		return anthropic.ToolInputSchemaParam{

@@ -12,10 +12,10 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/bus"
 )
 
-// HandlerFunc 处理 JSON-RPC 请求并返回结果或错误
+// HandlerFunc processes a JSON-RPC request and returns a result or error.
 type HandlerFunc func(ctx context.Context, params json.RawMessage) (any, error)
 
-// HandlerError 表示 JSON-RPC handler 抛出的错误
+// HandlerError represents an error raised by a JSON-RPC handler.
 type HandlerError struct {
 	Code    int
 	Message string
@@ -26,12 +26,12 @@ func (e *HandlerError) Error() string {
 	return fmt.Sprintf("[%d] %s", e.Code, e.Message)
 }
 
-// NewHandlerError 构造 HandlerError
+// NewHandlerError constructs a new HandlerError with the given code and message.
 func NewHandlerError(code int, message string) *HandlerError {
 	return &HandlerError{Code: code, Message: message}
 }
 
-// Server 是 TCP NDJSON JSON-RPC 服务端
+// Server is a TCP-based NDJSON JSON-RPC server.
 type Server struct {
 	host     string
 	port     int
@@ -39,20 +39,20 @@ type Server struct {
 	handlers map[string]HandlerFunc
 	mu       sync.RWMutex
 
-	// 连接管理
+	// Active connection tracking.
 	conns   map[net.Conn]struct{}
 	connsMu sync.Mutex
 
-	// 事件推送（由 broadcaster 注入）
+	// Event broadcasting (injected by the Broadcaster).
 	broadcaster *Broadcaster
 
-	// 关闭信号
+	// Graceful shutdown signaling.
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 }
 
-// NewServer 创建 TCP 服务器
+// NewServer creates a new TCP server.
 func NewServer(host string, port int) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
@@ -65,19 +65,19 @@ func NewServer(host string, port int) *Server {
 	}
 }
 
-// Register 注册 JSON-RPC handler
+// Register registers a JSON-RPC handler for the given method.
 func (s *Server) Register(method string, handler HandlerFunc) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.handlers[method] = handler
 }
 
-// SetBroadcaster 设置事件广播器
+// SetBroadcaster sets the event broadcaster.
 func (s *Server) SetBroadcaster(b *Broadcaster) {
 	s.broadcaster = b
 }
 
-// Start 开始监听 TCP 连接
+// Start begins listening for incoming TCP connections.
 func (s *Server) Start() error {
 	addr := net.JoinHostPort(s.host, fmt.Sprintf("%d", s.port))
 	listener, err := net.Listen("tcp", addr)
@@ -93,7 +93,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Addr 返回服务器监听地址
+// Addr returns the server's listening address.
 func (s *Server) Addr() string {
 	if s.listener == nil {
 		return ""
@@ -101,14 +101,14 @@ func (s *Server) Addr() string {
 	return s.listener.Addr().String()
 }
 
-// Stop 优雅关闭服务器
+// Stop gracefully shuts down the server.
 func (s *Server) Stop() {
 	s.cancel()
 	if s.listener != nil {
 		_ = s.listener.Close()
 	}
 
-	// 关闭所有连接
+	// Close all active connections.
 	s.connsMu.Lock()
 	for conn := range s.conns {
 		_ = conn.Close()
@@ -118,7 +118,7 @@ func (s *Server) Stop() {
 	s.wg.Wait()
 }
 
-// acceptLoop 接受新连接
+// acceptLoop accepts new incoming connections.
 func (s *Server) acceptLoop() {
 	defer s.wg.Done()
 
@@ -143,7 +143,7 @@ func (s *Server) acceptLoop() {
 	}
 }
 
-// handleConnection 处理单个连接的读写
+// handleConnection handles the read/write lifecycle of a single connection.
 func (s *Server) handleConnection(conn net.Conn) {
 	defer s.wg.Done()
 	defer func() {
@@ -151,7 +151,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 		delete(s.conns, conn)
 		s.connsMu.Unlock()
 
-		// 清理 broadcaster 中的订阅
+		// Clean up the broadcaster subscription for this connection.
 		if s.broadcaster != nil {
 			s.broadcaster.UnsubscribeWriter(conn)
 		}
@@ -177,7 +177,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 	}
 }
 
-// handleLine 解析并分发单行 JSON-RPC 请求
+// handleLine parses and dispatches a single line as a JSON-RPC request.
 func (s *Server) handleLine(conn net.Conn, line []byte) {
 	var req bus.JsonRpcRequest
 	if err := json.Unmarshal(line, &req); err != nil {
@@ -190,7 +190,7 @@ func (s *Server) handleLine(conn net.Conn, line []byte) {
 		return
 	}
 
-	// 特殊处理 event.subscribe —— 需要注册 broadcaster writer
+	// Special handling for event.subscribe: register the broadcaster writer.
 	if req.Method == "event.subscribe" && s.broadcaster != nil {
 		s.broadcaster.RegisterWriter(conn)
 	}
@@ -205,11 +205,11 @@ func (s *Server) handleLine(conn net.Conn, line []byte) {
 		return
 	}
 
-	// 异步执行 handler 防止阻塞读取循环
+	// Execute the handler asynchronously to avoid blocking the read loop.
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		// 将连接注入 context，供 handler 使用（如 event.subscribe）
+		// Inject the connection into the context for handler access (e.g., event.subscribe).
 		handlerCtx := ContextWithConn(s.ctx, conn)
 		result, err := handler(handlerCtx, req.Params)
 		if err != nil {
@@ -224,7 +224,7 @@ func (s *Server) handleLine(conn net.Conn, line []byte) {
 	}()
 }
 
-// sendJSON 将对象序列化为 JSON 并写入连接
+// sendJSON serializes the given value as JSON and writes it to the connection.
 func (s *Server) sendJSON(conn net.Conn, v any) {
 	data, err := json.Marshal(v)
 	if err != nil {
@@ -238,7 +238,7 @@ func (s *Server) sendJSON(conn net.Conn, v any) {
 	}
 }
 
-// WriteToConn 向指定连接写入 JSON 数据（供 broadcaster 使用）
+// WriteToConn writes a JSON-encoded value to the given connection (used by the broadcaster).
 func WriteToConn(conn net.Conn, v any) error {
 	data, err := json.Marshal(v)
 	if err != nil {

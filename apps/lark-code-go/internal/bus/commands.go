@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// SessionMode 定义 session 模式
+// SessionMode defines the operating mode for a session.
 type SessionMode string
 
 const (
@@ -13,7 +13,7 @@ const (
 	SessionModeChat    SessionMode = "chat"
 )
 
-// SessionStatus 定义 session 状态
+// SessionStatus defines the lifecycle status of a session.
 type SessionStatus string
 
 const (
@@ -24,12 +24,12 @@ const (
 
 // -- Ping --
 
-// PingCommand 请求心跳检测
+// PingCommand requests a heartbeat check from the daemon.
 type PingCommand struct {
 	Client string `json:"client"`
 }
 
-// PongResult 返回心跳响应
+// PongResult contains the heartbeat response from the daemon.
 type PongResult struct {
 	ServerVersion string `json:"server_version"`
 	UptimeMS      int64  `json:"uptime_ms"`
@@ -38,26 +38,26 @@ type PongResult struct {
 
 // -- Agent Run --
 
-// AgentRunCommand 请求一次性 agent 运行
+// AgentRunCommand requests a one-shot agent run with the given goal.
 type AgentRunCommand struct {
 	Goal string `json:"goal"`
 }
 
-// AgentRunResult 返回 agent 运行结果
+// AgentRunResult contains the result of an agent run request.
 type AgentRunResult struct {
 	RunID string `json:"run_id"`
 }
 
 // -- Event Subscribe --
 
-// EventSubscribeCommand 请求订阅事件流
+// EventSubscribeCommand requests subscription to the event stream.
 type EventSubscribeCommand struct {
 	Topics        []string `json:"topics"`
 	Scope         string   `json:"scope"`
 	ReplayFromRun string   `json:"replay_from_run,omitempty"`
 }
 
-// EventSubscribeResult 返回订阅确认
+// EventSubscribeResult contains the confirmation of an event subscription.
 type EventSubscribeResult struct {
 	SubscriptionID string `json:"subscription_id"`
 	ReplayedCount  int    `json:"replayed_count"`
@@ -65,13 +65,13 @@ type EventSubscribeResult struct {
 
 // -- Session Create --
 
-// SessionCreateCommand 请求创建新 session
+// SessionCreateCommand requests creation of a new session.
 type SessionCreateCommand struct {
 	Mode  SessionMode `json:"mode"`
 	Title string      `json:"title"`
 }
 
-// SessionCreateResult 返回创建的 session 信息
+// SessionCreateResult contains the newly created session information.
 type SessionCreateResult struct {
 	SessionID string        `json:"session_id"`
 	Status    SessionStatus `json:"status"`
@@ -79,63 +79,63 @@ type SessionCreateResult struct {
 
 // -- Session Send Message --
 
-// SessionSendMessageCommand 请求发送消息到 session
+// SessionSendMessageCommand requests sending a message to an existing session.
 type SessionSendMessageCommand struct {
 	SessionID string `json:"session_id"`
 	Content   string `json:"content"`
 }
 
-// SessionSendMessageResult 返回消息发送结果
+// SessionSendMessageResult contains the result of sending a message to a session.
 type SessionSendMessageResult struct {
 	RunID string `json:"run_id"`
 }
 
 // -- Session Get History --
 
-// SessionGetHistoryCommand 请求获取 session 历史
+// SessionGetHistoryCommand requests the message history of a session.
 type SessionGetHistoryCommand struct {
 	SessionID string `json:"session_id"`
 }
 
-// SessionGetHistoryResult 返回 session 历史消息
+// SessionGetHistoryResult contains the historical messages of a session.
 type SessionGetHistoryResult struct {
 	Messages []json.RawMessage `json:"messages"`
 }
 
 // -- Session Close --
 
-// SessionCloseCommand 请求关闭 session
+// SessionCloseCommand requests closing an existing session.
 type SessionCloseCommand struct {
 	SessionID string `json:"session_id"`
 }
 
-// SessionCloseResult 返回关闭后的 session 状态
+// SessionCloseResult contains the status of the closed session.
 type SessionCloseResult struct {
 	Status SessionStatus `json:"status"`
 }
 
 // -- Permission Respond --
 
-// PermissionRespondCommand 响应权限审批请求
+// PermissionRespondCommand responds to a pending permission approval request.
 type PermissionRespondCommand struct {
 	ToolUseID string `json:"tool_use_id"`
 	Decision  string `json:"decision"`
 }
 
-// PermissionRespondResult 返回权限响应确认
+// PermissionRespondResult contains the confirmation of a permission response.
 type PermissionRespondResult struct {
 	OK bool `json:"ok"`
 }
 
 // -- Session Compact --
 
-// SessionCompactCommand 请求压缩 session 上下文
+// SessionCompactCommand requests compaction of a session's conversation context.
 type SessionCompactCommand struct {
 	SessionID string `json:"session_id"`
 	Focus     string `json:"focus"`
 }
 
-// SessionCompactResult 返回压缩结果
+// SessionCompactResult contains the result of a context compaction operation.
 type SessionCompactResult struct {
 	SummaryTokens int `json:"summary_tokens"`
 	SavedTokens   int `json:"saved_tokens"`
@@ -143,7 +143,7 @@ type SessionCompactResult struct {
 
 // -- Command Dispatch --
 
-// commandTypes 注册所有命令类型名到解析函数的映射
+// commandTypes maps command method names to their constructor functions for dispatch.
 var commandTypes = map[string]func() any{
 	"core.ping":            func() any { return &PingCommand{} },
 	"agent.run":            func() any { return &AgentRunCommand{} },
@@ -156,7 +156,7 @@ var commandTypes = map[string]func() any{
 	"session.compact":      func() any { return &SessionCompactCommand{} },
 }
 
-// UnmarshalCommand 从 JSON-RPC 请求的 params 解析命令对象
+// UnmarshalCommand parses a command object from JSON-RPC request params based on the method name.
 func UnmarshalCommand(method string, params json.RawMessage) (any, error) {
 	constructor, ok := commandTypes[method]
 	if !ok {

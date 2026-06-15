@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-// Client 实现 JSON-RPC 2.0 over stdio 的 MCP 客户端
+// Client implements an MCP client using JSON-RPC 2.0 over stdio.
 type Client struct {
 	name    string
 	cmd     *exec.Cmd
@@ -21,7 +21,7 @@ type Client struct {
 	pending map[int]chan json.RawMessage
 }
 
-// NewClient 创建 MCP 客户端
+// NewClient creates a new MCP client with the given name and command.
 func NewClient(name string, command string, args []string, env map[string]string) *Client {
 	return &Client{
 		name:    name,
@@ -29,11 +29,11 @@ func NewClient(name string, command string, args []string, env map[string]string
 	}
 }
 
-// Start 启动 MCP 服务器进程并执行初始化握手
+// Start launches the MCP server process and performs the initialization handshake.
 func (c *Client) Start(ctx context.Context, command string, args []string, env map[string]string) error {
 	cmd := exec.CommandContext(ctx, command, args...)
 
-	// 设置环境变量
+	// Set environment variables for the subprocess
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
@@ -47,7 +47,7 @@ func (c *Client) Start(ctx context.Context, command string, args []string, env m
 		return fmt.Errorf("failed to get stdout pipe: %w", err)
 	}
 
-	// 排空 stderr
+	// Discard stderr output
 	cmd.Stderr = io.Discard
 
 	if err := cmd.Start(); err != nil {
@@ -58,10 +58,10 @@ func (c *Client) Start(ctx context.Context, command string, args []string, env m
 	c.stdin = stdin
 	c.stdout = stdout
 
-	// 启动读取循环
+	// Start the read loop
 	go c.readLoop()
 
-	// MCP 初始化握手
+	// Perform MCP initialization handshake
 	if _, err := c.call(ctx, "initialize", map[string]any{
 		"protocolVersion": "2024-11-05",
 		"capabilities":    map[string]any{},
@@ -70,7 +70,7 @@ func (c *Client) Start(ctx context.Context, command string, args []string, env m
 		return fmt.Errorf("MCP initialize failed: %w", err)
 	}
 
-	// 发送 initialized 通知
+	// Send the initialized notification
 	if err := c.notify("notifications/initialized", map[string]any{}); err != nil {
 		return fmt.Errorf("MCP initialized notification failed: %w", err)
 	}
@@ -78,7 +78,7 @@ func (c *Client) Start(ctx context.Context, command string, args []string, env m
 	return nil
 }
 
-// Stop 关闭 MCP 客户端
+// Stop shuts down the MCP client and kills the server process.
 func (c *Client) Stop() {
 	if c.stdin != nil {
 		_ = c.stdin.Close()
@@ -89,7 +89,7 @@ func (c *Client) Stop() {
 	}
 }
 
-// ListTools 列出 MCP 服务器提供的工具
+// ListTools lists all tools provided by the MCP server.
 func (c *Client) ListTools(ctx context.Context) ([]ToolDef, error) {
 	result, err := c.call(ctx, "tools/list", map[string]any{})
 	if err != nil {
@@ -106,7 +106,7 @@ func (c *Client) ListTools(ctx context.Context) ([]ToolDef, error) {
 	return response.Tools, nil
 }
 
-// CallTool 调用 MCP 工具
+// CallTool invokes an MCP tool with the given arguments.
 func (c *Client) CallTool(ctx context.Context, name string, arguments map[string]any) (*ToolCallResult, error) {
 	result, err := c.call(ctx, "tools/call", map[string]any{
 		"name":      name,
@@ -124,26 +124,26 @@ func (c *Client) CallTool(ctx context.Context, name string, arguments map[string
 	return &callResult, nil
 }
 
-// ToolDef 表示 MCP 工具定义
+// ToolDef represents an MCP tool definition.
 type ToolDef struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description"`
 	InputSchema map[string]any `json:"inputSchema"`
 }
 
-// ToolCallResult 表示 MCP 工具调用结果
+// ToolCallResult represents the result of an MCP tool call.
 type ToolCallResult struct {
 	Content []ContentItem `json:"content"`
 	IsError bool          `json:"isError"`
 }
 
-// ContentItem 表示 MCP 内容项
+// ContentItem represents an MCP content item.
 type ContentItem struct {
 	Type string `json:"type"`
 	Text string `json:"text"`
 }
 
-// call 发送 JSON-RPC 请求并等待响应
+// call sends a JSON-RPC request and waits for the response.
 func (c *Client) call(ctx context.Context, method string, params map[string]any) (json.RawMessage, error) {
 	c.mu.Lock()
 	c.nextID++
@@ -182,7 +182,7 @@ func (c *Client) call(ctx context.Context, method string, params map[string]any)
 	}
 }
 
-// notify 发送 JSON-RPC 通知（无响应）
+// notify sends a JSON-RPC notification (no response expected).
 func (c *Client) notify(method string, params map[string]any) error {
 	req := map[string]any{
 		"jsonrpc": "2.0",
@@ -201,7 +201,7 @@ func (c *Client) notify(method string, params map[string]any) error {
 	return err
 }
 
-// readLoop 读取 MCP 服务器输出
+// readLoop reads and dispatches messages from the MCP server stdout.
 func (c *Client) readLoop() {
 	buf := make([]byte, 0, 64*1024)
 	scanner := newLineScanner(c.stdout, buf)
@@ -233,7 +233,7 @@ func (c *Client) readLoop() {
 
 			if ok {
 				if errRaw, ok := raw["error"]; ok {
-					ch <- errRaw // 传递错误给调用方处理
+					ch <- errRaw // Forward the error to the caller for handling
 				} else if resultRaw, ok := raw["result"]; ok {
 					ch <- resultRaw
 				}
@@ -242,7 +242,7 @@ func (c *Client) readLoop() {
 	}
 }
 
-// lineScanner 简单的按行读取器
+// lineScanner is a simple line-by-line reader.
 type lineScanner struct {
 	reader io.Reader
 	buf    []byte

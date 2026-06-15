@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Decision 表示权限决策
+// Decision represents a permission decision.
 type Decision string
 
 const (
@@ -17,64 +17,64 @@ const (
 	DecisionAutoDeny    Decision = "auto_deny"
 )
 
-// ToolPolicy 定义工具的权限规则
+// ToolPolicy defines permission rules for a tool.
 type ToolPolicy struct {
 	AllowPatterns []string `json:"allow_patterns" toml:"allow_patterns"`
 	DenyPatterns  []string `json:"deny_patterns" toml:"deny_patterns"`
 }
 
-// PolicyStore 持久化的权限策略
+// PolicyStore holds persisted permission policies.
 type PolicyStore struct {
 	Tools map[string]*ToolPolicy `json:"tools" toml:"tools"`
 }
 
-// Evaluate 评估工具调用的权限
-// 优先级顺序：deny > OUTSIDE_CWD > allow > default
+// Evaluate assesses the permission for a tool invocation.
+// Priority order: deny > OUTSIDE_CWD > allow > default.
 func (p *PolicyStore) Evaluate(toolName string, params map[string]any, cwd string) Decision {
 	policy, ok := p.Tools[toolName]
 	if !ok {
-		return DecisionAllowOnce // 默认允许一次
+		return DecisionAllowOnce // Default: allow once (requires user confirmation)
 	}
 
-	// Tier 3 (最高): deny 模式 -- 强制拒绝
+	// Tier 3 (highest): deny mode - force deny
 	for _, pattern := range policy.DenyPatterns {
 		if matchParamPattern(pattern, params) {
 			return DecisionAutoDeny
 		}
 	}
 
-	// Tier 2: OUTSIDE_CWD -- 强制 ASK，覆盖 allow_patterns
+	// Tier 2: OUTSIDE_CWD - force ASK, overrides allow_patterns
 	if isOutsideCWD(toolName, params, cwd) {
 		return DecisionAllowOnce
 	}
 
-	// Tier 1: allow 模式 -- 自动允许
+	// Tier 1: allow mode - auto-allow
 	for _, pattern := range policy.AllowPatterns {
 		if matchParamPattern(pattern, params) {
 			return DecisionAutoAllow
 		}
 	}
 
-	// Tier 0 (默认): 需要询问
+	// Tier 0 (default): requires user confirmation
 	return DecisionAllowOnce
 }
 
-// matchParamPattern 检查参数是否匹配 glob 模式
+// matchParamPattern checks if any parameter value matches the given glob pattern.
 func matchParamPattern(pattern string, params map[string]any) bool {
 	for _, v := range params {
 		if s, ok := v.(string); ok {
-			// 尝试 filepath.Match (glob)
+			// Try filepath.Match (glob pattern)
 			if matched, _ := filepath.Match(pattern, s); matched {
 				return true
 			}
-			// 支持前缀匹配 (如 "rm *" 匹配 "rm -rf /")
+			// Support prefix matching (e.g., 'rm *' matches 'rm -rf /')
 			if len(pattern) >= 2 && pattern[len(pattern)-1] == '*' && pattern[len(pattern)-2] == ' ' {
 				prefix := pattern[:len(pattern)-1] // "rm "
 				if len(s) >= len(prefix) && s[:len(prefix)] == prefix {
 					return true
 				}
 			}
-			// 支持通配符匹配
+			// Support wildcard matching
 			if pattern == "*" {
 				return true
 			}
@@ -83,7 +83,7 @@ func matchParamPattern(pattern string, params map[string]any) bool {
 	return false
 }
 
-// isOutsideCWD 检查工具操作是否在工作目录之外
+// isOutsideCWD checks whether a tool operation targets a path outside the working directory.
 func isOutsideCWD(toolName string, params map[string]any, cwd string) bool {
 	if cwd == "" {
 		return false

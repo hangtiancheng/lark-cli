@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-// Task 表示一个跟踪的任务
+// Task represents a tracked task with status and dependency information.
 type Task struct {
 	ID          string   `json:"id"`
 	Subject     string   `json:"subject"`
@@ -20,7 +20,7 @@ type Task struct {
 	BlockedBy   []string `json:"blocked_by,omitempty"`
 }
 
-// 有效的状态值
+// validStatuses defines the set of allowed task status values.
 var validStatuses = map[string]bool{
 	"pending":     true,
 	"in_progress": true,
@@ -28,7 +28,7 @@ var validStatuses = map[string]bool{
 	"deleted":     true,
 }
 
-// TaskManager 管理任务的文件 CRUD
+// TaskManager manages file-backed CRUD operations for tasks.
 type TaskManager struct {
 	mu     sync.Mutex
 	dir    string
@@ -36,13 +36,13 @@ type TaskManager struct {
 	nextID int
 }
 
-// NewTaskManager 创建 TaskManager
+// NewTaskManager creates a new TaskManager and restores state from disk.
 func NewTaskManager(dir string) *TaskManager {
 	m := &TaskManager{
 		dir:    dir,
 		nextID: 1,
 	}
-	// 从已有文件恢复 nextID
+	// Restore nextID from existing tasks on disk
 	_ = m.load()
 	return m
 }
@@ -59,12 +59,12 @@ func (m *TaskManager) load() error {
 	if err := json.Unmarshal(data, &m.tasks); err != nil {
 		return err
 	}
-	// 从已有任务中恢复 nextID，避免重启后 ID 冲突
+	// Recover nextID from existing tasks to avoid ID collisions after restart
 	m.nextID = m.computeNextID()
 	return nil
 }
 
-// computeNextID 扫描现有任务，返回 max(ID) + 1
+// computeNextID scans existing tasks and returns max(ID) + 1 to ensure unique IDs.
 func (m *TaskManager) computeNextID() int {
 	maxID := 0
 	for _, task := range m.tasks {
@@ -86,7 +86,7 @@ func (m *TaskManager) save() error {
 	return os.WriteFile(filepath.Join(m.dir, "tasks.json"), data, 0o644)
 }
 
-// Create 创建新任务
+// Create creates a new task with the given subject and description.
 func (m *TaskManager) Create(subject, description string) *Task {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -104,13 +104,13 @@ func (m *TaskManager) Create(subject, description string) *Task {
 	return task
 }
 
-// Update 更新任务
+// Update updates a task's status and/or blocked_by dependencies.
 func (m *TaskManager) Update(id string, status string, blockedBy []string) (*Task, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	_ = m.load()
 
-	// 状态验证
+	// Validate status value against the allowed set
 	if status != "" && !validStatuses[status] {
 		return nil, fmt.Errorf("invalid status %q: must be one of pending, in_progress, completed, deleted", status)
 	}
@@ -124,7 +124,7 @@ func (m *TaskManager) Update(id string, status string, blockedBy []string) (*Tas
 				task.BlockedBy = blockedBy
 			}
 
-			// 完成任务时自动清理其他任务的 blocked_by 引用
+			// Automatically remove the completed task ID from other tasks' blocked_by references
 			if status == "completed" {
 				m.clearBlockedBy(id)
 			}
@@ -136,7 +136,7 @@ func (m *TaskManager) Update(id string, status string, blockedBy []string) (*Tas
 	return nil, fmt.Errorf("task %s not found", id)
 }
 
-// clearBlockedBy 从所有任务的 blocked_by 中移除指定 ID
+// clearBlockedBy removes the specified task ID from all tasks' blocked_by lists.
 func (m *TaskManager) clearBlockedBy(completedID string) {
 	for _, task := range m.tasks {
 		if task.ID == completedID {
@@ -152,7 +152,7 @@ func (m *TaskManager) clearBlockedBy(completedID string) {
 	}
 }
 
-// FormatList 返回格式化的任务列表摘要
+// FormatList returns a human-readable summary of all tasks.
 func (m *TaskManager) FormatList() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -182,7 +182,7 @@ func (m *TaskManager) FormatList() string {
 	return strings.Join(lines, "\n")
 }
 
-// List 列出所有任务
+// List returns all tasks.
 func (m *TaskManager) List() []*Task {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -190,7 +190,7 @@ func (m *TaskManager) List() []*Task {
 	return m.tasks
 }
 
-// Get 获取单个任务
+// Get retrieves a single task by its ID.
 func (m *TaskManager) Get(id string) (*Task, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

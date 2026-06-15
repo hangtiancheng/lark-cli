@@ -11,7 +11,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/transport"
 )
 
-// mockWriter 是一个用于测试的 writer，记录写入的数据
+// mockWriter is a test writer that records all data written to it.
 type mockWriter struct {
 	buf bytes.Buffer
 }
@@ -44,7 +44,7 @@ func TestBroadcasterRegisterAndHandle(t *testing.T) {
 		t.Fatal("expected output, got empty")
 	}
 
-	// 验证输出是有效的 JSON
+	// Verify the output is valid JSON.
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	if len(lines) != 1 {
 		t.Fatalf("expected 1 line, got %d", len(lines))
@@ -64,17 +64,17 @@ func TestBroadcasterTopicFilter(t *testing.T) {
 	b := transport.NewBroadcaster()
 	w := &mockWriter{}
 
-	// 只订阅 run.* 事件
+	// Subscribe only to run.* events.
 	b.Subscribe(w, []string{"run.*"}, "global")
 
-	// 应该收到的事件
+	// Event that should be received.
 	b.Handle(&bus.RunStartedEvent{
 		Type:  "run.started",
 		RunID: "run-1",
 		TS:    time.Now().UTC().Format(time.RFC3339),
 	})
 
-	// 不应该收到的事件
+	// Event that should NOT be received.
 	b.Handle(&bus.ToolCallStartedEvent{
 		Type:      "tool.call_started",
 		RunID:     "run-1",
@@ -86,7 +86,7 @@ func TestBroadcasterTopicFilter(t *testing.T) {
 	output := w.String()
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 
-	// 应该只有 1 行 (run.started)
+	// There should be exactly 1 line (run.started).
 	if len(lines) != 1 {
 		t.Errorf("expected 1 line (only run.started), got %d: %s", len(lines), output)
 	}
@@ -96,17 +96,17 @@ func TestBroadcasterScopeFilter(t *testing.T) {
 	b := transport.NewBroadcaster()
 	w := &mockWriter{}
 
-	// 只订阅 run-1 的事件
+	// Subscribe only to events for run-1.
 	b.Subscribe(w, []string{"*"}, "run:run-1")
 
-	// 应该收到
+	// Should be received (matching run_id).
 	b.Handle(&bus.RunStartedEvent{
 		Type:  "run.started",
 		RunID: "run-1",
 		TS:    time.Now().UTC().Format(time.RFC3339),
 	})
 
-	// 不应该收到 (不同的 run_id)
+	// Should NOT be received (different run_id).
 	b.Handle(&bus.RunStartedEvent{
 		Type:  "run.started",
 		RunID: "run-2",
@@ -127,17 +127,17 @@ func TestBroadcasterUnsubscribeWriter(t *testing.T) {
 
 	b.RegisterWriter(w)
 
-	// 发送一个事件
+	// Send one event.
 	b.Handle(&bus.RunStartedEvent{
 		Type:  "run.started",
 		RunID: "run-1",
 		TS:    time.Now().UTC().Format(time.RFC3339),
 	})
 
-	// 取消订阅
+	// Unsubscribe.
 	b.UnsubscribeWriter(w)
 
-	// 再发送一个事件
+	// Send another event after unsubscribing.
 	b.Handle(&bus.RunFinishedEvent{
 		Type:   "run.finished",
 		RunID:  "run-1",
@@ -148,7 +148,7 @@ func TestBroadcasterUnsubscribeWriter(t *testing.T) {
 	output := w.String()
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 
-	// 应该只有 1 行 (取消前的那个事件)
+	// There should be exactly 1 line (the event received before unsubscribing).
 	if len(lines) != 1 {
 		t.Errorf("expected 1 line (before unsubscribe), got %d: %s", len(lines), output)
 	}
@@ -180,7 +180,7 @@ func TestBroadcasterWildcardSubscription(t *testing.T) {
 	b := transport.NewBroadcaster()
 	w := &mockWriter{}
 
-	// 订阅所有事件
+	// Subscribe to all events.
 	b.Subscribe(w, []string{"*"}, "global")
 
 	b.Handle(&bus.RunStartedEvent{Type: "run.started", RunID: "run-1", TS: "now"})
@@ -199,7 +199,7 @@ func TestBroadcasterGlobalScopeReceivesAll(t *testing.T) {
 	b := transport.NewBroadcaster()
 	w := &mockWriter{}
 
-	// global scope 应该接收所有事件（无 run_id 的也包括）
+	// Global scope should receive all events (including those without run_id).
 	b.Subscribe(w, []string{"*"}, "global")
 
 	b.Handle(&bus.SessionCreatedEvent{

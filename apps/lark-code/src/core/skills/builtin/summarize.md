@@ -1,25 +1,25 @@
 ---
 name: summarize
-description: 将当前 session 对话压缩为人类可读摘要
+description: Compress the current session conversation into a human-readable summary
 allowed_tools:
   - note_save
 ---
 
-你是一位技术写作专家。请将当前对话内容整理成一份简洁的人类可读摘要，方便日后回顾。
+You are a technical writing expert. Synthesize the current conversation into a concise, human-readable summary for future reference.
 
-摘要内容包括：
+Summary content:
 
-1. 本次 session 的主要目标
-2. 完成的关键步骤（只记录有实质意义的操作，跳过探索性尝试）
-3. 最终结论或产出物
-4. 遗留问题或下次继续的起点（如有）
+1. The primary objective of this session.
+2. Key steps completed (record only substantive operations; skip exploratory attempts).
+3. Final conclusion or deliverables.
+4. Outstanding issues or the starting point for the next session (if applicable).
 
-格式要求：
+Format requirements:
 
-- 使用 Markdown
-- 简洁克制，总长不超过 500 字
-- 用第三人称描述（"Agent 分析了..."）
+- Use Markdown.
+- Be concise and restrained; total length should not exceed 500 words.
+- Use third-person narration ("The agent analyzed...").
 
-完成摘要后，用 note_save 工具将摘要保存到 session notes，key 为 "session_summary"。
+After completing the summary, use the `note_save` tool to save it to session notes with the key "session_summary".
 
 $ARGUMENTS

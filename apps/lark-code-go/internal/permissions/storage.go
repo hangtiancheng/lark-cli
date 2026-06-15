@@ -6,7 +6,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// LoadPolicy 从 TOML 文件加载权限策略
+// LoadPolicy loads a permission policy from a TOML file.
 func LoadPolicy(path string) (*PolicyStore, error) {
 	store := &PolicyStore{Tools: make(map[string]*ToolPolicy)}
 
@@ -29,7 +29,7 @@ func LoadPolicy(path string) (*PolicyStore, error) {
 	return store, nil
 }
 
-// SavePolicy 将权限策略保存到 TOML 文件
+// SavePolicy saves a permission policy to a TOML file.
 func SavePolicy(path string, store *PolicyStore) error {
 	f, err := os.Create(path)
 	if err != nil {

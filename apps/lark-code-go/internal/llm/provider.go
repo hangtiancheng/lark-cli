@@ -6,7 +6,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/events"
 )
 
-// UsageStats 记录单次 LLM 调用的 token 用量
+// UsageStats records token usage statistics for a single LLM call.
 type UsageStats struct {
 	InputTokens              int     `json:"input_tokens"`
 	OutputTokens             int     `json:"output_tokens"`
@@ -15,21 +15,21 @@ type UsageStats struct {
 	ContextPct               float64 `json:"context_pct"`
 }
 
-// ToolCallBlock 表示 LLM 请求调用的一个工具
+// ToolCallBlock represents a tool invocation requested by the LLM.
 type ToolCallBlock struct {
 	ID    string         `json:"id"`
 	Name  string         `json:"name"`
 	Input map[string]any `json:"input"`
 }
 
-// ThinkingBlock 表示 LLM 的 extended thinking 输出
+// ThinkingBlock represents an extended thinking output block from the LLM.
 type ThinkingBlock struct {
 	Type      string `json:"type"`
 	Thinking  string `json:"thinking"`
 	Signature string `json:"signature,omitempty"`
 }
 
-// LlmResponse 是 Provider.Chat() 的返回值
+// LlmResponse is the return type of Provider.Chat().
 type LlmResponse struct {
 	StopReason     string          `json:"stop_reason"`
 	ToolCalls      []ToolCallBlock `json:"tool_calls"`
@@ -38,7 +38,7 @@ type LlmResponse struct {
 	ThinkingBlocks []ThinkingBlock `json:"thinking_blocks"`
 }
 
-// ChatRequest 是 Provider.Chat() 的请求参数
+// ChatRequest holds the parameters for a Provider.Chat() call.
 type ChatRequest struct {
 	Messages    []map[string]any `json:"messages"`
 	ToolSchemas []map[string]any `json:"tool_schemas"`
@@ -48,7 +48,7 @@ type ChatRequest struct {
 	Bus         *events.EventBus `json:"-"`
 }
 
-// Provider 是 LLM 调用的接口
+// Provider defines the interface for LLM API interactions.
 type Provider interface {
 	Chat(ctx context.Context, req *ChatRequest) (*LlmResponse, error)
 }

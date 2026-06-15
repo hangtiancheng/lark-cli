@@ -8,27 +8,27 @@ import (
 	"strings"
 )
 
-// Store 管理 session 的文件存储
+// Store manages file-based session storage.
 type Store struct {
 	rootDir string
 }
 
-// NewStore 创建 session 存储
+// NewStore creates a new session Store.
 func NewStore(rootDir string) *Store {
 	return &Store{rootDir: rootDir}
 }
 
-// SessionDir 返回 session 目录
+// SessionDir returns the directory path for the given session.
 func (s *Store) SessionDir(sid string) string {
 	return filepath.Join(s.rootDir, sid)
 }
 
-// RunsDir 返回 session 的 runs 目录
+// RunsDir returns the runs directory for the given session.
 func (s *Store) RunsDir(sid string) string {
 	return filepath.Join(s.rootDir, sid, "runs")
 }
 
-// WriteMeta 写入 session 元数据
+// WriteMeta writes session metadata to disk.
 func (s *Store) WriteMeta(sess *Session) error {
 	dir := s.SessionDir(sess.ID)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -41,7 +41,7 @@ func (s *Store) WriteMeta(sess *Session) error {
 	return os.WriteFile(filepath.Join(dir, "meta.json"), data, 0o644)
 }
 
-// ReadMeta 读取 session 元数据
+// ReadMeta reads session metadata from disk.
 func (s *Store) ReadMeta(sid string) (*Session, error) {
 	data, err := os.ReadFile(filepath.Join(s.SessionDir(sid), "meta.json"))
 	if err != nil {
@@ -54,7 +54,7 @@ func (s *Store) ReadMeta(sid string) (*Session, error) {
 	return &sess, nil
 }
 
-// AppendMessage 追加一条消息到 thread.jsonl
+// AppendMessage appends a single message to the session's thread.jsonl file.
 func (s *Store) AppendMessage(sid, role string, content any, runID string) error {
 	dir := s.SessionDir(sid)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -84,7 +84,7 @@ func (s *Store) AppendMessage(sid, role string, content any, runID string) error
 	return err
 }
 
-// AppendMessages 批量追加消息
+// AppendMessages appends multiple messages to the session's thread file.
 func (s *Store) AppendMessages(sid string, messages []map[string]any, runID string) error {
 	for _, msg := range messages {
 		role, _ := msg["role"].(string)
@@ -96,7 +96,7 @@ func (s *Store) AppendMessages(sid string, messages []map[string]any, runID stri
 	return nil
 }
 
-// ReadMessages 读取完整的对话历史
+// ReadMessages reads the complete conversation history from thread.jsonl.
 func (s *Store) ReadMessages(sid string) ([]map[string]any, error) {
 	path := filepath.Join(s.SessionDir(sid), "thread.jsonl")
 	data, err := os.ReadFile(path)
@@ -120,13 +120,13 @@ func (s *Store) ReadMessages(sid string) ([]map[string]any, error) {
 		messages = append(messages, msg)
 	}
 
-	// 裁剪尾部未配对的 tool_use 块
+	// Trim trailing orphaned tool_use blocks
 	messages = trimOrphanToolUse(messages)
 
 	return messages, nil
 }
 
-// ReadNotes 读取 session notes
+// ReadNotes reads the session notes file.
 func (s *Store) ReadNotes(sid string) string {
 	data, err := os.ReadFile(filepath.Join(s.SessionDir(sid), "notes.md"))
 	if err != nil {
@@ -135,11 +135,11 @@ func (s *Store) ReadNotes(sid string) string {
 	return string(data)
 }
 
-// WriteCompacted 写入压缩后的对话历史
+// WriteCompacted writes a compacted conversation history, backing up the original.
 func (s *Store) WriteCompacted(sid string, messages []map[string]any) error {
 	dir := s.SessionDir(sid)
 
-	// 备份原文件
+	// Back up the original file
 	oldPath := filepath.Join(dir, "thread.jsonl")
 	if _, err := os.Stat(oldPath); err == nil {
 		backupPath := filepath.Join(dir, fmt.Sprintf("thread_%s.jsonl.bak",
@@ -147,7 +147,7 @@ func (s *Store) WriteCompacted(sid string, messages []map[string]any) error {
 		_ = os.Rename(oldPath, backupPath)
 	}
 
-	// 写入新文件
+	// Write the new compacted file
 	f, err := os.Create(oldPath)
 	if err != nil {
 		return err
@@ -163,14 +163,15 @@ func (s *Store) WriteCompacted(sid string, messages []map[string]any) error {
 	return nil
 }
 
-// trimOrphanToolUse 裁剪尾部未配对的 assistant tool_use 消息
+// trimOrphanToolUse removes trailing assistant messages with tool_use blocks
+// that have no corresponding tool_result.
 func trimOrphanToolUse(messages []map[string]any) []map[string]any {
 	if len(messages) == 0 {
 		return messages
 	}
 
-	// 从尾部向前扫描，找到最后一个 assistant 消息
-	// 如果它包含 tool_use 但没有后续的 tool_result，则裁剪
+	// Scan backwards from the tail to find the last assistant message.
+	// If it contains tool_use without a subsequent tool_result, trim it.
 	for i := len(messages) - 1; i >= 0; i-- {
 		msg := messages[i]
 		role, _ := msg["role"].(string)
@@ -178,17 +179,17 @@ func trimOrphanToolUse(messages []map[string]any) []map[string]any {
 			return messages[:i+1]
 		}
 
-		// 检查 content 是否包含 tool_use
+		// Check if the content contains tool_use blocks
 		content := msg["content"]
 		if hasToolUse(content) {
-			// 检查后面是否有对应的 tool_result
+			// Check if there is a corresponding tool_result following
 			if i+1 < len(messages) {
 				nextRole, _ := messages[i+1]["role"].(string)
 				if nextRole == "user" && hasToolResult(messages[i+1]["content"]) {
-					return messages[:i+2] // 配对完整
+					return messages[:i+2] // Pair is complete
 				}
 			}
-			// 未配对，裁剪此消息及之后
+			// Unpaired; trim this message and everything after it
 			return messages[:i]
 		}
 		return messages[:i+1]
@@ -196,7 +197,7 @@ func trimOrphanToolUse(messages []map[string]any) []map[string]any {
 	return messages
 }
 
-// hasToolUse 检查内容是否包含 tool_use 块
+// hasToolUse checks whether the content contains tool_use blocks.
 func hasToolUse(content any) bool {
 	arr, ok := content.([]any)
 	if !ok {
@@ -212,7 +213,7 @@ func hasToolUse(content any) bool {
 	return false
 }
 
-// hasToolResult 检查内容是否包含 tool_result 块
+// hasToolResult checks whether the content contains tool_result blocks.
 func hasToolResult(content any) bool {
 	arr, ok := content.([]any)
 	if !ok {

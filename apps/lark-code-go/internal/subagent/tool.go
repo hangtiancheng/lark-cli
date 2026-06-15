@@ -7,7 +7,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/tools"
 )
 
-// SpawnAgentTool 用于创建隔离子 agent
+// SpawnAgentTool creates isolated sub-agents for delegated tasks.
 type SpawnAgentTool struct {
 	registry  *Registry
 	nestLevel int
@@ -15,7 +15,7 @@ type SpawnAgentTool struct {
 
 const maxNestLevel = 2
 
-// NewSpawnAgentTool 创建 SpawnAgentTool
+// NewSpawnAgentTool creates a new SpawnAgentTool with the given registry and nesting level.
 func NewSpawnAgentTool(registry *Registry, nestLevel int) *SpawnAgentTool {
 	return &SpawnAgentTool{
 		registry:  registry,
@@ -60,23 +60,23 @@ func (t *SpawnAgentTool) Invoke(ctx context.Context, params map[string]any) (*to
 		return &tools.ToolResult{Content: "goal is required", IsError: true, ErrorType: tools.ErrorTypeSchema}, nil
 	}
 
-	// 生成 run ID 并注册
+	// Generate a run ID and register the task
 	runID := GenerateRunID()
 	t.registry.Register(runID)
 
-	// 注：实际的 agent 执行由 runner 层驱动
-	// 这里只注册任务并返回 run_id
+	// Note: actual agent execution is driven by the runner layer.
+	// This tool only registers the task and returns the run_id.
 	return &tools.ToolResult{
 		Content: fmt.Sprintf("sub-agent spawned with run_id: %s", runID),
 	}, nil
 }
 
-// AgentResultTool 用于查询后台 subagent 结果
+// AgentResultTool queries the result of a background sub-agent.
 type AgentResultTool struct {
 	registry *Registry
 }
 
-// NewAgentResultTool 创建 AgentResultTool
+// NewAgentResultTool creates a new AgentResultTool.
 func NewAgentResultTool(registry *Registry) *AgentResultTool {
 	return &AgentResultTool{registry: registry}
 }

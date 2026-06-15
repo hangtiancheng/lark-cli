@@ -11,7 +11,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/events"
 )
 
-// subscription 表示单个客户端的事件订阅
+// subscription represents a single client's event subscription.
 type subscription struct {
 	subID  string
 	writer io.Writer
@@ -19,24 +19,24 @@ type subscription struct {
 	scope  string
 }
 
-// Broadcaster 将 EventBus 事件按 topic/scope 过滤后推送给订阅客户端
+// Broadcaster filters EventBus events by topic and scope, then pushes matching events to subscribed clients.
 type Broadcaster struct {
 	mu            sync.RWMutex
 	subscriptions []*subscription
 	nextID        int
 }
 
-// NewBroadcaster 创建事件广播器
+// NewBroadcaster creates a new event broadcaster.
 func NewBroadcaster() *Broadcaster {
 	return &Broadcaster{}
 }
 
-// RegisterWriter 为新连接注册 writer
+// RegisterWriter registers a writer for a new connection.
 func (b *Broadcaster) RegisterWriter(w io.Writer) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	// 先检查是否已注册
+	// Check if the writer is already registered.
 	for _, sub := range b.subscriptions {
 		if sub.writer == w {
 			return
@@ -47,13 +47,13 @@ func (b *Broadcaster) RegisterWriter(w io.Writer) {
 	sub := &subscription{
 		subID:  fmt.Sprintf("sub-%x", b.nextID),
 		writer: w,
-		topics: []string{"*"}, // 默认订阅所有事件
+		topics: []string{"*"}, // Subscribe to all events by default.
 		scope:  "global",
 	}
 	b.subscriptions = append(b.subscriptions, sub)
 }
 
-// Subscribe 为指定 writer 设置 topic/scope 过滤条件
+// Subscribe sets the topic/scope filters for a given writer.
 func (b *Broadcaster) Subscribe(w io.Writer, topics []string, scope string) string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -66,7 +66,7 @@ func (b *Broadcaster) Subscribe(w io.Writer, topics []string, scope string) stri
 		}
 	}
 
-	// Writer 未注册，创建新订阅
+	// Writer not registered; create a new subscription.
 	b.nextID++
 	sub := &subscription{
 		subID:  fmt.Sprintf("sub-%x", b.nextID),
@@ -78,7 +78,7 @@ func (b *Broadcaster) Subscribe(w io.Writer, topics []string, scope string) stri
 	return sub.subID
 }
 
-// UnsubscribeWriter 移除指定 writer 的所有订阅
+// UnsubscribeWriter removes all subscriptions for the given writer.
 func (b *Broadcaster) UnsubscribeWriter(w io.Writer) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -91,18 +91,18 @@ func (b *Broadcaster) UnsubscribeWriter(w io.Writer) {
 	}
 }
 
-// Handle 处理来自 EventBus 的事件，推送给匹配的订阅者
+// Handle processes an event from the EventBus and pushes it to matching subscribers.
 func (b *Broadcaster) Handle(evt bus.Event) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	eventType := evt.EventType()
 
-	// 提取 run_id 用于 scope 过滤
+	// Extract run_id for scope-based filtering.
 	runID := extractRunID(evt)
 
 	for _, sub := range b.subscriptions {
-		// 检查 scope
+		// Check scope.
 		if sub.scope != "global" && sub.scope != "" {
 			if runID == "" {
 				continue
@@ -113,12 +113,12 @@ func (b *Broadcaster) Handle(evt bus.Event) {
 			}
 		}
 
-		// 检查 topic
+		// Check topic.
 		if !events.MatchTopics(eventType, sub.topics) {
 			continue
 		}
 
-		// 构造推送信封并发送
+		// Construct the push envelope and send it.
 		envelope, err := bus.MakeEventPush(evt)
 		if err != nil {
 			slog.Error("broadcaster: failed to marshal event", "error", err)
@@ -137,7 +137,7 @@ func (b *Broadcaster) Handle(evt bus.Event) {
 	}
 }
 
-// extractRunID 从事件中提取 run_id
+// extractRunID extracts the run_id from the given event.
 func extractRunID(evt bus.Event) string {
 	switch e := evt.(type) {
 	case *bus.RunStartedEvent:

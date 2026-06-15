@@ -92,7 +92,7 @@ func cmdRun() {
 
 	fmt.Printf("run started: %s\n", runResult.RunID)
 
-	// 等待事件
+	// Wait for events from the server
 	client.OnEvent(func(event json.RawMessage) error {
 		var evt struct {
 			Type string `json:"type"`

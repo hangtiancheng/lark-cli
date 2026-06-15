@@ -105,10 +105,10 @@ func TestLoadProfileInvalidTOML(t *testing.T) {
 func TestLoadFromDir(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// 创建多个 profile 文件
+	// Create multiple profile files
 	os.WriteFile(filepath.Join(tmpDir, "agent1.toml"), []byte(`name = "agent1"`), 0o644)
 	os.WriteFile(filepath.Join(tmpDir, "agent2.toml"), []byte(`name = "agent2"`), 0o644)
-	// 非 .toml 文件应被跳过
+	// Non-.toml files should be skipped
 	os.WriteFile(filepath.Join(tmpDir, "readme.txt"), []byte("not a profile"), 0o644)
 
 	profiles, err := agents.LoadFromDir(tmpDir)

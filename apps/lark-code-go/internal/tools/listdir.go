@@ -14,7 +14,7 @@ const (
 	listDirMaxEntries = 200
 )
 
-// ListDirTool 以树形格式列出目录内容
+// ListDirTool lists directory contents in a tree-like format with depth control.
 type ListDirTool struct {
 	cwd string
 }
@@ -80,7 +80,7 @@ func (t *ListDirTool) Invoke(ctx context.Context, params map[string]any) (*ToolR
 			return
 		}
 
-		// 排序：目录优先，然后按名称
+		// Sort entries: directories first, then alphabetically by name
 		sort.Slice(entries, func(i, j int) bool {
 			if entries[i].IsDir() != entries[j].IsDir() {
 				return entries[i].IsDir()
@@ -125,7 +125,7 @@ func (t *ListDirTool) Invoke(ctx context.Context, params map[string]any) (*ToolR
 		lines = append(lines, fmt.Sprintf("\n(truncated at %d entries)", listDirMaxEntries))
 	}
 
-	// 跳过隐藏目录
+	// Filter out noisy directories (e.g., node_modules, .git)
 	filtered := make([]string, 0, len(lines))
 	for _, line := range lines {
 		if !shouldSkipEntry(line) {
@@ -136,9 +136,9 @@ func (t *ListDirTool) Invoke(ctx context.Context, params map[string]any) (*ToolR
 	return &ToolResult{Content: strings.Join(filtered, "\n")}, nil
 }
 
-// shouldSkipEntry 判断是否跳过隐藏文件/目录
+// shouldSkipEntry determines whether a directory entry should be excluded from output.
 func shouldSkipEntry(line string) bool {
-	// 提取文件名
+	// Extract the file/directory name from the tree-formatted line
 	parts := strings.Split(line, " ")
 	if len(parts) == 0 {
 		return false
@@ -146,7 +146,7 @@ func shouldSkipEntry(line string) bool {
 	name := parts[len(parts)-1]
 	name = strings.TrimSuffix(name, "/")
 
-	// 跳过常见的噪音目录
+	// Skip commonly noisy directories that add little value to the output
 	skipDirs := map[string]bool{
 		"node_modules": true,
 		".git":         true,

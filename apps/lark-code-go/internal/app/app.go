@@ -31,7 +31,7 @@ import (
 
 const version = "0.1.0"
 
-// CoreApp 是 daemon 的入口点，组装所有组件
+// CoreApp is the daemon entry point that assembles and orchestrates all components.
 type CoreApp struct {
 	startTime time.Time
 	cfg       *config.Config
@@ -50,31 +50,31 @@ type CoreApp struct {
 	runningRuns sync.Map // run_id -> context.CancelFunc
 }
 
-// NewCoreApp 创建 daemon 实例
+// NewCoreApp creates a new daemon instance.
 func NewCoreApp() *CoreApp {
 	return &CoreApp{
 		startTime: time.Now(),
 	}
 }
 
-// Run 启动 daemon 并等待关闭信号
+// Run starts the daemon and blocks until a shutdown signal is received.
 func (a *CoreApp) Run() error {
-	// 1. 加载配置
+	// 1. Load configuration
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	a.cfg = cfg
 
-	// 2. 设置日志
+	// 2. Configure logging
 	setupLogging(cfg)
 
 	slog.Info("starting lark-code daemon", "version", version)
 
-	// 3. 创建 EventBus
+	// 3. Create the EventBus
 	a.bus = events.NewEventBus()
 
-	// 4. 设置追踪
+	// 4. Set up tracing
 	if cfg.Trace.Enabled {
 		tracePath := expandUser(cfg.Trace.File)
 		a.traceWriter, err = trace.NewWriter(tracePath)
@@ -97,7 +97,7 @@ func (a *CoreApp) Run() error {
 		}
 	}
 
-	// 5. 权限管理器
+	// 5. Initialize the permission manager
 	homeDir, _ := os.UserHomeDir()
 	policyPath := filepath.Join(homeDir, ".lark", "policy.toml")
 	policy, err := permissions.LoadPolicy(policyPath)
@@ -108,7 +108,7 @@ func (a *CoreApp) Run() error {
 	cwd, _ := os.Getwd()
 	a.permMgr = permissions.NewManager(policy, a.bus, cfg.Permission.TimeoutS, cwd, policyPath)
 
-	// 6. 事件广播器
+	// 6. Set up the event broadcaster
 	a.broadcaster = transport.NewBroadcaster()
 	broadcasterCh := a.bus.Subscribe()
 	go func() {
@@ -117,7 +117,7 @@ func (a *CoreApp) Run() error {
 		}
 	}()
 
-	// 7. MCP 服务器管理
+	// 7. Start MCP server connections
 	a.mcpMgr = mcp.NewServerManager()
 	ctx := context.Background()
 	if len(cfg.MCP.Servers) > 0 {
@@ -126,43 +126,43 @@ func (a *CoreApp) Run() error {
 		}
 	}
 
-	// 8. Session 存储和管理器
+	// 8. Initialize session storage and manager
 	a.sessionsDir = filepath.Join(homeDir, ".lark", "sessions")
 	sessStore := session.NewStore(a.sessionsDir)
 	a.sessMgr = session.NewManager(sessStore, a.bus, a.runAgent)
 
-	// 9. TCP 服务器
+	// 9. Start the TCP server
 	a.server = transport.NewServer(cfg.Host, cfg.Port)
 	a.server.SetBroadcaster(a.broadcaster)
 
-	// 注册 handler
+	// Register JSON-RPC handlers
 	a.registerHandlers()
 
-	// 启动服务器
+	// Start the server
 	if err := a.server.Start(); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
 
-	// 发布启动事件
+	// Publish the core.started event
 	a.bus.Publish(&bus.CoreStartedEvent{
 		Type:       "core.started",
 		ListenAddr: a.server.Addr(),
 		Version:    version,
 	})
 
-	// 10. 等待关闭信号
+	// 10. Wait for shutdown signal
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigCh
 	slog.Info("received signal, shutting down", "signal", sig.String())
 
-	// 11. 优雅关闭
+	// 11. Graceful shutdown
 	a.shutdown()
 
 	return nil
 }
 
-// registerHandlers 注册所有 JSON-RPC handler
+// registerHandlers registers all JSON-RPC method handlers.
 func (a *CoreApp) registerHandlers() {
 	a.server.Register("core.ping", a.handlePing)
 	a.server.Register("agent.run", a.handleAgentRun)
@@ -175,9 +175,9 @@ func (a *CoreApp) registerHandlers() {
 	a.server.Register("session.compact", a.handleSessionCompact)
 }
 
-// shutdown 优雅关闭
+// shutdown performs a graceful shutdown of all daemon components.
 func (a *CoreApp) shutdown() {
-	// 取消所有运行中的 agent run
+	// Cancel all running agent runs
 	a.runningRuns.Range(func(key, value any) bool {
 		if cancel, ok := value.(context.CancelFunc); ok {
 			cancel()
@@ -185,22 +185,22 @@ func (a *CoreApp) shutdown() {
 		return true
 	})
 
-	// 停止 MCP
+	// Stop MCP servers
 	if a.mcpMgr != nil {
 		a.mcpMgr.StopAll()
 	}
 
-	// 停止服务器
+	// Stop the TCP server
 	if a.server != nil {
 		a.server.Stop()
 	}
 
-	// 停止追踪
+	// Stop the trace writer
 	if a.traceWriter != nil {
 		a.traceWriter.Stop()
 	}
 
-	// 关闭 EventBus
+	// Close the EventBus
 	if a.bus != nil {
 		a.bus.Close()
 	}
@@ -208,11 +208,11 @@ func (a *CoreApp) shutdown() {
 	slog.Info("daemon stopped")
 }
 
-// runAgent 执行一次 agent run（供 SessionManager 回调）
+// runAgent executes a single agent run (used as a callback by SessionManager).
 func (a *CoreApp) runAgent(sess *session.Session, goal string, systemPromptOverride string, toolWhitelist []string) (string, error) {
 	runID := fmt.Sprintf("run-%s", uuid.New().String()[:12])
 
-	// 创建可取消的 context
+	// Create a cancellable context for this run
 	ctx, cancel := context.WithCancel(context.Background())
 	a.runningRuns.Store(runID, cancel)
 	defer func() {
@@ -220,12 +220,12 @@ func (a *CoreApp) runAgent(sess *session.Session, goal string, systemPromptOverr
 		a.runningRuns.Delete(runID)
 	}()
 
-	// 创建 run 目录
+	// Create the run output directory
 	homeDir, _ := os.UserHomeDir()
 	runsDir := filepath.Join(homeDir, ".lark", "sessions", sess.ID, "runs", runID)
 	_ = os.MkdirAll(runsDir, 0o755)
 
-	// 创建 EventWriter
+	// Create the EventWriter for this run
 	evtWriter, err := events.NewEventWriter(runsDir)
 	if err != nil {
 		slog.Warn("failed to create event writer", "error", err)
@@ -237,37 +237,37 @@ func (a *CoreApp) runAgent(sess *session.Session, goal string, systemPromptOverr
 		defer evtWriter.Stop()
 	}
 
-	// 加载上下文文件
+	// Load global and project context files
 	globalCtx := agent.LoadContextFile(filepath.Join(homeDir, ".lark", "context.md"))
 	projectCtx := agent.LoadContextFile(".lark/context.md")
 
-	// 加载 session notes
+	// Load session notes
 	sessStore := session.NewStore(a.sessionsDir)
 	sessionNotes := sessStore.ReadNotes(sess.ID)
 
-	// 构建系统提示
+	// Build the system prompt
 	systemPrompt := agent.BuildSystemPrompt(globalCtx, projectCtx, sessionNotes, systemPromptOverride)
 
-	// 创建 LLM provider
+	// Create the LLM provider
 	var provider llm.Provider = llm.NewAnthropicProvider(a.cfg.LLM.DefaultModel)
 	if a.traceWriter != nil {
 		provider = llm.NewTracingProvider(provider, a.traceWriter, a.cfg.Trace.IncludeLLMPayload)
 	}
 
-	// 构建工具注册表
+	// Build the tool registry
 	registry := a.buildRegistry(toolWhitelist)
 
-	// 创建 Compactor
+	// Create the context compactor
 	compactor := compact.NewCompactor(provider, a.bus)
 
-	// 加载历史消息
+	// Load historical messages from storage
 	existingMessages, _ := sessStore.ReadMessages(sess.ID)
 
-	// 创建 ExecutionContext
+	// Create the execution context
 	ec := agent.NewExecutionContext(sess.ID, existingMessages, systemPrompt)
 	ec.AddUserMessage(goal)
 
-	// 构建 AgentLoop 配置
+	// Build the AgentLoop configuration
 	loopCfg := &agent.LoopConfig{
 		MaxSteps:         a.cfg.Agent.MaxSteps,
 		CompactThreshold: a.cfg.Compaction.AutoThreshold,
@@ -275,11 +275,11 @@ func (a *CoreApp) runAgent(sess *session.Session, goal string, systemPromptOverr
 		ToolResultKeep:   a.cfg.Compaction.ToolResultKeep,
 	}
 
-	// 创建并运行 AgentLoop
+	// Create and run the AgentLoop
 	loop := agent.NewAgentLoop(loopCfg, provider, registry, a.bus, compactor)
 	outcome, runErr := loop.Run(ctx, ec, runID)
 
-	// 持久化新消息
+	// Persist new messages to storage
 	if len(ec.NewMessages()) > 0 {
 		_ = sessStore.AppendMessages(sess.ID, ec.NewMessages(), runID)
 	}
@@ -296,12 +296,12 @@ func (a *CoreApp) runAgent(sess *session.Session, goal string, systemPromptOverr
 	return runID, nil
 }
 
-// buildRegistry 构建工具注册表
+// buildRegistry constructs the tool registry with built-in, task, subagent, and MCP tools.
 func (a *CoreApp) buildRegistry(whitelist []string) *tools.Registry {
 	registry := tools.NewRegistry()
 	cwd, _ := os.Getwd()
 
-	// 内置工具
+	// Built-in tools
 	allTools := []tools.Tool{
 		tools.NewReadFileTool(cwd),
 		tools.NewBashTool(),
@@ -309,7 +309,7 @@ func (a *CoreApp) buildRegistry(whitelist []string) *tools.Registry {
 		tools.NewListDirTool(cwd),
 	}
 
-	// 任务工具
+	// Task management tools
 	homeDir, _ := os.UserHomeDir()
 	taskMgr := tools.NewTaskManager(filepath.Join(homeDir, ".lark", "tasks"))
 	allTools = append(allTools,
@@ -319,19 +319,19 @@ func (a *CoreApp) buildRegistry(whitelist []string) *tools.Registry {
 		tools.NewTaskGetTool(taskMgr),
 	)
 
-	// subagent 工具
+	// Subagent tools
 	taskRegistry := subagent.NewRegistry()
 	allTools = append(allTools,
 		subagent.NewSpawnAgentTool(taskRegistry, 0),
 		subagent.NewAgentResultTool(taskRegistry),
 	)
 
-	// MCP 工具
+	// MCP tools
 	if a.mcpMgr != nil {
 		allTools = append(allTools, a.mcpMgr.GetTools()...)
 	}
 
-	// 按白名单过滤
+	// Filter tools by whitelist if specified
 	if len(whitelist) > 0 {
 		allowed := make(map[string]bool)
 		for _, name := range whitelist {
@@ -386,13 +386,13 @@ func (a *CoreApp) handleSubscribe(ctx context.Context, params json.RawMessage) (
 		return nil, transport.NewHandlerError(bus.InvalidParams, "invalid params")
 	}
 
-	// 获取当前连接的 writer（由 server 通过 context 传递）
+	// Retrieve the current connection's writer (injected by the server via context)
 	conn := transport.ConnFromContext(ctx)
 	if conn == nil {
 		return nil, transport.NewHandlerError(bus.InternalError, "no connection in context")
 	}
 
-	// 注册订阅
+	// Register the subscription
 	topics := cmd.Topics
 	if len(topics) == 0 {
 		topics = []string{"*"}
@@ -404,7 +404,7 @@ func (a *CoreApp) handleSubscribe(ctx context.Context, params json.RawMessage) (
 
 	subID := a.broadcaster.Subscribe(conn, topics, scope)
 
-	// 事件回放
+	// Event replay from historical events
 	replayedCount := 0
 	if cmd.ReplayFromRun != "" {
 		replayedCount = a.replayEvents(conn, cmd.ReplayFromRun, topics)
@@ -416,9 +416,9 @@ func (a *CoreApp) handleSubscribe(ctx context.Context, params json.RawMessage) (
 	}, nil
 }
 
-// replayEvents 从 events.jsonl 回放历史事件
+// replayEvents replays historical events from events.jsonl files.
 func (a *CoreApp) replayEvents(conn net.Conn, runID string, topics []string) int {
-	// 在所有 session 目录中查找该 run 的 events.jsonl
+	// Search all session directories for the run's events.jsonl
 	homeDir, _ := os.UserHomeDir()
 	sessionsDir := filepath.Join(homeDir, ".lark", "sessions")
 
@@ -536,7 +536,7 @@ func (a *CoreApp) handleSessionCompact(ctx context.Context, params json.RawMessa
 		return nil, transport.NewHandlerError(bus.InternalError, err.Error())
 	}
 
-	// 创建 LLM provider
+	// Create the LLM provider
 	var provider llm.Provider = llm.NewAnthropicProvider(a.cfg.LLM.DefaultModel)
 	if a.traceWriter != nil {
 		provider = llm.NewTracingProvider(provider, a.traceWriter, a.cfg.Trace.IncludeLLMPayload)
@@ -544,7 +544,7 @@ func (a *CoreApp) handleSessionCompact(ctx context.Context, params json.RawMessa
 
 	compactor := compact.NewCompactor(provider, a.bus)
 
-	// 加载历史消息
+	// Load historical messages from storage
 	sessStore := session.NewStore(a.sessionsDir)
 	messages, err := sessStore.ReadMessages(cmd.SessionID)
 	if err != nil {
@@ -568,12 +568,12 @@ func (a *CoreApp) handleSessionCompact(ctx context.Context, params json.RawMessa
 		return nil, transport.NewHandlerError(bus.InternalError, err.Error())
 	}
 
-	// 写入压缩后的对话历史
+	// Write the compacted conversation history
 	if err := sessStore.WriteCompacted(cmd.SessionID, compacted); err != nil {
 		slog.Warn("failed to write compacted session", "error", err)
 	}
 
-	// 写入 summary 文件
+	// Write the summary file
 	runsDir := sessStore.RunsDir(cmd.SessionID)
 	if runID != "" {
 		summaryPath := filepath.Join(runsDir, runID, fmt.Sprintf("summary_%d.md", time.Now().Unix()))

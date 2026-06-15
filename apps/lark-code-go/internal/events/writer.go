@@ -11,7 +11,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/bus"
 )
 
-// EventWriter 消费 EventBus 事件并持久化到 events.jsonl
+// EventWriter consumes events from the EventBus and persists them to events.jsonl.
 type EventWriter struct {
 	dir    string
 	mu     sync.Mutex
@@ -19,7 +19,7 @@ type EventWriter struct {
 	stopCh chan struct{}
 }
 
-// NewEventWriter 创建 EventWriter，事件写入指定目录下的 events.jsonl
+// NewEventWriter creates a new EventWriter that writes events to events.jsonl in the specified directory.
 func NewEventWriter(dir string) (*EventWriter, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create event dir: %w", err)
@@ -38,7 +38,7 @@ func NewEventWriter(dir string) (*EventWriter, error) {
 	}, nil
 }
 
-// Consume 从 channel 读取事件并写入文件，直到 channel 关闭或 Stop 被调用
+// Consume reads events from a channel and writes them to the file until the channel closes or Stop is called.
 func (w *EventWriter) Consume(ch <-chan bus.Event) {
 	for {
 		select {
@@ -53,7 +53,7 @@ func (w *EventWriter) Consume(ch <-chan bus.Event) {
 	}
 }
 
-// Stop 停止写入并关闭文件
+// Stop stops the writer and closes the underlying file.
 func (w *EventWriter) Stop() {
 	select {
 	case <-w.stopCh:
@@ -68,7 +68,7 @@ func (w *EventWriter) Stop() {
 	}
 }
 
-// writeEvent 将单个事件序列化为 JSON 行并写入文件
+// writeEvent serializes a single event as a JSON line and writes it to the file.
 func (w *EventWriter) writeEvent(evt bus.Event) {
 	data, err := bus.MarshalEvent(evt)
 	if err != nil {
@@ -88,7 +88,7 @@ func (w *EventWriter) writeEvent(evt bus.Event) {
 	}
 }
 
-// ReplayEvents 从 events.jsonl 文件中读取并按 topic 过滤，返回匹配的事件
+// ReplayEvents reads events from an events.jsonl file, filters by topic, and returns matching events.
 func ReplayEvents(path string, topics []string) ([]json.RawMessage, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -115,7 +115,7 @@ func ReplayEvents(path string, topics []string) ([]json.RawMessage, error) {
 	return results, nil
 }
 
-// ReplayEventsWithCallback 从 events.jsonl 文件中读取事件，按 topic 过滤并逐条回调
+// ReplayEventsWithCallback reads events from an events.jsonl file, filters by topic, and invokes a callback for each match.
 func ReplayEventsWithCallback(path string, topics []string, callback func(data []byte)) int {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -143,7 +143,7 @@ func ReplayEventsWithCallback(path string, topics []string, callback func(data [
 	return count
 }
 
-// splitLines 将字节数据按换行符分割
+// splitLines splits byte data by newline characters.
 func splitLines(data []byte) [][]byte {
 	var lines [][]byte
 	start := 0
@@ -161,7 +161,7 @@ func splitLines(data []byte) [][]byte {
 	return lines
 }
 
-// MatchTopics 检查事件类型是否匹配任一 topic 模式（支持 * 通配符）
+// MatchTopics checks if an event type matches any of the given topic patterns (supports * wildcard).
 func MatchTopics(eventType string, topics []string) bool {
 	for _, topic := range topics {
 		if matchTopic(eventType, topic) {
@@ -171,12 +171,12 @@ func MatchTopics(eventType string, topics []string) bool {
 	return false
 }
 
-// matchTopic 简单 fnmatch 实现：支持 "prefix.*" 和完整匹配
+// matchTopic is a simple fnmatch implementation supporting 'prefix.*' and exact match.
 func matchTopic(eventType, pattern string) bool {
 	if pattern == "*" {
 		return true
 	}
-	// 支持 "prefix.*" 形式
+	// Support 'prefix.*' pattern
 	if len(pattern) >= 2 && pattern[len(pattern)-1] == '*' && pattern[len(pattern)-2] == '.' {
 		prefix := pattern[:len(pattern)-1]
 		return len(eventType) >= len(prefix) && eventType[:len(prefix)] == prefix

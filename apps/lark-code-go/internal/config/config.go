@@ -21,44 +21,44 @@ const (
 	defaultTraceFile = "~/.lark/traces/daemon.jsonl"
 )
 
-// LoggingConfig 控制日志输出行为
+// LoggingConfig controls logging output behavior.
 type LoggingConfig struct {
 	Level  string `toml:"level"`
 	File   string `toml:"file"`
 	Format string `toml:"format"`
 }
 
-// AgentConfig 控制 agent 运行参数
+// AgentConfig controls agent runtime parameters.
 type AgentConfig struct {
 	MaxSteps int `toml:"max_steps"`
 }
 
-// LlmConfig 控制 LLM 调用参数
+// LlmConfig controls LLM call parameters.
 type LlmConfig struct {
 	DefaultModel string `toml:"default_model"`
 	Router       string `toml:"router"`
 }
 
-// TraceConfig 控制系统级追踪行为
+// TraceConfig controls system-level tracing behavior.
 type TraceConfig struct {
 	Enabled           bool   `toml:"enabled"`
 	File              string `toml:"file"`
 	IncludeLLMPayload bool   `toml:"include_llm_payload"`
 }
 
-// PermissionConfig 控制权限审批行为
+// PermissionConfig controls permission approval behavior.
 type PermissionConfig struct {
 	TimeoutS float64 `toml:"timeout_s"`
 }
 
-// CompactionConfig 控制上下文压缩参数
+// CompactionConfig controls context compaction parameters.
 type CompactionConfig struct {
 	AutoThreshold   float64 `toml:"auto_threshold"`
 	ToolResultLimit int     `toml:"tool_result_limit"`
 	ToolResultKeep  int     `toml:"tool_result_keep"`
 }
 
-// McpServerConfig 描述单个 MCP 服务器连接
+// McpServerConfig describes a single MCP server connection.
 type McpServerConfig struct {
 	Name      string            `toml:"name"`
 	Transport string            `toml:"transport"`
@@ -69,12 +69,12 @@ type McpServerConfig struct {
 	Port      int               `toml:"port"`
 }
 
-// McpConfig 控制 MCP 集成
+// McpConfig controls MCP integration settings.
 type McpConfig struct {
 	Servers []McpServerConfig `toml:"servers"`
 }
 
-// Config 是运行时配置的根结构
+// Config is the root structure for runtime configuration.
 type Config struct {
 	Host       string           `toml:"host"`
 	Port       int              `toml:"port"`
@@ -87,7 +87,7 @@ type Config struct {
 	MCP        McpConfig        `toml:"mcp"`
 }
 
-// DefaultConfig 返回带默认值的配置
+// DefaultConfig returns a Config populated with default values.
 func DefaultConfig() *Config {
 	return &Config{
 		Host: defaultHost,
@@ -120,14 +120,15 @@ func DefaultConfig() *Config {
 	}
 }
 
-// GetConfig 构建并返回运行时配置：默认值 -> 全局 TOML -> 项目本地 TOML -> .env -> 系统环境变量
+// GetConfig builds and returns the runtime configuration by layering:
+// defaults -> global TOML -> project TOML -> .env -> system environment variables.
 func GetConfig() (*Config, error) {
 	cfg := DefaultConfig()
 
-	// 加载 .env 文件（不覆盖已有环境变量）
+	// Load .env file (does not override existing environment variables)
 	loadDotEnv(".env")
 
-	// 确定 TOML 文件路径
+	// Determine TOML file paths
 	explicit := os.Getenv("LARK_CONFIG")
 	var configPaths []string
 	if explicit != "" {
@@ -139,7 +140,7 @@ func GetConfig() (*Config, error) {
 		}
 	}
 
-	// 按优先级叠加 TOML 文件
+	// Layer TOML files by priority
 	for _, p := range configPaths {
 		if _, err := os.Stat(p); err == nil {
 			if err := applyTOML(cfg, p); err != nil {
@@ -148,7 +149,7 @@ func GetConfig() (*Config, error) {
 		}
 	}
 
-	// 环境变量覆盖（最高优先级）
+	// Environment variable overrides (highest priority)
 	if err := applyEnv(cfg); err != nil {
 		return nil, err
 	}
@@ -156,7 +157,7 @@ func GetConfig() (*Config, error) {
 	return cfg, nil
 }
 
-// tomlData 定义 TOML 文件解析结构
+// tomlData defines the struct for TOML file parsing.
 type tomlData struct {
 	Core       *tomlCore       `toml:"core"`
 	Logging    *tomlLogging    `toml:"logging"`
@@ -218,7 +219,7 @@ type tomlMcpServer struct {
 	Port      int               `toml:"port"`
 }
 
-// applyTOML 解析并应用 TOML 文件到配置
+// applyTOML parses and applies a TOML file to the configuration.
 func applyTOML(cfg *Config, path string) error {
 	var data tomlData
 	if _, err := toml.DecodeFile(path, &data); err != nil {
@@ -347,7 +348,7 @@ func applyTOML(cfg *Config, path string) error {
 	return nil
 }
 
-// applyEnv 用 LARK_* 环境变量覆盖配置
+// applyEnv overrides configuration values with LARK_* environment variables.
 func applyEnv(cfg *Config) error {
 	if v := os.Getenv("LARK_HOST"); v != "" {
 		cfg.Host = v
@@ -428,13 +429,13 @@ func applyEnv(cfg *Config) error {
 	return nil
 }
 
-// isFalsy 判断字符串是否为假值
+// isFalsy checks whether a string represents a falsy value.
 func isFalsy(s string) bool {
 	lower := strings.ToLower(s)
 	return lower == "0" || lower == "false" || lower == "no"
 }
 
-// expandUser 将 ~ 展开为用户主目录
+// expandUser expands ~ to the user's home directory.
 func expandUser(path string) string {
 	if !strings.HasPrefix(path, "~/") {
 		return path
@@ -446,7 +447,7 @@ func expandUser(path string) string {
 	return filepath.Join(home, path[2:])
 }
 
-// loadDotEnv 加载 .env 文件中的环境变量（不覆盖已有值）
+// loadDotEnv loads environment variables from a .env file without overriding existing values.
 func loadDotEnv(path string) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -463,9 +464,9 @@ func loadDotEnv(path string) {
 		}
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
-		// 去除引号
+		// Strip surrounding quotes
 		value = strings.Trim(value, `"'`)
-		// 不覆盖已有环境变量
+		// Do not override existing environment variables
 		if os.Getenv(key) == "" {
 			_ = os.Setenv(key, value)
 		}

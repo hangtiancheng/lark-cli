@@ -6,6 +6,20 @@ import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return Object.fromEntries(value.entries());
+  }
+  return {};
+}
+
 // Shared mock config used across all runner tests
 function mockConfig() {
   return {
@@ -62,16 +76,22 @@ describe("AgentRunner", () => {
     expect(outcome.result).toBe("Done");
 
     const started = events.find(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "run.started",
-    ) as Record<string, unknown>;
+      (e: unknown) => asRecord(e)["type"] === "run.started",
+    );
     expect(started).toBeDefined();
-    expect(started["goal"]).toBe("test goal");
+    if (!started) {
+      throw new Error("Expected started event to be defined");
+    }
+    expect(asRecord(started)["goal"]).toBe("test goal");
 
     const finished = events.find(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "run.finished",
-    ) as Record<string, unknown>;
+      (e: unknown) => asRecord(e)["type"] === "run.finished",
+    );
     expect(finished).toBeDefined();
-    expect(finished["status"]).toBe("success");
+    if (!finished) {
+      throw new Error("Expected finished event to be defined");
+    }
+    expect(asRecord(finished)["status"]).toBe("success");
 
     rmSync(dir, { recursive: true, force: true });
   });
@@ -250,7 +270,10 @@ describe("AgentRunner", () => {
   // Feature: Verify config maxSteps propagates to ExecutionContext
   // Design: Set maxSteps=2 in config, provider always returns tool_use, confirm run stops at max_steps
   test("config maxSteps propagates to loop", async () => {
-    const dir = path.join(tmpdir(), `test-runner-maxsteps-${String(Date.now())}`);
+    const dir = path.join(
+      tmpdir(),
+      `test-runner-maxsteps-${String(Date.now())}`,
+    );
     mkdirSync(dir, { recursive: true });
     const bus = new EventBus();
 
@@ -262,7 +285,7 @@ describe("AgentRunner", () => {
           stopReason: "tool_use",
           toolUses: [
             {
-              id: `call_${callCount}`,
+              id: `call_${String(callCount)}`,
               name: "list_dir",
               input: { path: "." },
               type: "tool_use",
@@ -313,15 +336,21 @@ describe("AgentRunner", () => {
     await runner.run("test goal");
 
     const started = events.find(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "run.started",
-    ) as Record<string, unknown>;
+      (e: unknown) => asRecord(e)["type"] === "run.started",
+    );
     const finished = events.find(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "run.finished",
-    ) as Record<string, unknown>;
+      (e: unknown) => asRecord(e)["type"] === "run.finished",
+    );
 
-    expect(started["run_id"]).toBeDefined();
-    expect(finished["run_id"]).toBeDefined();
-    expect(started["run_id"]).toBe(finished["run_id"]);
+    expect(started).toBeDefined();
+    expect(finished).toBeDefined();
+    if (!started || !finished) {
+      throw new Error("Expected started and finished events to be defined");
+    }
+
+    expect(asRecord(started)["run_id"]).toBeDefined();
+    expect(asRecord(finished)["run_id"]).toBeDefined();
+    expect(asRecord(started)["run_id"]).toBe(asRecord(finished)["run_id"]);
     rmSync(dir, { recursive: true, force: true });
   });
 });

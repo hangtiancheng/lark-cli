@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Skill 表示一个可用的 skill（斜杠命令）
+// Skill represents an available skill (slash command) with prompt template and metadata.
 type Skill struct {
 	Name           string
 	Description    string
@@ -18,28 +18,28 @@ type Skill struct {
 	PromptTemplate string
 }
 
-// Loader 加载和管理 skills
+// Loader loads and manages skills from multiple sources.
 type Loader struct {
 	builtinDir string
 }
 
-// NewLoader 创建 skill 加载器
+// NewLoader creates a new skill Loader.
 func NewLoader() *Loader {
 	return &Loader{
-		builtinDir: "", // 将在 Resolve 时查找
+		builtinDir: "", // Resolved at lookup time
 	}
 }
 
-// Resolve 解析 skill 名称，按优先级搜索：项目 > 用户 > 内置
+// Resolve resolves a skill by name, searching with priority: project > user > built-in.
 func (l *Loader) Resolve(name string, projectDir string) (*Skill, error) {
-	// 1. 项目级 .lark/skills/
+	// 1. Project-level .lark/skills/
 	if projectDir != "" {
 		if skill := l.loadFromDir(filepath.Join(projectDir, ".lark", "skills"), name); skill != nil {
 			return skill, nil
 		}
 	}
 
-	// 2. 用户级 ~/.lark/skills/
+	// 2. User-level ~/.lark/skills/
 	homeDir, err := os.UserHomeDir()
 	if err == nil {
 		if skill := l.loadFromDir(filepath.Join(homeDir, ".lark", "skills"), name); skill != nil {
@@ -47,7 +47,7 @@ func (l *Loader) Resolve(name string, projectDir string) (*Skill, error) {
 		}
 	}
 
-	// 3. 内置 skills
+	// 3. Built-in skills
 	if skill := l.loadBuiltin(name); skill != nil {
 		return skill, nil
 	}
@@ -55,19 +55,19 @@ func (l *Loader) Resolve(name string, projectDir string) (*Skill, error) {
 	return nil, fmt.Errorf("skill not found: %s", name)
 }
 
-// ListAll 列出所有可用的 skills
+// ListAll returns all available skills.
 func (l *Loader) ListAll() []*Skill {
 	var skills []*Skill
 	skills = append(skills, l.listBuiltin()...)
 	return skills
 }
 
-// RenderPrompt 渲染 skill 的 prompt 模板，替换 $ARGUMENTS
+// RenderPrompt renders the skill's prompt template, substituting $ARGUMENTS.
 func (l *Loader) RenderPrompt(skill *Skill, arguments string) string {
 	return strings.ReplaceAll(skill.PromptTemplate, "$ARGUMENTS", arguments)
 }
 
-// loadFromDir 从指定目录加载 skill
+// loadFromDir loads a skill from the specified directory.
 func (l *Loader) loadFromDir(dir, name string) *Skill {
 	path := filepath.Join(dir, name+".md")
 	data, err := os.ReadFile(path)
@@ -77,9 +77,9 @@ func (l *Loader) loadFromDir(dir, name string) *Skill {
 	return parseSkillFile(name, string(data))
 }
 
-// loadBuiltin 加载内置 skill
+// loadBuiltin loads a built-in skill by name.
 func (l *Loader) loadBuiltin(name string) *Skill {
-	// 内置 skills 硬编码
+	// Built-in skills are hardcoded
 	builtins := map[string]string{
 		"init":        builtinInit,
 		"orchestrate": builtinOrchestrate,
@@ -94,7 +94,7 @@ func (l *Loader) loadBuiltin(name string) *Skill {
 	return parseSkillFile(name, content)
 }
 
-// listBuiltin 列出所有内置 skills
+// listBuiltin returns all built-in skills.
 func (l *Loader) listBuiltin() []*Skill {
 	names := []string{"init", "orchestrate", "review", "summarize"}
 	var skills []*Skill
@@ -106,14 +106,14 @@ func (l *Loader) listBuiltin() []*Skill {
 	return skills
 }
 
-// parseSkillFile 解析 skill 文件（YAML frontmatter + 正文）
+// parseSkillFile parses a skill file with optional YAML frontmatter and body content.
 func parseSkillFile(name, content string) *Skill {
 	skill := &Skill{
 		Name:           name,
 		PromptTemplate: content,
 	}
 
-	// 解析 YAML frontmatter
+	// Parse optional YAML frontmatter
 	if strings.HasPrefix(content, "---") {
 		parts := strings.SplitN(content[3:], "---", 2)
 		if len(parts) == 2 {
@@ -138,7 +138,7 @@ func parseSkillFile(name, content string) *Skill {
 	return skill
 }
 
-// 内置 skill 定义
+// Built-in skill definitions
 var builtinInit = `---
 description: Analyze project structure and generate context.md
 ---

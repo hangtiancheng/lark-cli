@@ -5,6 +5,17 @@ import { ToolRegistry } from "../../src/core/tools/registry.js";
 import { EventBus } from "../../src/core/events/bus.js";
 import type { LLMProvider } from "../../src/core/llm/base.js";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value;
+  }
+  return {};
+}
+
 describe("AgentLoop", () => {
   // Feature: Verify AgentLoop terminates on end_turn
   // Design: Create mock provider that returns end_turn, confirm loop completes
@@ -225,7 +236,11 @@ describe("AgentLoop", () => {
       description: "Always fails",
       inputSchema: { type: "object" as const, properties: {} },
       invoke: () =>
-        Promise.resolve({ content: "error", isError: true, errorType: "runtime_error" }),
+        Promise.resolve({
+          content: "error",
+          isError: true,
+          errorType: "runtime_error",
+        }),
     });
     const bus = new EventBus();
     const loop = new AgentLoop(mockProvider, registry, bus);
@@ -341,7 +356,11 @@ describe("AgentLoop", () => {
       description: "Returns error",
       inputSchema: { type: "object" as const, properties: {} },
       invoke: () =>
-        Promise.resolve({ content: "failed", isError: true, errorType: "runtime_error" }),
+        Promise.resolve({
+          content: "failed",
+          isError: true,
+          errorType: "runtime_error",
+        }),
     });
     const bus = new EventBus();
     const loop = new AgentLoop(mockProvider, registry, bus);
@@ -353,12 +372,26 @@ describe("AgentLoop", () => {
       (m) =>
         m.role === "user" &&
         Array.isArray(m.content) &&
-        m.content.some((b: unknown) => (b as Record<string, unknown>)["type"] === "tool_result"),
+        m.content.some((b) => {
+          const record = asRecord(b);
+          return record["type"] === "tool_result";
+        }),
     );
     expect(toolResultMsg).toBeDefined();
-    const content = (toolResultMsg as { content: Record<string, unknown>[] }).content;
-    const toolResult = content.find((b) => b["type"] === "tool_result");
-    expect(toolResult!["is_error"]).toBe(true);
+    if (!toolResultMsg || !Array.isArray(toolResultMsg.content)) {
+      throw new Error("Expected toolResultMsg with array content");
+    }
+    const content = toolResultMsg.content;
+    const toolResult = content.find((b) => {
+      const record = asRecord(b);
+      return record["type"] === "tool_result";
+    });
+    expect(toolResult).toBeDefined();
+    if (!toolResult) {
+      throw new Error("Expected toolResult to be defined");
+    }
+    const resultRecord = asRecord(toolResult);
+    expect(resultRecord["is_error"]).toBe(true);
   });
 
   // Feature: Verify AgentLoop increments step counter
@@ -373,7 +406,7 @@ describe("AgentLoop", () => {
             stopReason: "tool_use",
             toolUses: [
               {
-                id: `call_${callCount}`,
+                id: `call_${String(callCount)}`,
                 name: "test_tool",
                 input: {},
                 type: "tool_use",
@@ -473,18 +506,27 @@ describe("AgentLoop", () => {
       (m) =>
         m.role === "user" &&
         Array.isArray(m.content) &&
-        m.content.some(
-          (b: unknown) =>
-            (b as Record<string, unknown>)["type"] === "tool_result" &&
-            (b as Record<string, unknown>)["is_error"] === true,
-        ),
+        m.content.some((b) => {
+          const record = asRecord(b);
+          return (
+            record["type"] === "tool_result" && record["is_error"] === true
+          );
+        }),
     );
     expect(toolResultMsg).toBeDefined();
-    const content = (toolResultMsg as { content: Record<string, unknown>[] }).content;
-    const errorResult = content.find(
-      (b) => b["type"] === "tool_result" && b["is_error"] === true,
-    );
+    if (!toolResultMsg || !Array.isArray(toolResultMsg.content)) {
+      throw new Error("Expected toolResultMsg with array content");
+    }
+    const content = toolResultMsg.content;
+    const errorResult = content.find((b) => {
+      const record = asRecord(b);
+      return record["type"] === "tool_result" && record["is_error"] === true;
+    });
     expect(errorResult).toBeDefined();
-    expect(errorResult!["content"]).toContain("output token limit");
+    if (!errorResult) {
+      throw new Error("Expected errorResult to be defined");
+    }
+    const errorRecord = asRecord(errorResult);
+    expect(errorRecord["content"]).toContain("output token limit");
   });
 });
