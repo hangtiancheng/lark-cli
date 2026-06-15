@@ -406,7 +406,16 @@ export function App({ _config, client }: AppProps): React.JSX.Element {
         disabled={
           runStatus === "running" || runStatus === "waiting" || !connected
         }
-        placeholder="Type a message… (/compact to compress context)"
+        label={
+          !connected
+            ? "connecting..."
+            : runStatus === "running"
+              ? "agent is working..."
+              : runStatus === "waiting"
+                ? "waiting for permission..."
+                : "input"
+        }
+        placeholder="Type a message... (/compact to compress context)"
       />
     </Box>
   );

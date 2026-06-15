@@ -5,6 +5,7 @@ import type net from "node:net";
 import picomatch from "picomatch";
 
 import type { Event } from "../bus/events.js";
+import type { TraceWriter } from "../trace/writer.js";
 
 interface Subscription {
   subId: string;
@@ -21,6 +22,11 @@ function writeLine(socket: net.Socket, data: unknown): boolean {
 
 export class IpcEventBroadcaster {
   private _subscriptions: Subscription[] = [];
+  private _trace: TraceWriter | undefined;
+
+  constructor(options?: { trace?: TraceWriter }) {
+    this._trace = options?.trace;
+  }
 
   // Register a client subscription; returns subscription_id
   subscribe(socket: net.Socket, topics: string[], scope = "global"): string {
@@ -57,6 +63,19 @@ export class IpcEventBroadcaster {
           await new Promise<void>((resolve) =>
             sub.socket.once("drain", resolve),
           );
+        }
+        // Trace: CORE->CLIENT push
+        if (this._trace) {
+          this._trace.emit({
+            ts: new Date().toISOString(),
+            direction: "CORE→CLIENT",
+            layer: "ipc",
+            kind: "push",
+            run_id: typeof runId === "string" ? runId : null,
+            step: null,
+            client_id: sub.subId,
+            data: { event_type: eventType },
+          });
         }
       } catch {
         dead.push(sub.socket);

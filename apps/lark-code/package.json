@@ -27,6 +27,8 @@
     "ink": "^7.0.6",
     "ink-spinner": "^5.0.0",
     "ink-text-input": "^6.0.0",
+    "marked": "^18.0.5",
+    "marked-terminal": "^7.3.0",
     "picomatch": "^4.0.4",
     "pino": "^10.3.1",
     "pino-roll": "^4.0.0",

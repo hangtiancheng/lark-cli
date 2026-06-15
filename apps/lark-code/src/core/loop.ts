@@ -26,6 +26,7 @@ export class AgentLoop {
   private _compactor: Compactor | undefined;
   private _compactThreshold: number;
   private _sessionId: string;
+  private _signal: AbortSignal | undefined;
 
   constructor(
     provider: LLMProvider,
@@ -36,6 +37,7 @@ export class AgentLoop {
       compactor?: Compactor;
       compactThreshold?: number;
       sessionId?: string;
+      signal?: AbortSignal;
     },
   ) {
     this._provider = provider;
@@ -45,11 +47,18 @@ export class AgentLoop {
     this._compactor = options?.compactor;
     this._compactThreshold = options?.compactThreshold ?? 0.8;
     this._sessionId = options?.sessionId ?? "";
+    this._signal = options?.signal;
   }
 
   // Drive the plan-act-observe loop until the context signals completion
   async run(context: ExecutionContext): Promise<void> {
     while (!context.isDone()) {
+      // Cooperative cancellation check
+      if (this._signal?.aborted) {
+        context.markFailed("cancelled");
+        throw new Error("cancelled");
+      }
+
       context.step++;
       await this._bus.publish({
         type: "step.started",
@@ -68,7 +77,11 @@ export class AgentLoop {
           context.runId,
           { step: context.step, system: context.systemPrompt(SYSTEM_PROMPT) },
         );
-      } catch {
+      } catch (exc) {
+        if (this._signal?.aborted) {
+          context.markFailed("cancelled");
+          throw exc;
+        }
         context.markFailed("llm_error");
         break;
       }

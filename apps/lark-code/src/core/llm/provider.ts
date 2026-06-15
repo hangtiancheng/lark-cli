@@ -38,6 +38,23 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Check if an error is a transient network failure worth retrying
+function isRetryableError(exc: unknown): boolean {
+  if (!(exc instanceof Error)) return false;
+  const code = (exc as NodeJS.ErrnoException).code;
+  if (
+    code === "ECONNRESET" ||
+    code === "ECONNREFUSED" ||
+    code === "ETIMEDOUT" ||
+    code === "EPIPE" ||
+    code === "EAI_AGAIN"
+  ) {
+    return true;
+  }
+  const msg = exc.message.toLowerCase();
+  return msg.includes("socket hang up") || msg.includes("connection reset");
+}
+
 export class AnthropicProvider implements LLMProvider {
   private _client: Anthropic;
   private _model: string;
@@ -119,20 +136,21 @@ export class AnthropicProvider implements LLMProvider {
 
         // Collect tokens via text event (MessageStream has no textStream property)
         stream.on("text", (textDelta) => {
-          if (attempt === 1) {
-            void bus.publish({
-              type: "llm.token",
-              run_id: runId,
-              token: textDelta,
-              timestamp: now(),
-            });
-          }
+          void bus.publish({
+            type: "llm.token",
+            run_id: runId,
+            token: textDelta,
+            timestamp: now(),
+          });
           textParts.push(textDelta);
         });
 
         finalMessage = await stream.finalMessage();
         break;
       } catch (exc) {
+        if (!isRetryableError(exc)) {
+          throw exc;
+        }
         if (attempt === MAX_STREAM_RETRIES) {
           console.error(
             `stream failed after ${String(MAX_STREAM_RETRIES)} attempts run_id=${runId} step=${String(step)}:`,

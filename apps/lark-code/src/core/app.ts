@@ -60,6 +60,7 @@ export class CoreApp {
   private _permissionManager: PermissionManager | null = null;
   private _mcpManager: McpServerManager | null = null;
   private _runningRuns = new Set<Promise<unknown>>();
+  private _abortController = new AbortController();
 
   // Handle core.ping request
   private async _pingHandler(
@@ -292,7 +293,9 @@ export class CoreApp {
     });
 
     // Broadcaster
-    this._broadcaster = new IpcEventBroadcaster();
+    this._broadcaster = new IpcEventBroadcaster(
+      this._trace ? { trace: this._trace } : undefined,
+    );
     this._bus.subscribe(async (e) => {
       if (this._broadcaster) {
         await this._broadcaster.handle(e);
@@ -322,13 +325,16 @@ export class CoreApp {
             ? { permissionManager: this._permissionManager }
             : {}),
           ...(this._mcpManager ? { mcpManager: this._mcpManager } : {}),
+          signal: this._abortController.signal,
         }),
       this._bus,
       provider,
     );
 
     // Server
-    const server = new SocketServer(config.host, config.port);
+    const server = new SocketServer(config.host, config.port, {
+      ...(this._trace ? { trace: this._trace } : {}),
+    });
     server.register("core.ping", (p) => this._pingHandler(p));
     server.register("agent.run", (p) => this._agentRunHandler(p));
     server.register("event.subscribe", (p) => this._subscribeHandler(p));
@@ -352,6 +358,7 @@ export class CoreApp {
       shutdownResolve = resolve;
     });
     const onSignal = (): void => {
+      this._abortController.abort();
       shutdownResolve?.();
     };
     process.on("SIGINT", onSignal);
@@ -360,6 +367,17 @@ export class CoreApp {
     await shutdownPromise;
 
     logger.info("shutting down");
+
+    // Wait for running agent runs to complete (with 5s timeout)
+    if (this._runningRuns.size > 0) {
+      await Promise.race([
+        Promise.allSettled(this._runningRuns),
+        new Promise<void>((resolve) =>
+          setTimeout(() => { resolve(); }, 5000),
+        ),
+      ]);
+    }
+
     await this._mcpManager.stopAll();
     await server.stop();
     if (this._trace) await this._trace.stop();

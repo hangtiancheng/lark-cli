@@ -12,6 +12,8 @@ import {
   makeError,
 } from "../bus/envelope.js";
 import type { JsonRpcSuccess } from "../bus/envelope.js";
+import type { TraceWriter } from "../trace/writer.js";
+import type { TraceRecord } from "../trace/record.js";
 
 export type CommandHandler = (
   params: Record<string, unknown>,
@@ -54,10 +56,12 @@ export class SocketServer {
   private _handlers = new Map<string, CommandHandler>();
   private _server: net.Server | null = null;
   private _activeSockets = new Set<net.Socket>();
+  private _trace: TraceWriter | undefined;
 
-  constructor(host: string, port: number) {
+  constructor(host: string, port: number, options?: { trace?: TraceWriter }) {
     this._host = host;
     this._port = port;
+    this._trace = options?.trace;
   }
 
   // Register a command handler for a given method name
@@ -182,12 +186,41 @@ export class SocketServer {
 
     const req = reqResult.data;
 
+    // Trace: CLIENT->CORE command
+    if (this._trace) {
+      this._trace.emit({
+        ts: new Date().toISOString(),
+        direction: "CLIENT→CORE",
+        layer: "ipc",
+        kind: "command",
+        run_id: null,
+        step: null,
+        client_id: null,
+        data: { method: req.method, params: req.params },
+      });
+    }
+
     const handler = this._handlers.get(req.method);
     if (!handler) {
-      await sendJson(
-        socket,
-        makeError(req.id, METHOD_NOT_FOUND, `Method not found: ${req.method}`),
+      const errorResponse = makeError(
+        req.id,
+        METHOD_NOT_FOUND,
+        `Method not found: ${req.method}`,
       );
+      // Trace: CORE->CLIENT error
+      if (this._trace) {
+        this._trace.emit({
+          ts: new Date().toISOString(),
+          direction: "CORE→CLIENT",
+          layer: "ipc",
+          kind: "error",
+          run_id: null,
+          step: null,
+          client_id: null,
+          data: { method: req.method, error: "method_not_found" },
+        });
+      }
+      await sendJson(socket, errorResponse);
       return;
     }
 
@@ -198,8 +231,37 @@ export class SocketServer {
         id: req.id,
         result,
       };
+      // Trace: CORE->CLIENT response
+      if (this._trace) {
+        this._trace.emit({
+          ts: new Date().toISOString(),
+          direction: "CORE→CLIENT",
+          layer: "ipc",
+          kind: "response",
+          run_id: null,
+          step: null,
+          client_id: null,
+          data: { method: req.method },
+        });
+      }
       await sendJson(socket, response);
     } catch (e) {
+      // Trace: CORE->CLIENT handler error
+      if (this._trace) {
+        this._trace.emit({
+          ts: new Date().toISOString(),
+          direction: "CORE→CLIENT",
+          layer: "ipc",
+          kind: "error",
+          run_id: null,
+          step: null,
+          client_id: null,
+          data: {
+            method: req.method,
+            error: e instanceof Error ? e.message : String(e),
+          },
+        });
+      }
       if (e instanceof HandlerError) {
         await sendJson(socket, makeError(req.id, e.code, e.message, e.data));
       } else if (e instanceof Error) {

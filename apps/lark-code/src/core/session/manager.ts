@@ -15,6 +15,7 @@ import type { SessionStore } from "./store.js";
 
 const SESSION_NOT_FOUND = -32010;
 const SESSION_CLOSED = -32011;
+const SESSION_BUSY = -32012;
 const PROVIDER_NOT_AVAILABLE = -32020;
 const COMPACTION_FAILED = -32021;
 
@@ -88,7 +89,9 @@ export class SessionManager {
     const mutex = this._mutexes.get(sid);
     if (!mutex)
       throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
-    await mutex.acquire();
+    if (!mutex.tryAcquire()) {
+      throw new HandlerError(SESSION_BUSY, "session is busy");
+    }
     try {
       if (session.status === "closed") {
         throw new HandlerError(SESSION_CLOSED, "session already closed");
@@ -181,7 +184,9 @@ export class SessionManager {
     const mutex = this._mutexes.get(sid);
     if (!mutex)
       throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
-    await mutex.acquire();
+    if (!mutex.tryAcquire()) {
+      throw new HandlerError(SESSION_BUSY, "session is busy");
+    }
     try {
       session.status = "closed";
       session.updatedAt = now();
@@ -209,7 +214,9 @@ export class SessionManager {
       );
     }
 
-    await mutex.acquire();
+    if (!mutex.tryAcquire()) {
+      throw new HandlerError(SESSION_BUSY, "session is busy");
+    }
     try {
       const messages = this._store.readMessages(sid);
       const sessionDir = this._store.sessionDir(sid);
@@ -265,8 +272,7 @@ export class SessionManager {
 }
 
 // Promise-based mutex: guarantees async mutual exclusion without busy-spinning
-// Replaces the previous boolean flag approach which could not prevent concurrent
-// async operations from both seeing _locks.get(sid) === false simultaneously
+// Supports both blocking acquire() and non-blocking tryAcquire() for immediate rejection
 class PromiseMutex {
   private _queue: {
     resolve: () => void;
@@ -282,6 +288,15 @@ class PromiseMutex {
     return new Promise<void>((resolve) => {
       this._queue.push({ resolve });
     });
+  }
+
+  // Try to acquire without waiting; returns false if already locked
+  tryAcquire(): boolean {
+    if (!this._locked) {
+      this._locked = true;
+      return true;
+    }
+    return false;
   }
 
   // Release the lock; wakes the next waiter in FIFO order

@@ -130,7 +130,157 @@ describe("Tool Retry", () => {
     };
     const result = await invokeTool(registry, toolUse, bus, "r1");
 
-    expect(callCount).toBeGreaterThan(1);
+    expect(callCount).toBe(3); // MAX_RETRIES=2 means 3 total attempts (1 + 2 retries)
     expect(result.isError).toBe(true);
+    expect(result.errorType).toBe("runtime_error");
+  });
+
+  // Feature: Verify invokeTool does not retry on timeout
+  // Design: Tool that exceeds timeout returns timeout error, no retry
+  test("does not retry on timeout", async () => {
+    let callCount = 0;
+    const tool: BaseTool = {
+      name: "slow_tool",
+      description: "Slow tool",
+      inputSchema: { type: "object" as const, properties: {} },
+      invoke: () => {
+        callCount++;
+        return new Promise((resolve) => setTimeout(() => resolve(toolSuccess("done")), 10000));
+      },
+    };
+    const registry = new ToolRegistry();
+    registry.register(tool);
+
+    const bus = new EventBus();
+    const toolUse: ToolUseBlock = {
+      id: "call_1",
+      name: "slow_tool",
+      input: {},
+      type: "tool_use",
+      caller: { type: "direct" },
+    };
+    const result = await invokeTool(registry, toolUse, bus, "r1", { timeout: 50 });
+
+    expect(callCount).toBe(1); // No retry on timeout
+    expect(result.isError).toBe(true);
+    expect(result.errorType).toBe("timeout");
+  }, 15000);
+
+  // Feature: Verify error_class in tool.call_failed events
+  // Design: Failing tool publishes events with correct error_class
+  test("publishes failed events with correct error_class", async () => {
+    let callCount = 0;
+    const tool: BaseTool = {
+      name: "err_tool",
+      description: "Error tool",
+      inputSchema: { type: "object" as const, properties: {} },
+      invoke: () => {
+        callCount++;
+        return Promise.resolve(toolError("fail", "runtime_error"));
+      },
+    };
+    const registry = new ToolRegistry();
+    registry.register(tool);
+
+    const bus = new EventBus();
+    const events: unknown[] = [];
+    bus.subscribe((e) => {
+      events.push(e);
+      return Promise.resolve();
+    });
+    const toolUse: ToolUseBlock = {
+      id: "call_1",
+      name: "err_tool",
+      input: {},
+      type: "tool_use",
+      caller: { type: "direct" },
+    };
+    await invokeTool(registry, toolUse, bus, "r1");
+
+    const failedEvents = events.filter(
+      (e: unknown) => (e as Record<string, unknown>)["type"] === "tool.call_failed",
+    );
+    expect(failedEvents.length).toBeGreaterThan(0);
+    for (const fe of failedEvents) {
+      expect((fe as Record<string, unknown>)["error_class"]).toBe("runtime_error");
+    }
+  });
+
+  // Feature: Verify RateLimitedError exception triggers retry
+  // Design: Tool that throws RateLimitedError is retried with rate_limited error_class
+  test("retries on RateLimitedError exception", async () => {
+    let callCount = 0;
+    const { RateLimitedError } = await import("../../src/core/tools/errors.js");
+    const tool: BaseTool = {
+      name: "rl_tool",
+      description: "Rate limited tool",
+      inputSchema: { type: "object" as const, properties: {} },
+      invoke: () => {
+        callCount++;
+        if (callCount < 2) {
+          throw new RateLimitedError("too many requests");
+        }
+        return Promise.resolve(toolSuccess("ok"));
+      },
+    };
+    const registry = new ToolRegistry();
+    registry.register(tool);
+
+    const bus = new EventBus();
+    const events: unknown[] = [];
+    bus.subscribe((e) => {
+      events.push(e);
+      return Promise.resolve();
+    });
+    const toolUse: ToolUseBlock = {
+      id: "call_1",
+      name: "rl_tool",
+      input: {},
+      type: "tool_use",
+      caller: { type: "direct" },
+    };
+    const result = await invokeTool(registry, toolUse, bus, "r1");
+
+    expect(callCount).toBe(2);
+    expect(result.isError).toBe(false);
+    const failedEvents = events.filter(
+      (e: unknown) => (e as Record<string, unknown>)["type"] === "tool.call_failed",
+    );
+    expect(failedEvents.length).toBe(1);
+    expect((failedEvents[0] as Record<string, unknown>)["error_class"]).toBe("rate_limited");
+  });
+
+  // Feature: Verify runtime exceptions trigger retry
+  // Design: Tool that throws a generic Error is caught as runtime_error and retried
+  test("retries on thrown exceptions as runtime_error", async () => {
+    let callCount = 0;
+    const tool: BaseTool = {
+      name: "throw_tool",
+      description: "Throw tool",
+      inputSchema: { type: "object" as const, properties: {} },
+      invoke: () => {
+        callCount++;
+        if (callCount < 2) {
+          throw new Error("unexpected failure");
+        }
+        return Promise.resolve(toolSuccess("recovered"));
+      },
+    };
+    const registry = new ToolRegistry();
+    registry.register(tool);
+
+    const bus = new EventBus();
+    const toolUse: ToolUseBlock = {
+      id: "call_1",
+      name: "throw_tool",
+      input: {},
+      type: "tool_use",
+      caller: { type: "direct" },
+    };
+    const result = await invokeTool(registry, toolUse, bus, "r1");
+
+    expect(callCount).toBe(2);
+    expect(result.isError).toBe(false);
+    expect(result.content).toBe("recovered");
   });
 });

@@ -2,10 +2,15 @@
 // Claude Code style: inline indicators, no heavy borders, flowing text layout
 import React from "react";
 import { Box, Text } from "ink";
+import { marked } from "marked";
+import { markedTerminal } from "marked-terminal";
 
 import { theme, truncate } from "../theme.js";
 import { isRecord } from "../../core/bus/envelope.js";
 import { ToolUseCard } from "./tool-use-card.js";
+
+// Configure marked with terminal renderer (cached, created once)
+marked.use(markedTerminal());
 
 // Normalized event representation for rendering
 export interface AgentEvent {
@@ -106,7 +111,7 @@ export function EventCard({
       );
     }
 
-    // LLM streaming output — flowing text, no per-line boxing
+    // LLM streaming output — flowing text with markdown rendering
     case "llm.token": {
       const token = typeof data["token"] === "string" ? data["token"] : "";
       return (
@@ -118,10 +123,11 @@ export function EventCard({
 
     case "llm.text": {
       const text = typeof data["text"] === "string" ? data["text"] : "";
+      const rendered = marked.parse(text) as string;
       return (
-        <Text color={theme.text} wrap="wrap">
-          {text}
-        </Text>
+        <Box paddingX={1}>
+          <Text wrap="wrap">{rendered}</Text>
+        </Box>
       );
     }
 

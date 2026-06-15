@@ -62,6 +62,7 @@ export class AgentRunner {
   private _permissionManager: PermissionManager | undefined;
   private _mcpManager: McpManagerLike | undefined;
   private _taskRegistry = new BackgroundTaskRegistry();
+  private _signal: AbortSignal | undefined;
 
   constructor(
     config: LarkConfig,
@@ -73,6 +74,7 @@ export class AgentRunner {
       trace?: TraceWriter;
       permissionManager?: PermissionManager;
       mcpManager?: McpManagerLike;
+      signal?: AbortSignal;
     },
   ) {
     this._config = config;
@@ -83,6 +85,7 @@ export class AgentRunner {
     this._trace = options?.trace;
     this._permissionManager = options?.permissionManager;
     this._mcpManager = options?.mcpManager;
+    this._signal = options?.signal;
   }
 
   // Build tool registry
@@ -270,6 +273,7 @@ export class AgentRunner {
           compactor,
           compactThreshold: this._config.compaction.autoThreshold,
           sessionId: sessionIdStr,
+          ...(this._signal ? { signal: this._signal } : {}),
         });
         await loop.run(context);
       } catch {
