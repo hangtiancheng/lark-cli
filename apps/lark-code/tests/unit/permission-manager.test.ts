@@ -7,13 +7,11 @@ import { PermissionManager } from "../../src/core/permissions/manager.js";
 import type { ToolPolicy } from "../../src/core/permissions/policy.js";
 
 // Helper: create a manager with custom options, no filesystem side effects by default
-function makeManager(
-  opts?: {
-    policies?: Record<string, ToolPolicy>;
-    policyFile?: string;
-    timeoutS?: number;
-  },
-): PermissionManager {
+function makeManager(opts?: {
+  policies?: Record<string, ToolPolicy>;
+  policyFile?: string;
+  timeoutS?: number;
+}): PermissionManager {
   return new PermissionManager(opts);
 }
 
@@ -55,7 +53,7 @@ describe("PermissionManager", () => {
     const mgr = makeManager();
     const emitter = makeEmitter();
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-1",
+      "tool-use-1",
       "read_file",
       { path: "test.txt" },
       "session-1",
@@ -73,10 +71,12 @@ describe("PermissionManager", () => {
     const emitter = makeEmitter();
 
     // Schedule respond after a short delay
-    setTimeout(() => { mgr.respond("tu-ask-1", "allow_once"); }, 20);
+    setTimeout(() => {
+      mgr.respond("tool-use-ask-1", "allow_once");
+    }, 20);
 
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-ask-1",
+      "tool-use-ask-1",
       "bash",
       { command: "echo hello" },
       "session-1",
@@ -87,17 +87,19 @@ describe("PermissionManager", () => {
     expect(decision).toBe("allow_once");
     expect(emitter.events).toHaveLength(1);
     expect(emitter.events[0]["type"]).toBe("permission.requested");
-    expect(emitter.events[0]["tool_use_id"]).toBe("tu-ask-1");
+    expect(emitter.events[0]["tool_use_id"]).toBe("tool-use-ask-1");
   });
 
   test("checkAndWait respond deny_once returns false", async () => {
     const mgr = makeManager({ timeoutS: 5 });
     const emitter = makeEmitter();
 
-    setTimeout(() => { mgr.respond("tu-deny-1", "deny_once"); }, 20);
+    setTimeout(() => {
+      mgr.respond("tool-use-deny-1", "deny_once");
+    }, 20);
 
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-deny-1",
+      "tool-use-deny-1",
       "bash",
       { command: "rm -rf /" },
       "session-1",
@@ -115,9 +117,11 @@ describe("PermissionManager", () => {
     const emitter = makeEmitter();
 
     // First call: respond with always_allow
-    setTimeout(() => { mgr.respond("tu-aa-1", "always_allow"); }, 20);
+    setTimeout(() => {
+      mgr.respond("tool-use-aa-1", "always_allow");
+    }, 20);
     await mgr.checkAndWait(
-      "tu-aa-1",
+      "tool-use-aa-1",
       "bash",
       { command: "echo hello" },
       "session-1",
@@ -127,7 +131,7 @@ describe("PermissionManager", () => {
 
     // Second call: should hit session cache, no new event
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-aa-2",
+      "tool-use-aa-2",
       "bash",
       { command: "echo world" },
       "session-1",
@@ -143,9 +147,11 @@ describe("PermissionManager", () => {
     const emitter = makeEmitter();
 
     // Session 1: respond always_allow for bash
-    setTimeout(() => { mgr.respond("tu-s1", "always_allow"); }, 20);
+    setTimeout(() => {
+      mgr.respond("tool-use-s1", "always_allow");
+    }, 20);
     await mgr.checkAndWait(
-      "tu-s1",
+      "tool-use-s1",
       "bash",
       { command: "echo test" },
       "session-1",
@@ -154,7 +160,7 @@ describe("PermissionManager", () => {
 
     // Session 2: bash should auto_allow via persistent in-memory cache
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-s2",
+      "tool-use-s2",
       "bash",
       { command: "echo test" },
       "session-2",
@@ -171,9 +177,11 @@ describe("PermissionManager", () => {
     const mgr = makeManager({ timeoutS: 5 });
     const emitter = makeEmitter();
 
-    setTimeout(() => { mgr.respond("tu-ad-1", "always_deny"); }, 20);
+    setTimeout(() => {
+      mgr.respond("tool-use-ad-1", "always_deny");
+    }, 20);
     await mgr.checkAndWait(
-      "tu-ad-1",
+      "tool-use-ad-1",
       "bash",
       { command: "rm -rf /" },
       "session-1",
@@ -182,7 +190,7 @@ describe("PermissionManager", () => {
 
     // Second call: should hit cache
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-ad-2",
+      "tool-use-ad-2",
       "bash",
       { command: "ls" },
       "session-1",
@@ -201,7 +209,7 @@ describe("PermissionManager", () => {
 
     // Start checkAndWait without responding
     const pending = mgr.checkAndWait(
-      "tu-cancel-1",
+      "tool-use-cancel-1",
       "bash",
       { command: "echo test" },
       "session-1",
@@ -209,7 +217,9 @@ describe("PermissionManager", () => {
     );
 
     // Cancel after a short delay
-    setTimeout(() => { mgr.cancelSession("session-1"); }, 20);
+    setTimeout(() => {
+      mgr.cancelSession("session-1");
+    }, 20);
 
     const [allowed, decision] = await pending;
     expect(allowed).toBe(false);
@@ -222,7 +232,7 @@ describe("PermissionManager", () => {
 
     // Session 1: start pending
     const pending1 = mgr.checkAndWait(
-      "tu-iso-1",
+      "tool-use-iso-1",
       "bash",
       { command: "echo s1" },
       "session-1",
@@ -231,7 +241,7 @@ describe("PermissionManager", () => {
 
     // Session 2: start pending
     const pending2 = mgr.checkAndWait(
-      "tu-iso-2",
+      "tool-use-iso-2",
       "bash",
       { command: "echo s2" },
       "session-2",
@@ -239,9 +249,13 @@ describe("PermissionManager", () => {
     );
 
     // Cancel only session 1
-    setTimeout(() => { mgr.cancelSession("session-1"); }, 20);
+    setTimeout(() => {
+      mgr.cancelSession("session-1");
+    }, 20);
     // Respond to session 2
-    setTimeout(() => { mgr.respond("tu-iso-2", "allow_once"); }, 40);
+    setTimeout(() => {
+      mgr.respond("tool-use-iso-2", "allow_once");
+    }, 40);
 
     const [r1, r2] = await Promise.all([pending1, pending2]);
     expect(r1[1]).toBe("deny_once"); // cancelled
@@ -256,7 +270,7 @@ describe("PermissionManager", () => {
 
     // Never respond
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-timeout-1",
+      "tool-use-timeout-1",
       "bash",
       { command: "echo test" },
       "session-1",
@@ -271,7 +285,7 @@ describe("PermissionManager", () => {
     const emitter = makeEmitter();
 
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-late-1",
+      "tool-use-late-1",
       "bash",
       { command: "echo test" },
       "session-1",
@@ -280,7 +294,7 @@ describe("PermissionManager", () => {
     expect(decision).toBe("timeout");
 
     // Late respond should not throw
-    mgr.respond("tu-late-1", "allow_once");
+    mgr.respond("tool-use-late-1", "allow_once");
     // No crash = success
   });
 
@@ -299,9 +313,11 @@ describe("PermissionManager", () => {
     const emitter = makeEmitter();
 
     // First: respond always_allow for bash with safe command
-    setTimeout(() => { mgr.respond("tu-outside-1", "always_allow"); }, 20);
+    setTimeout(() => {
+      mgr.respond("tool-use-outside-1", "always_allow");
+    }, 20);
     await mgr.checkAndWait(
-      "tu-outside-1",
+      "tool-use-outside-1",
       "bash",
       { command: "echo safe" },
       "session-1",
@@ -309,9 +325,11 @@ describe("PermissionManager", () => {
     );
 
     // Second: bash with OUTSIDE_CWD command should still ASK (not hit cache)
-    setTimeout(() => { mgr.respond("tu-outside-2", "allow_once"); }, 20);
+    setTimeout(() => {
+      mgr.respond("tool-use-outside-2", "allow_once");
+    }, 20);
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-outside-2",
+      "tool-use-outside-2",
       "bash",
       { command: "cd /tmp && echo hacked" },
       "session-1",
@@ -331,9 +349,11 @@ describe("PermissionManager", () => {
       // First manager: respond always_allow
       const mgr1 = makeManager({ policyFile, timeoutS: 5 });
       const emitter = makeEmitter();
-      setTimeout(() => { mgr1.respond("tu-persist-1", "always_allow"); }, 20);
+      setTimeout(() => {
+        mgr1.respond("tool-use-persist-1", "always_allow");
+      }, 20);
       await mgr1.checkAndWait(
-        "tu-persist-1",
+        "tool-use-persist-1",
         "bash",
         { command: "echo test" },
         "session-1",
@@ -344,7 +364,7 @@ describe("PermissionManager", () => {
       const mgr2 = makeManager({ policyFile, timeoutS: 5 });
       const emitter2 = makeEmitter();
       const [allowed, decision] = await mgr2.checkAndWait(
-        "tu-persist-2",
+        "tool-use-persist-2",
         "bash",
         { command: "echo test" },
         "session-2",
@@ -372,7 +392,7 @@ describe("PermissionManager", () => {
     const emitter = makeEmitter();
 
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-dp-1",
+      "tool-use-dp-1",
       "bash",
       { command: "rm -rf /" },
       "session-1",
@@ -397,7 +417,7 @@ describe("PermissionManager", () => {
     const emitter = makeEmitter();
 
     const [allowed, decision] = await mgr.checkAndWait(
-      "tu-ap-1",
+      "tool-use-ap-1",
       "bash",
       { command: "echo hello" },
       "session-1",

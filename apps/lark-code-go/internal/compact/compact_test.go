@@ -45,7 +45,7 @@ func TestCompactorCompact(t *testing.T) {
 	}
 
 	compacted, origTokens, summaryTokens, err := compactor.Compact(
-		context.Background(), messages, "sess-1", "run-1", "",
+		context.Background(), messages, "session-1", "run-1", "",
 	)
 	if err != nil {
 		t.Fatalf("Compact failed: %v", err)
@@ -89,7 +89,7 @@ func TestCompactorWithFocus(t *testing.T) {
 	}
 
 	_, _, _, err := compactor.Compact(
-		context.Background(), messages, "sess-1", "run-1", "security concerns",
+		context.Background(), messages, "session-1", "run-1", "security concerns",
 	)
 	if err != nil {
 		t.Fatalf("Compact with focus failed: %v", err)
@@ -110,7 +110,7 @@ func TestCompactorLLMError(t *testing.T) {
 	}
 
 	_, _, _, err := compactor.Compact(
-		context.Background(), messages, "sess-1", "run-1", "",
+		context.Background(), messages, "session-1", "run-1", "",
 	)
 	if err == nil {
 		t.Error("expected error when LLM call fails")
@@ -131,7 +131,7 @@ func TestCompactorEventPublishing(t *testing.T) {
 		{"role": "assistant", "content": "hi"},
 	}
 
-	compactor.Compact(context.Background(), messages, "sess-1", "run-1", "")
+	compactor.Compact(context.Background(), messages, "session-1", "run-1", "")
 
 	// 应该发布 context.compacted 事件
 	found := false
@@ -178,7 +178,7 @@ func TestCompactorWithArrayContent(t *testing.T) {
 	}
 
 	compacted, origTokens, _, err := compactor.Compact(
-		context.Background(), messages, "sess-1", "run-1", "",
+		context.Background(), messages, "session-1", "run-1", "",
 	)
 	if err != nil {
 		t.Fatalf("Compact with array content failed: %v", err)
@@ -198,7 +198,7 @@ func TestTruncateToolResultsNoTruncation(t *testing.T) {
 			"content": []any{
 				map[string]any{
 					"type":        "tool_result",
-					"tool_use_id": "tu-1",
+					"tool_use_id": "tool-use-1",
 					"content":     "short content",
 				},
 			},
@@ -232,7 +232,7 @@ func TestTruncateToolResultsWithStringContent(t *testing.T) {
 			"content": []any{
 				map[string]any{
 					"type":        "tool_result",
-					"tool_use_id": "tu-1",
+					"tool_use_id": "tool-use-1",
 					"content":     string(longContent),
 				},
 			},
@@ -268,7 +268,7 @@ func TestTruncateToolResultsWithArrayContent(t *testing.T) {
 			"content": []any{
 				map[string]any{
 					"type":        "tool_result",
-					"tool_use_id": "tu-1",
+					"tool_use_id": "tool-use-1",
 					"content": []any{
 						map[string]any{
 							"type": "text",

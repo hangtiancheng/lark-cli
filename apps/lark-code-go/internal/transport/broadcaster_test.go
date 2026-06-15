@@ -78,7 +78,7 @@ func TestBroadcasterTopicFilter(t *testing.T) {
 	b.Handle(&bus.ToolCallStartedEvent{
 		Type:      "tool.call_started",
 		RunID:     "run-1",
-		ToolUseID: "tu-1",
+		ToolUseID: "tool-use-1",
 		ToolName:  "bash",
 		TS:        time.Now().UTC().Format(time.RFC3339),
 	})
@@ -184,8 +184,8 @@ func TestBroadcasterWildcardSubscription(t *testing.T) {
 	b.Subscribe(w, []string{"*"}, "global")
 
 	b.Handle(&bus.RunStartedEvent{Type: "run.started", RunID: "run-1", TS: "now"})
-	b.Handle(&bus.ToolCallStartedEvent{Type: "tool.call_started", RunID: "run-1", ToolUseID: "tu-1", ToolName: "bash", TS: "now"})
-	b.Handle(&bus.SessionCreatedEvent{Type: "session.created", SessionID: "sess-1", TS: "now"})
+	b.Handle(&bus.ToolCallStartedEvent{Type: "tool.call_started", RunID: "run-1", ToolUseID: "tool-use-1", ToolName: "bash", TS: "now"})
+	b.Handle(&bus.SessionCreatedEvent{Type: "session.created", SessionID: "session-1", TS: "now"})
 
 	output := w.String()
 	lines := strings.Split(strings.TrimSpace(output), "\n")
@@ -204,7 +204,7 @@ func TestBroadcasterGlobalScopeReceivesAll(t *testing.T) {
 
 	b.Handle(&bus.SessionCreatedEvent{
 		Type:      "session.created",
-		SessionID: "sess-1",
+		SessionID: "session-1",
 		TS:        time.Now().UTC().Format(time.RFC3339),
 	})
 

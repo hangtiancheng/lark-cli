@@ -91,7 +91,7 @@ func TestManagerCheckAndWaitAutoAllow(t *testing.T) {
 	defer eb.Close()
 
 	mgr := permissions.NewManager(store, eb, 5.0, "/tmp", "")
-	decision, err := mgr.CheckAndWait("echo", "tu-1", map[string]any{"msg": "hi"}, "sess-1", "run-1")
+	decision, err := mgr.CheckAndWait("echo", "tool-use-1", map[string]any{"msg": "hi"}, "session-1", "run-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestManagerCheckAndWaitAutoDeny(t *testing.T) {
 	defer eb.Close()
 
 	mgr := permissions.NewManager(store, eb, 5.0, "/tmp", "")
-	decision, err := mgr.CheckAndWait("bash", "tu-1", map[string]any{"command": "rm -rf /"}, "sess-1", "run-1")
+	decision, err := mgr.CheckAndWait("bash", "tool-use-1", map[string]any{"command": "rm -rf /"}, "session-1", "run-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestManagerCheckAndWaitUserApproval(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		decision, err := mgr.CheckAndWait("bash", "tu-1", map[string]any{"command": "ls"}, "sess-1", "run-1")
+		decision, err := mgr.CheckAndWait("bash", "tool-use-1", map[string]any{"command": "ls"}, "session-1", "run-1")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -156,7 +156,7 @@ func TestManagerCheckAndWaitUserApproval(t *testing.T) {
 	}
 
 	// 响应允许
-	ok := mgr.Respond("tu-1", "allow_once")
+	ok := mgr.Respond("tool-use-1", "allow_once")
 	if !ok {
 		t.Error("Respond returned false")
 	}
@@ -172,7 +172,7 @@ func TestManagerCheckAndWaitTimeout(t *testing.T) {
 
 	mgr := permissions.NewManager(store, eb, 0.1, "/tmp", "") // 100ms timeout
 
-	decision, err := mgr.CheckAndWait("bash", "tu-1", map[string]any{"command": "ls"}, "sess-1", "run-1")
+	decision, err := mgr.CheckAndWait("bash", "tool-use-1", map[string]any{"command": "ls"}, "session-1", "run-1")
 	if err == nil {
 		t.Error("expected timeout error")
 	}
@@ -203,7 +203,7 @@ func TestManagerSessionCache(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		// 第一次请求：用户选择 always_allow
-		_, err := mgr.CheckAndWait("bash", "tu-1", map[string]any{"command": "ls"}, "sess-1", "run-1")
+		_, err := mgr.CheckAndWait("bash", "tool-use-1", map[string]any{"command": "ls"}, "session-1", "run-1")
 		if err != nil {
 			t.Errorf("first call error: %v", err)
 		}
@@ -212,11 +212,11 @@ func TestManagerSessionCache(t *testing.T) {
 
 	// 等待并响应 always_allow
 	time.Sleep(50 * time.Millisecond)
-	mgr.Respond("tu-1", "always_allow")
+	mgr.Respond("tool-use-1", "always_allow")
 	<-done
 
 	// 第二次请求相同参数应该直接返回缓存
-	decision, err := mgr.CheckAndWait("bash", "tu-2", map[string]any{"command": "ls"}, "sess-1", "run-1")
+	decision, err := mgr.CheckAndWait("bash", "tool-use-2", map[string]any{"command": "ls"}, "session-1", "run-1")
 	if err != nil {
 		t.Fatalf("cached call error: %v", err)
 	}
@@ -232,21 +232,21 @@ func TestManagerCancelSession(t *testing.T) {
 
 	mgr := permissions.NewManager(store, eb, 30.0, "/tmp", "")
 
-	// sess-1 的请求
+	// session-1 的请求
 	sess1Done := make(chan struct{})
 	go func() {
-		decision, err := mgr.CheckAndWait("bash", "tu-s1", map[string]any{"command": "ls"}, "sess-1", "run-1")
+		decision, err := mgr.CheckAndWait("bash", "tool-use-s1", map[string]any{"command": "ls"}, "session-1", "run-1")
 		if err == nil && decision != permissions.DecisionDenyOnce {
-			t.Errorf("sess-1: expected DenyOnce after cancel, got %s", decision)
+			t.Errorf("session-1: expected DenyOnce after cancel, got %s", decision)
 		}
 		close(sess1Done)
 	}()
 
-	// sess-2 的请求
+	// session-2 的请求
 	sess2Done := make(chan struct{})
 	sess2Decision := make(chan permissions.Decision, 1)
 	go func() {
-		decision, _ := mgr.CheckAndWait("bash", "tu-s2", map[string]any{"command": "ls"}, "sess-2", "run-2")
+		decision, _ := mgr.CheckAndWait("bash", "tool-use-s2", map[string]any{"command": "ls"}, "session-2", "run-2")
 		sess2Decision <- decision
 		close(sess2Done)
 	}()
@@ -254,26 +254,26 @@ func TestManagerCancelSession(t *testing.T) {
 	// 等待两个请求都到达
 	time.Sleep(100 * time.Millisecond)
 
-	// 只取消 sess-1
-	mgr.CancelSession("sess-1")
+	// 只取消 session-1
+	mgr.CancelSession("session-1")
 	<-sess1Done
 
-	// sess-2 不应被取消，响应它
+	// session-2 不应被取消，响应它
 	time.Sleep(50 * time.Millisecond)
-	ok := mgr.Respond("tu-s2", "allow_once")
+	ok := mgr.Respond("tool-use-s2", "allow_once")
 	if !ok {
-		t.Error("sess-2 should still be pending after cancelling sess-1")
+		t.Error("session-2 should still be pending after cancelling session-1")
 	}
 	<-sess2Done
 
-	// 验证 sess-2 收到了 allow_once
+	// 验证 session-2 收到了 allow_once
 	select {
 	case d := <-sess2Decision:
 		if d != permissions.DecisionAllowOnce {
-			t.Errorf("sess-2: expected AllowOnce, got %s", d)
+			t.Errorf("session-2: expected AllowOnce, got %s", d)
 		}
 	default:
-		t.Error("sess-2: no decision received")
+		t.Error("session-2: no decision received")
 	}
 }
 
@@ -289,12 +289,12 @@ func TestManagerPersistAlwaysDecision(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		mgr.CheckAndWait("bash", "tu-1", map[string]any{"command": "ls"}, "sess-1", "run-1")
+		mgr.CheckAndWait("bash", "tool-use-1", map[string]any{"command": "ls"}, "session-1", "run-1")
 		close(done)
 	}()
 
 	time.Sleep(50 * time.Millisecond)
-	mgr.Respond("tu-1", "always_allow")
+	mgr.Respond("tool-use-1", "always_allow")
 	<-done
 
 	// 验证文件已写入

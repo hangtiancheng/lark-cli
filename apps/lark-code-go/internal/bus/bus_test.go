@@ -11,12 +11,12 @@ func TestEventMarshalUnmarshal(t *testing.T) {
 	events := []bus.Event{
 		&bus.RunStartedEvent{Type: "run.started", RunID: "run-123", Goal: "test goal", TS: "2024-01-01T00:00:00Z"},
 		&bus.RunFinishedEvent{Type: "run.finished", RunID: "run-123", Status: "success", Steps: 3, TS: "2024-01-01T00:00:01Z"},
-		&bus.ToolCallStartedEvent{Type: "tool.call_started", RunID: "run-123", ToolUseID: "tu-1", ToolName: "bash", Params: map[string]any{"command": "echo hello"}, TS: "2024-01-01T00:00:00Z"},
+		&bus.ToolCallStartedEvent{Type: "tool.call_started", RunID: "run-123", ToolUseID: "tool-use-1", ToolName: "bash", Params: map[string]any{"command": "echo hello"}, TS: "2024-01-01T00:00:00Z"},
 		&bus.LlmTokenEvent{Type: "llm.token", RunID: "run-123", Token: "Hello", TS: "2024-01-01T00:00:00Z"},
-		&bus.SessionCreatedEvent{Type: "session.created", SessionID: "sess-abc", Mode: "chat", TS: "2024-01-01T00:00:00Z"},
-		&bus.PermissionRequestedEvent{Type: "permission.requested", RunID: "run-123", ToolUseID: "tu-1", ToolName: "bash", Params: map[string]any{}, ParamPreview: "command: ls", SessionID: "sess-abc", TS: "2024-01-01T00:00:00Z"},
+		&bus.SessionCreatedEvent{Type: "session.created", SessionID: "session-abc", Mode: "chat", TS: "2024-01-01T00:00:00Z"},
+		&bus.PermissionRequestedEvent{Type: "permission.requested", RunID: "run-123", ToolUseID: "tool-use-1", ToolName: "bash", Params: map[string]any{}, ParamPreview: "command: ls", SessionID: "session-abc", TS: "2024-01-01T00:00:00Z"},
 		&bus.SubagentStartedEvent{Type: "subagent.started", RunID: "run-child", ParentRunID: "run-123", Description: "do work", TS: "2024-01-01T00:00:00Z"},
-		&bus.ContextCompactedEvent{Type: "context.compacted", SessionID: "sess-abc", RunID: "run-123", OriginalTokens: 1000, SummaryTokens: 200, TS: "2024-01-01T00:00:00Z"},
+		&bus.ContextCompactedEvent{Type: "context.compacted", SessionID: "session-abc", RunID: "run-123", OriginalTokens: 1000, SummaryTokens: 200, TS: "2024-01-01T00:00:00Z"},
 		&bus.SkillInvokedEvent{Type: "skill.invoked", SkillName: "review", Arguments: "check code", RunID: "run-123", TS: "2024-01-01T00:00:00Z"},
 	}
 
@@ -85,8 +85,8 @@ func TestCommandUnmarshal(t *testing.T) {
 	}{
 		{"core.ping", `{"client":"test"}`},
 		{"session.create", `{"mode":"chat","title":"test"}`},
-		{"session.send_message", `{"session_id":"sess-1","content":"hello"}`},
-		{"permission.respond", `{"tool_use_id":"tu-1","decision":"allow_once"}`},
+		{"session.send_message", `{"session_id":"session-1","content":"hello"}`},
+		{"permission.respond", `{"tool_use_id":"tool-use-1","decision":"allow_once"}`},
 	}
 
 	for _, tc := range tests {

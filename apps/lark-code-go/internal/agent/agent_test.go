@@ -49,7 +49,7 @@ func (t *mockTool) Invoke(ctx context.Context, params map[string]any) (*tools.To
 }
 
 func TestExecutionContextBasic(t *testing.T) {
-	ec := agent.NewExecutionContext("sess-1", nil, "You are helpful.")
+	ec := agent.NewExecutionContext("session-1", nil, "You are helpful.")
 
 	if ec.SystemPrompt() != "You are helpful." {
 		t.Errorf("expected system prompt 'You are helpful.', got %q", ec.SystemPrompt())
@@ -79,7 +79,7 @@ func TestExecutionContextWithExistingMessages(t *testing.T) {
 		{"role": "user", "content": "previous"},
 		{"role": "assistant", "content": "response"},
 	}
-	ec := agent.NewExecutionContext("sess-1", existing, "system")
+	ec := agent.NewExecutionContext("session-1", existing, "system")
 
 	msgs := ec.Messages()
 	if len(msgs) != 2 {
@@ -99,7 +99,7 @@ func TestExecutionContextWithExistingMessages(t *testing.T) {
 }
 
 func TestExecutionContextReplaceMessages(t *testing.T) {
-	ec := agent.NewExecutionContext("sess-1", nil, "system")
+	ec := agent.NewExecutionContext("session-1", nil, "system")
 	ec.AddUserMessage("msg1")
 	ec.AddUserMessage("msg2")
 
@@ -180,7 +180,7 @@ func TestAgentLoopEndTurn(t *testing.T) {
 
 	registry := tools.NewRegistry()
 
-	ec := agent.NewExecutionContext("sess-1", nil, "system")
+	ec := agent.NewExecutionContext("session-1", nil, "system")
 	ec.AddUserMessage("hello")
 
 	loopCfg := agent.DefaultLoopConfig()
@@ -228,7 +228,7 @@ func TestAgentLoopToolUse(t *testing.T) {
 	registry := tools.NewRegistry()
 	registry.Register(&mockTool{name: "echo", result: "echo: hi"})
 
-	ec := agent.NewExecutionContext("sess-1", nil, "system")
+	ec := agent.NewExecutionContext("session-1", nil, "system")
 	ec.AddUserMessage("use echo tool")
 
 	loopCfg := agent.DefaultLoopConfig()
@@ -283,7 +283,7 @@ func TestAgentLoopMaxSteps(t *testing.T) {
 	registry := tools.NewRegistry()
 	registry.Register(&mockTool{name: "noop", result: "ok"})
 
-	ec := agent.NewExecutionContext("sess-1", nil, "system")
+	ec := agent.NewExecutionContext("session-1", nil, "system")
 	ec.AddUserMessage("loop forever")
 
 	loopCfg := &agent.LoopConfig{
@@ -328,7 +328,7 @@ func TestAgentLoopMaxTokens(t *testing.T) {
 	registry := tools.NewRegistry()
 	registry.Register(&mockTool{name: "echo", result: "ok"})
 
-	ec := agent.NewExecutionContext("sess-1", nil, "system")
+	ec := agent.NewExecutionContext("session-1", nil, "system")
 	ec.AddUserMessage("test max_tokens")
 
 	loopCfg := agent.DefaultLoopConfig()
@@ -354,7 +354,7 @@ func TestAgentLoopCancellation(t *testing.T) {
 	provider := &mockBlockingProvider{}
 
 	registry := tools.NewRegistry()
-	ec := agent.NewExecutionContext("sess-1", nil, "system")
+	ec := agent.NewExecutionContext("session-1", nil, "system")
 	ec.AddUserMessage("cancel me")
 
 	loopCfg := agent.DefaultLoopConfig()
@@ -392,7 +392,7 @@ func TestAgentLoopEventPublishing(t *testing.T) {
 	}
 
 	registry := tools.NewRegistry()
-	ec := agent.NewExecutionContext("sess-1", nil, "system")
+	ec := agent.NewExecutionContext("session-1", nil, "system")
 	ec.AddUserMessage("test events")
 
 	loopCfg := agent.DefaultLoopConfig()

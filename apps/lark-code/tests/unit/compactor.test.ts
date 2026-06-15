@@ -159,4 +159,74 @@ describe("Compactor", () => {
     );
     expect(result).toBeNull();
   });
+
+  // Feature: compact replaces context messages with summary and acknowledgment
+  // Design: Call compact, verify context.messages is replaced with [summary, acknowledgment]
+  test("compact replaces context messages", async () => {
+    const bus = new EventBus();
+    const compactor = new Compactor(bus, "/tmp/session", "session-1");
+    const provider = stubProviderWithSummary("## 1. Original Goal\nSummary");
+
+    const ctx = makeCtx("run-1");
+    ctx.addAssistantMessage([{ type: "text", text: "old message 1" }]);
+    ctx.addAssistantMessage([{ type: "text", text: "old message 2" }]);
+
+    const originalLength = ctx.messages.length;
+    expect(originalLength).toBeGreaterThan(0);
+
+    const result = await compactor.compact(ctx, provider);
+    expect(result).not.toBeNull();
+
+    // Context should be replaced with exactly 2 messages: summary + acknowledgment
+    expect(ctx.messages).toHaveLength(2);
+    expect(ctx.messages[0].role).toBe("user");
+    expect(ctx.messages[1].role).toBe("assistant");
+
+    const summaryContent = ctx.messages[0].content;
+    expect(typeof summaryContent === "string" ? summaryContent : "").toContain(
+      "Summary",
+    );
+  });
+
+  // Feature: compactMessages passes focus parameter to LLM prompt
+  // Design: Call compactMessages with focus text, verify provider receives it in messages
+  test("compactMessages includes focus in LLM prompt", async () => {
+    const bus = new EventBus();
+    const compactor = new Compactor(bus, "/tmp/session", "session-1");
+
+    let capturedMessages: unknown[] = [];
+    const capturingProvider: LLMProvider = {
+      chat(messages) {
+        capturedMessages = messages;
+        return Promise.resolve({
+          stopReason: "end_turn",
+          text: "Summary with focus",
+          usage: {
+            inputTokens: 100,
+            outputTokens: 50,
+            cacheReadInputTokens: 0,
+            cacheCreationInputTokens: 0,
+            contextPercent: 5,
+          },
+          toolUses: [],
+          thinkingBlocks: [],
+        });
+      },
+    };
+
+    const messages = [
+      { role: "user" as const, content: "Hello" },
+      { role: "assistant" as const, content: "Hi" },
+    ];
+
+    await compactor.compactMessages(
+      messages,
+      capturingProvider,
+      "Focus on file operations",
+    );
+
+    // The focus text should appear in the messages sent to the LLM
+    const allContent = JSON.stringify(capturedMessages);
+    expect(allContent).toContain("Focus on file operations");
+  });
 });

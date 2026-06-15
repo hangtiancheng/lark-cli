@@ -67,7 +67,9 @@ function makeMockStream(opts: {
 }
 
 // Mock Anthropic client with configurable stream behavior
-function makeMockClient(streamFactory: () => ReturnType<typeof makeMockStream>) {
+function makeMockClient(
+  streamFactory: () => ReturnType<typeof makeMockStream>,
+) {
   return {
     messages: {
       stream: () => streamFactory(),
@@ -103,10 +105,7 @@ describe("AnthropicProvider", () => {
     const client = makeMockClient(() =>
       makeMockStream({ textChunks: ["hello"] }),
     );
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     expect(provider).toBeDefined();
     expect(typeof provider.chat).toBe("function");
   });
@@ -114,33 +113,28 @@ describe("AnthropicProvider", () => {
   // --- chat() event publishing ---
 
   test("chat publishes llm.model_selected event", async () => {
-    const client = makeMockClient(() =>
-      makeMockStream({ textChunks: ["hi"] }),
-    );
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const client = makeMockClient(() => makeMockStream({ textChunks: ["hi"] }));
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
     const events = collectEvents(bus);
 
     await provider.chat([], [], bus, "run-1");
 
     const selected = events.find(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "llm.model_selected",
+      (e: unknown) =>
+        (e as Record<string, unknown>)["type"] === "llm.model_selected",
     );
     expect(selected).toBeDefined();
-    expect((selected as Record<string, unknown>)["model"]).toBe("claude-sonnet-4-6");
+    expect((selected as Record<string, unknown>)["model"]).toBe(
+      "claude-sonnet-4-6",
+    );
   });
 
   test("chat publishes llm.token events per chunk", async () => {
     const client = makeMockClient(() =>
       makeMockStream({ textChunks: ["Hello", " ", "world"] }),
     );
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
     const events = collectEvents(bus);
 
@@ -167,10 +161,7 @@ describe("AnthropicProvider", () => {
         },
       }),
     );
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
     const events = collectEvents(bus);
 
@@ -192,10 +183,7 @@ describe("AnthropicProvider", () => {
     const client = makeMockClient(() =>
       makeMockStream({ textChunks: ["done"], stopReason: "end_turn" }),
     );
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -206,10 +194,7 @@ describe("AnthropicProvider", () => {
     const client = makeMockClient(() =>
       makeMockStream({ textChunks: ["Hello", " ", "world", "!"] }),
     );
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -222,15 +207,12 @@ describe("AnthropicProvider", () => {
         textChunks: [],
         stopReason: "tool_use",
         toolUses: [
-          { id: "tu-1", name: "bash", input: { command: "ls" } },
-          { id: "tu-2", name: "read_file", input: { path: "test.txt" } },
+          { id: "tool-use-1", name: "bash", input: { command: "ls" } },
+          { id: "tool-use-2", name: "read_file", input: { path: "test.txt" } },
         ],
       }),
     );
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -247,10 +229,7 @@ describe("AnthropicProvider", () => {
         thinkingBlocks: [{ thinking: "Let me think about this..." }],
       }),
     );
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -262,10 +241,7 @@ describe("AnthropicProvider", () => {
 
   test("chat returns empty text for no tokens", async () => {
     const client = makeMockClient(() => makeMockStream({ textChunks: [] }));
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -284,10 +260,7 @@ describe("AnthropicProvider", () => {
         }),
       });
     });
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     await expect(provider.chat([], [], bus, "run-1")).rejects.toThrow(
@@ -315,10 +288,7 @@ describe("AnthropicProvider", () => {
         },
       },
     };
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -343,19 +313,14 @@ describe("AnthropicProvider", () => {
         },
       },
     };
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
     const events = collectEvents(bus);
 
     await provider.chat([], [], bus, "run-1");
 
     // Token events from attempt 2 should be present (fix verified)
-    const tokens = events.filter(
-      (e: unknown) => (e as Record<string, unknown>)["type"] === "llm.token",
-    );
+    const tokens = events.filter((e: unknown) => e["type"] === "llm.token");
     expect(tokens.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -367,10 +332,7 @@ describe("AnthropicProvider", () => {
         }),
       }),
     );
-    const provider = new AnthropicProvider(
-      "claude-sonnet-4-6",
-      client,
-    );
+    const provider = new AnthropicProvider("claude-sonnet-4-6", client);
     const bus = new EventBus();
 
     await expect(provider.chat([], [], bus, "run-1")).rejects.toThrow(

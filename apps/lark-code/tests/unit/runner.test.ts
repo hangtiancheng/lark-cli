@@ -41,18 +41,38 @@ function mockEndTurnProvider(): LLMProvider {
 
 describe("AgentRunner", () => {
   // Feature: Verify AgentRunner executes a run
-  // Design: Create runner with mock provider, run goal, confirm it completes
+  // Design: Create runner with mock provider, run goal, confirm it completes with run events
   test("executes a run", async () => {
     const dir = path.join(tmpdir(), `test-runner-${String(Date.now())}`);
     mkdirSync(dir, { recursive: true });
     const bus = new EventBus();
+    const events: unknown[] = [];
+    bus.subscribe((e) => {
+      events.push(e);
+      return Promise.resolve();
+    });
     const runner = new AgentRunner(mockConfig(), {
       provider: mockEndTurnProvider(),
       bus,
       runsDir: dir,
     });
 
-    await runner.run("test goal");
+    const outcome = await runner.runAndCapture("test goal");
+    expect(outcome.status).toBe("success");
+    expect(outcome.result).toBe("Done");
+
+    const started = events.find(
+      (e: unknown) => (e as Record<string, unknown>)["type"] === "run.started",
+    ) as Record<string, unknown>;
+    expect(started).toBeDefined();
+    expect(started["goal"]).toBe("test goal");
+
+    const finished = events.find(
+      (e: unknown) => (e as Record<string, unknown>)["type"] === "run.finished",
+    ) as Record<string, unknown>;
+    expect(finished).toBeDefined();
+    expect(finished["status"]).toBe("success");
+
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -224,6 +244,80 @@ describe("AgentRunner", () => {
 
     // MCP tool should not have been invoked
     expect(toolNames).not.toContain("test_server__search");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  // Feature: Verify config maxSteps propagates to ExecutionContext
+  // Design: Set maxSteps=2 in config, provider always returns tool_use, confirm run stops at max_steps
+  test("config maxSteps propagates to loop", async () => {
+    const dir = path.join(tmpdir(), `test-runner-maxsteps-${String(Date.now())}`);
+    mkdirSync(dir, { recursive: true });
+    const bus = new EventBus();
+
+    const provider: LLMProvider = {
+      chat: () =>
+        Promise.resolve({
+          stopReason: "tool_use",
+          toolUses: [
+            {
+              id: "call_1",
+              name: "read_file",
+              input: { path: "test.txt" },
+              type: "tool_use",
+              caller: { type: "direct" },
+            },
+          ],
+          text: "",
+          usage: null,
+          thinkingBlocks: [],
+        }),
+    };
+
+    const config = mockConfig();
+    config.agent.maxSteps = 2;
+
+    const runner = new AgentRunner(config, {
+      provider,
+      bus,
+      runsDir: dir,
+    });
+
+    const outcome = await runner.runAndCapture("test");
+    expect(outcome.status).toBe("failed");
+    expect(outcome.reason).toContain("max_steps");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  // Feature: Verify run ID is consistent across started and finished events
+  // Design: Run goal, confirm started and finished events share the same run_id
+  test("run ID is consistent across events", async () => {
+    const dir = path.join(tmpdir(), `test-runner-runid-${String(Date.now())}`);
+    mkdirSync(dir, { recursive: true });
+    const bus = new EventBus();
+    const events: unknown[] = [];
+    bus.subscribe((e) => {
+      events.push(e);
+      return Promise.resolve();
+    });
+
+    const runner = new AgentRunner(mockConfig(), {
+      provider: mockEndTurnProvider(),
+      bus,
+      runsDir: dir,
+    });
+
+    await runner.run("test goal");
+
+    const started = events.find(
+      (e: unknown) => (e as Record<string, unknown>)["type"] === "run.started",
+    ) as Record<string, unknown>;
+    const finished = events.find(
+      (e: unknown) => (e as Record<string, unknown>)["type"] === "run.finished",
+    ) as Record<string, unknown>;
+
+    expect(started["run_id"]).toBeDefined();
+    expect(finished["run_id"]).toBeDefined();
+    expect(started["run_id"]).toBe(finished["run_id"]);
     rmSync(dir, { recursive: true, force: true });
   });
 });

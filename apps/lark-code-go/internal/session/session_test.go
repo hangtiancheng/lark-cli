@@ -17,19 +17,19 @@ func newTestStore(t *testing.T) *session.Store {
 
 func TestStoreWriteAndReadMeta(t *testing.T) {
 	store := newTestStore(t)
-	sess := session.NewSession("sess-test-1", session.ModeChat, "Test Session")
+	sess := session.NewSession("session-test-1", session.ModeChat, "Test Session")
 
 	if err := store.WriteMeta(sess); err != nil {
 		t.Fatalf("WriteMeta failed: %v", err)
 	}
 
-	loaded, err := store.ReadMeta("sess-test-1")
+	loaded, err := store.ReadMeta("session-test-1")
 	if err != nil {
 		t.Fatalf("ReadMeta failed: %v", err)
 	}
 
-	if loaded.ID != "sess-test-1" {
-		t.Errorf("expected ID 'sess-test-1', got %s", loaded.ID)
+	if loaded.ID != "session-test-1" {
+		t.Errorf("expected ID 'session-test-1', got %s", loaded.ID)
 	}
 	if loaded.Mode != session.ModeChat {
 		t.Errorf("expected mode chat, got %s", loaded.Mode)
@@ -44,17 +44,17 @@ func TestStoreWriteAndReadMeta(t *testing.T) {
 
 func TestStoreAppendAndReadMessages(t *testing.T) {
 	store := newTestStore(t)
-	sess := session.NewSession("sess-msg", session.ModeChat, "")
+	sess := session.NewSession("session-msg", session.ModeChat, "")
 	_ = store.WriteMeta(sess)
 
-	if err := store.AppendMessage("sess-msg", "user", "hello", "run-1"); err != nil {
+	if err := store.AppendMessage("session-msg", "user", "hello", "run-1"); err != nil {
 		t.Fatalf("AppendMessage failed: %v", err)
 	}
-	if err := store.AppendMessage("sess-msg", "assistant", "hi there", "run-1"); err != nil {
+	if err := store.AppendMessage("session-msg", "assistant", "hi there", "run-1"); err != nil {
 		t.Fatalf("AppendMessage failed: %v", err)
 	}
 
-	messages, err := store.ReadMessages("sess-msg")
+	messages, err := store.ReadMessages("session-msg")
 	if err != nil {
 		t.Fatalf("ReadMessages failed: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestStoreAppendAndReadMessages(t *testing.T) {
 
 func TestStoreAppendMessages(t *testing.T) {
 	store := newTestStore(t)
-	sess := session.NewSession("sess-batch", session.ModeChat, "")
+	sess := session.NewSession("session-batch", session.ModeChat, "")
 	_ = store.WriteMeta(sess)
 
 	messages := []map[string]any{
@@ -80,11 +80,11 @@ func TestStoreAppendMessages(t *testing.T) {
 		{"role": "user", "content": "msg3"},
 	}
 
-	if err := store.AppendMessages("sess-batch", messages, "run-1"); err != nil {
+	if err := store.AppendMessages("session-batch", messages, "run-1"); err != nil {
 		t.Fatalf("AppendMessages failed: %v", err)
 	}
 
-	read, err := store.ReadMessages("sess-batch")
+	read, err := store.ReadMessages("session-batch")
 	if err != nil {
 		t.Fatalf("ReadMessages failed: %v", err)
 	}
@@ -95,20 +95,20 @@ func TestStoreAppendMessages(t *testing.T) {
 
 func TestStoreReadNotes(t *testing.T) {
 	store := newTestStore(t)
-	sess := session.NewSession("sess-notes", session.ModeChat, "")
+	sess := session.NewSession("session-notes", session.ModeChat, "")
 	_ = store.WriteMeta(sess)
 
 	// 初始无 notes
-	notes := store.ReadNotes("sess-notes")
+	notes := store.ReadNotes("session-notes")
 	if notes != "" {
 		t.Errorf("expected empty notes, got %q", notes)
 	}
 
 	// 写入 notes
-	notesPath := filepath.Join(store.SessionDir("sess-notes"), "notes.md")
+	notesPath := filepath.Join(store.SessionDir("session-notes"), "notes.md")
 	_ = os.WriteFile(notesPath, []byte("# Notes\n- item 1"), 0o644)
 
-	notes = store.ReadNotes("sess-notes")
+	notes = store.ReadNotes("session-notes")
 	if notes != "# Notes\n- item 1" {
 		t.Errorf("unexpected notes content: %q", notes)
 	}
@@ -116,12 +116,12 @@ func TestStoreReadNotes(t *testing.T) {
 
 func TestStoreWriteCompacted(t *testing.T) {
 	store := newTestStore(t)
-	sess := session.NewSession("sess-compact", session.ModeChat, "")
+	sess := session.NewSession("session-compact", session.ModeChat, "")
 	_ = store.WriteMeta(sess)
 
 	// 写入原始消息
-	_ = store.AppendMessage("sess-compact", "user", "old msg 1", "run-1")
-	_ = store.AppendMessage("sess-compact", "assistant", "old reply 1", "run-1")
+	_ = store.AppendMessage("session-compact", "user", "old msg 1", "run-1")
+	_ = store.AppendMessage("session-compact", "assistant", "old reply 1", "run-1")
 
 	// 压缩
 	compacted := []map[string]any{
@@ -129,12 +129,12 @@ func TestStoreWriteCompacted(t *testing.T) {
 		{"role": "assistant", "content": "Summary of old conversation"},
 	}
 
-	if err := store.WriteCompacted("sess-compact", compacted); err != nil {
+	if err := store.WriteCompacted("session-compact", compacted); err != nil {
 		t.Fatalf("WriteCompacted failed: %v", err)
 	}
 
 	// 验证压缩后的消息
-	messages, err := store.ReadMessages("sess-compact")
+	messages, err := store.ReadMessages("session-compact")
 	if err != nil {
 		t.Fatalf("ReadMessages failed: %v", err)
 	}
@@ -148,12 +148,12 @@ func TestStoreWriteCompacted(t *testing.T) {
 
 func TestStoreTrimOrphanToolUse(t *testing.T) {
 	store := newTestStore(t)
-	sess := session.NewSession("sess-orphan", session.ModeChat, "")
+	sess := session.NewSession("session-orphan", session.ModeChat, "")
 	_ = store.WriteMeta(sess)
 
 	// 写入正常消息对
-	_ = store.AppendMessage("sess-orphan", "user", "hello", "run-1")
-	_ = store.AppendMessage("sess-orphan", "assistant", "hi", "run-1")
+	_ = store.AppendMessage("session-orphan", "user", "hello", "run-1")
+	_ = store.AppendMessage("session-orphan", "assistant", "hi", "run-1")
 
 	// 写入孤立的 tool_use（assistant 消息包含 tool_use 但没有后续 tool_result）
 	assistantWithToolUse := map[string]any{
@@ -161,15 +161,15 @@ func TestStoreTrimOrphanToolUse(t *testing.T) {
 		"content": []any{
 			map[string]any{
 				"type":  "tool_use",
-				"id":    "tu-1",
+				"id":    "tool-use-1",
 				"name":  "bash",
 				"input": map[string]any{"command": "ls"},
 			},
 		},
 	}
-	_ = store.AppendMessages("sess-orphan", []map[string]any{assistantWithToolUse}, "run-1")
+	_ = store.AppendMessages("session-orphan", []map[string]any{assistantWithToolUse}, "run-1")
 
-	messages, err := store.ReadMessages("sess-orphan")
+	messages, err := store.ReadMessages("session-orphan")
 	if err != nil {
 		t.Fatalf("ReadMessages failed: %v", err)
 	}
@@ -379,10 +379,10 @@ func TestManagerEventPublishing(t *testing.T) {
 }
 
 func TestNewSession(t *testing.T) {
-	sess := session.NewSession("sess-1", session.ModeChat, "Test")
+	sess := session.NewSession("session-1", session.ModeChat, "Test")
 
-	if sess.ID != "sess-1" {
-		t.Errorf("expected ID 'sess-1', got %s", sess.ID)
+	if sess.ID != "session-1" {
+		t.Errorf("expected ID 'session-1', got %s", sess.ID)
 	}
 	if sess.Mode != session.ModeChat {
 		t.Errorf("expected mode chat, got %s", sess.Mode)

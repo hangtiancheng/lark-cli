@@ -15,11 +15,11 @@ type RunFunc func(session *Session, goal string, systemPromptOverride string, to
 
 // Manager 管理 session 生命周期
 type Manager struct {
-	store  *Store
-	bus    *events.EventBus
-	runFn  RunFunc
+	store *Store
+	bus   *events.EventBus
+	runFn RunFunc
 
-	mu      sync.Mutex
+	mu       sync.Mutex
 	sessions map[string]*Session
 	locks    map[string]*sync.Mutex
 }
@@ -37,7 +37,7 @@ func NewManager(store *Store, busInst *events.EventBus, runFn RunFunc) *Manager 
 
 // Create 创建新 session
 func (m *Manager) Create(mode SessionMode, title string) (*Session, error) {
-	id := fmt.Sprintf("sess-%s", uuid.New().String()[:12])
+	id := fmt.Sprintf("session-%s", uuid.New().String()[:12])
 	sess := NewSession(id, mode, title)
 
 	if err := m.store.WriteMeta(sess); err != nil {
