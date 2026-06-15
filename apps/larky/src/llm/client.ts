@@ -36,14 +36,16 @@ export async function createClient(
     }
 
     case "openai": {
-      //
+      const { OpenAIClient } = await import("./openai.js");
+      return new OpenAIClient(config, systemPrompt);
     }
 
     case "openai-compat": {
-      //
+      const { OpenAICompatClient } = await import("./openai.js");
+      return new OpenAICompatClient(config, systemPrompt);
 		}
 			
 		default:
-			throw new Error(`Unknown protocol: ${config.protocol}`)
+			throw new Error(`Unknown protocol: ${String(config.protocol)}`)
   }
 }

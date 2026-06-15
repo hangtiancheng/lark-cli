@@ -1,7 +1,5 @@
 /**
  * Status: Done
- * 
- * 少壮就要多努力, 来日望自食其力
  */
 import {
   getContextWindow,
@@ -253,7 +251,7 @@ export class AnthropicClient implements LLMClient, MaxTokensSetter {
             properties?: unknown;
             required?: string[];
           }
-        | undefined;
+        | null;
       name: string;
       description: string;
     }[],
@@ -501,11 +499,11 @@ function classifyAnthropicError(err: unknown) {
       return new ContextTooLongError(`Context Too Long: ${err.message}`);
     }
 
-    if (err.status === 401) {
+    if (err.status === AnthropicErrorCode.InvalidAPIKey) {
       return new AuthenticationError(`Invalid API key: ${err.message}`);
     } // end if (err.status === 401)
 
-    if (err.status === 429) {
+    if (err.status === AnthropicErrorCode.RateLimitError) {
       const retryAfter = asRecord(err.headers)["retry-after"];
       let message = "Rate Limited";
       if (retryAfter) {
@@ -520,7 +518,7 @@ function classifyAnthropicError(err: unknown) {
       );
     } // end if (err.status === 429)
 
-    return new LLMError(`API error (${asString(err.status)}): ${err.message}`);
+    return new LLMError(`Anthropic API error (${asString(err.status)}): ${err.message}`);
   } // end if (err instanceof Anthropic.APIError) 
 
   return new NetworkError(
