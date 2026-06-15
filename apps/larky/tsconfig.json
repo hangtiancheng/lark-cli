@@ -2,9 +2,12 @@
 	// Visit https://aka.ms/tsconfig to read more about this file
 	"compilerOptions": {
 		// File Layout
-		// "rootDir": "./src",
-		// "outDir": "./dist",
+		"rootDir": "./",
+		"outDir": "./dist",
 
+		"allowJs": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
 		// Environment Settings
 		// See also https://aka.ms/tsconfig/module
 		"target": "esnext",
@@ -28,6 +31,7 @@
 		// "noUnusedParameters": true,
 		// "noFallthroughCasesInSwitch": true,
 		// "noPropertyAccessFromIndexSignature": true,
+    "forceConsistentCasingInFileNames": true,
 
 		// Recommended Options
 		"strict": true,

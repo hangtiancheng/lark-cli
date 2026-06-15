@@ -8,10 +8,6 @@
     "git:commit:n": "git add -A && git commit -m \"feat: Introduce new features\" --no-verify",
     "git:push": "pnpm git:commit && git push origin main",
     "git:push:n": "pnpm git:commit:n && git push origin main",
-    "git:push:force": "git push -f origin main --set-upstream",
-    "git:remote": "git remote add origin git@github.com:hangtiancheng/lark-cli.git",
-    "git:init": "rm -rf ./.git && git init",
-    "git:reset": "pnpm git:init && pnpm git:remote && pnpm git:commit && pnpm git:push:force",
     "prepare": "husky"
   },
   "keywords": [],

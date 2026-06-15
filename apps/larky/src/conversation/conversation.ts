@@ -1,3 +1,7 @@
+/**
+ * Status: Done.
+ */
+
 export interface ToolUseBlock {
 	toolUseId: string;
 	toolName: string;
