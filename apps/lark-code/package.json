@@ -2,15 +2,15 @@
   "name": "@lark.js/lark-code",
   "version": "0.0.1",
   "description": "LarkCode - dual-process local AI agent",
-  "type": "module",
   "bin": {
     "lark-code": "./dist/cli/main.js"
   },
+  "type": "module",
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --fix ./scripts ./src ./tests",
-    "format": "prettier -w ./ --experimental-cli",
+    "format": "oxfmt --write ./",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -20,7 +20,6 @@
     "dev:tui": "tsx ./src/tui/bootstrap.ts",
     "qa": "concurrently --names type,lint,test --prefix-colors blue,red,green \"pnpm typecheck\" \"pnpm lint\" \"pnpm test\" && pnpm format && echo \"Congratulations!\""
   },
-  "packageManager": "pnpm@10.33.1",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
     "dotenv": "^17.4.2",
@@ -50,11 +49,12 @@
     "eslint-plugin-react-refresh": "^0.5.3",
     "eslint-plugin-unicorn": "^65.0.1",
     "globals": "^17.6.0",
-    "prettier": "^3.8.4",
+    "oxfmt": "^0.53.0",
     "tsup": "^8.5.1",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.61.0",
     "vitest": "^4.1.8"
-  }
+  },
+  "packageManager": "pnpm@10.33.1"
 }

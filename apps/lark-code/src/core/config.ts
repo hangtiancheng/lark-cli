@@ -192,9 +192,7 @@ const VALID_SECTIONS = new Set([
 function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
   const unknownKeys = Object.keys(data).filter((k) => !VALID_SECTIONS.has(k));
   if (unknownKeys.length > 0) {
-    throw new Error(
-      `Unknown top-level config keys: ${unknownKeys.sort().join(", ")}`,
-    );
+    throw new Error(`Unknown top-level config keys: ${unknownKeys.sort().join(", ")}`);
   }
 
   if ("core" in data) {
@@ -203,9 +201,7 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
       throw new Error("Config error: [core] must be a table");
     }
     const coreObj = core;
-    const unknownCore = Object.keys(coreObj).filter(
-      (k) => !["host", "port"].includes(k),
-    );
+    const unknownCore = Object.keys(coreObj).filter((k) => !["host", "port"].includes(k));
     if (unknownCore.length > 0) {
       throw new Error(`Unknown [core] keys: ${unknownCore.sort().join(", ")}`);
     }
@@ -227,13 +223,9 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
       throw new Error("Config error: [logging] must be a table");
     }
     const logObj = log;
-    const unknownLog = Object.keys(logObj).filter(
-      (k) => !["level", "file", "format"].includes(k),
-    );
+    const unknownLog = Object.keys(logObj).filter((k) => !["level", "file", "format"].includes(k));
     if (unknownLog.length > 0) {
-      throw new Error(
-        `Unknown [logging] keys: ${unknownLog.sort().join(", ")}`,
-      );
+      throw new Error(`Unknown [logging] keys: ${unknownLog.sort().join(", ")}`);
     }
     for (const key of ["level", "file", "format"] as const) {
       if (key in logObj) {
@@ -250,20 +242,14 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
       throw new Error("Config error: [agent] must be a table");
     }
     const agentObj = agent;
-    const unknownAgent = Object.keys(agentObj).filter(
-      (k) => !["max_steps"].includes(k),
-    );
+    const unknownAgent = Object.keys(agentObj).filter((k) => !["max_steps"].includes(k));
     if (unknownAgent.length > 0) {
-      throw new Error(
-        `Unknown [agent] keys: ${unknownAgent.sort().join(", ")}`,
-      );
+      throw new Error(`Unknown [agent] keys: ${unknownAgent.sort().join(", ")}`);
     }
     if ("max_steps" in agentObj) {
       const val = agentObj["max_steps"];
       if (typeof val !== "number" || val <= 0) {
-        throw new Error(
-          "Config error: agent.max_steps must be a positive integer",
-        );
+        throw new Error("Config error: agent.max_steps must be a positive integer");
       }
       config.agent.maxSteps = val;
     }
@@ -275,9 +261,7 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
       throw new Error("Config error: [llm] must be a table");
     }
     const llmObj = llm;
-    const unknownLlm = Object.keys(llmObj).filter(
-      (k) => !["default_model", "router"].includes(k),
-    );
+    const unknownLlm = Object.keys(llmObj).filter((k) => !["default_model", "router"].includes(k));
     if (unknownLlm.length > 0) {
       throw new Error(`Unknown [llm] keys: ${unknownLlm.sort().join(", ")}`);
     }
@@ -303,9 +287,7 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
       (k) => !["enabled", "file", "include_llm_payload"].includes(k),
     );
     if (unknownTrace.length > 0) {
-      throw new Error(
-        `Unknown [trace] keys: ${unknownTrace.sort().join(", ")}`,
-      );
+      throw new Error(`Unknown [trace] keys: ${unknownTrace.sort().join(", ")}`);
     }
     if ("enabled" in traceObj) {
       if (typeof traceObj["enabled"] !== "boolean")
@@ -319,9 +301,7 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
     }
     if ("include_llm_payload" in traceObj) {
       if (typeof traceObj["include_llm_payload"] !== "boolean")
-        throw new Error(
-          "Config error: trace.include_llm_payload must be a boolean",
-        );
+        throw new Error("Config error: trace.include_llm_payload must be a boolean");
       config.trace.includeLlmPayload = traceObj["include_llm_payload"];
     }
   }
@@ -332,20 +312,14 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
       throw new Error("Config error: [permission] must be a table");
     }
     const permObj = perm;
-    const unknownPerm = Object.keys(permObj).filter(
-      (k) => !["timeout_s"].includes(k),
-    );
+    const unknownPerm = Object.keys(permObj).filter((k) => !["timeout_s"].includes(k));
     if (unknownPerm.length > 0) {
-      throw new Error(
-        `Unknown [permission] keys: ${unknownPerm.sort().join(", ")}`,
-      );
+      throw new Error(`Unknown [permission] keys: ${unknownPerm.sort().join(", ")}`);
     }
     if ("timeout_s" in permObj) {
       const val = permObj["timeout_s"];
       if (typeof val !== "number" || val < 0) {
-        throw new Error(
-          "Config error: permission.timeout_s must be a non-negative number",
-        );
+        throw new Error("Config error: permission.timeout_s must be a non-negative number");
       }
       config.permission.timeoutS = val;
     }
@@ -358,40 +332,29 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
     }
     const compObj = comp;
     const unknownComp = Object.keys(compObj).filter(
-      (k) =>
-        !["auto_threshold", "tool_result_limit", "tool_result_keep"].includes(
-          k,
-        ),
+      (k) => !["auto_threshold", "tool_result_limit", "tool_result_keep"].includes(k),
     );
     if (unknownComp.length > 0) {
-      throw new Error(
-        `Unknown [compaction] keys: ${unknownComp.sort().join(", ")}`,
-      );
+      throw new Error(`Unknown [compaction] keys: ${unknownComp.sort().join(", ")}`);
     }
     if ("auto_threshold" in compObj) {
       const val = compObj["auto_threshold"];
       if (typeof val !== "number" || val < 0 || val > 1) {
-        throw new Error(
-          "Config error: compaction.auto_threshold must be between 0 and 1",
-        );
+        throw new Error("Config error: compaction.auto_threshold must be between 0 and 1");
       }
       config.compaction.autoThreshold = val;
     }
     if ("tool_result_limit" in compObj) {
       const val = compObj["tool_result_limit"];
       if (typeof val !== "number" || val <= 0) {
-        throw new Error(
-          "Config error: compaction.tool_result_limit must be a positive integer",
-        );
+        throw new Error("Config error: compaction.tool_result_limit must be a positive integer");
       }
       config.compaction.toolResultLimit = val;
     }
     if ("tool_result_keep" in compObj) {
       const val = compObj["tool_result_keep"];
       if (typeof val !== "number" || val <= 0) {
-        throw new Error(
-          "Config error: compaction.tool_result_keep must be a positive integer",
-        );
+        throw new Error("Config error: compaction.tool_result_keep must be a positive integer");
       }
       config.compaction.toolResultKeep = val;
     }
@@ -403,9 +366,7 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
       throw new Error("Config error: [mcp] must be a table");
     }
     const mcpObj = mcp;
-    const unknownMcp = Object.keys(mcpObj).filter(
-      (k) => !["servers"].includes(k),
-    );
+    const unknownMcp = Object.keys(mcpObj).filter((k) => !["servers"].includes(k));
     if (unknownMcp.length > 0) {
       throw new Error(`Unknown [mcp] keys: ${unknownMcp.sort().join(", ")}`);
     }
@@ -416,20 +377,15 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
     for (let i = 0; i < serversRaw.length; i++) {
       const srv: unknown = serversRaw[i];
       if (!isRecord(srv)) {
-        throw new Error(
-          `Config error: mcp.servers[${String(i)}] must be a table`,
-        );
+        throw new Error(`Config error: mcp.servers[${String(i)}] must be a table`);
       }
       const srvObj = srv;
       const name = srvObj["name"];
       if (typeof name !== "string" || !name) {
-        throw new Error(
-          `Config error: mcp.servers[${String(i)}].name must be a non-empty string`,
-        );
+        throw new Error(`Config error: mcp.servers[${String(i)}].name must be a non-empty string`);
       }
       const transportRaw = srvObj["transport"];
-      const transport =
-        typeof transportRaw === "string" ? transportRaw : "stdio";
+      const transport = typeof transportRaw === "string" ? transportRaw : "stdio";
       if (transport !== "stdio" && transport !== "tcp") {
         throw new Error(
           `Config error: mcp.servers[${String(i)}].transport must be 'stdio' or 'tcp'`,
@@ -446,42 +402,30 @@ function applyToml(config: LarkConfig, data: Record<string, unknown>): void {
       };
       if ("command" in srvObj) {
         if (typeof srvObj["command"] !== "string")
-          throw new Error(
-            `Config error: mcp.servers[${String(i)}].command must be a string`,
-          );
+          throw new Error(`Config error: mcp.servers[${String(i)}].command must be a string`);
         s.command = srvObj["command"];
       }
       if ("args" in srvObj) {
         if (!Array.isArray(srvObj["args"]))
-          throw new Error(
-            `Config error: mcp.servers[${String(i)}].args must be an array`,
-          );
+          throw new Error(`Config error: mcp.servers[${String(i)}].args must be an array`);
         const argsRaw: unknown = srvObj["args"];
         s.args = Array.isArray(argsRaw) ? argsRaw.map(String) : [];
       }
       if ("env" in srvObj) {
         const envVal = srvObj["env"];
         if (!isRecord(envVal)) {
-          throw new Error(
-            `Config error: mcp.servers[${String(i)}].env must be a table`,
-          );
+          throw new Error(`Config error: mcp.servers[${String(i)}].env must be a table`);
         }
-        s.env = Object.fromEntries(
-          Object.entries(envVal).map(([k, v]) => [k, String(v)]),
-        );
+        s.env = Object.fromEntries(Object.entries(envVal).map(([k, v]) => [k, String(v)]));
       }
       if ("host" in srvObj) {
         if (typeof srvObj["host"] !== "string")
-          throw new Error(
-            `Config error: mcp.servers[${String(i)}].host must be a string`,
-          );
+          throw new Error(`Config error: mcp.servers[${String(i)}].host must be a string`);
         s.host = srvObj["host"];
       }
       if ("port" in srvObj) {
         if (typeof srvObj["port"] !== "number")
-          throw new Error(
-            `Config error: mcp.servers[${String(i)}].port must be an integer`,
-          );
+          throw new Error(`Config error: mcp.servers[${String(i)}].port must be an integer`);
         s.port = srvObj["port"];
       }
       config.mcp.servers.push(s);
@@ -530,9 +474,7 @@ function applyEnv(config: LarkConfig): void {
 
   const traceEnabled = process.env["LARK_TRACE_ENABLED"];
   if (traceEnabled !== undefined) {
-    config.trace.enabled = !["0", "false", "no"].includes(
-      traceEnabled.toLowerCase(),
-    );
+    config.trace.enabled = !["0", "false", "no"].includes(traceEnabled.toLowerCase());
   }
 
   const traceFile = process.env["LARK_TRACE_FILE"];
@@ -540,9 +482,7 @@ function applyEnv(config: LarkConfig): void {
 
   const tracePayload = process.env["LARK_TRACE_INCLUDE_LLM_PAYLOAD"];
   if (tracePayload !== undefined) {
-    config.trace.includeLlmPayload = !["0", "false", "no"].includes(
-      tracePayload.toLowerCase(),
-    );
+    config.trace.includeLlmPayload = !["0", "false", "no"].includes(tracePayload.toLowerCase());
   }
 
   const permTimeout = process.env["LARK_PERMISSION_TIMEOUT_S"];

@@ -37,9 +37,7 @@ describe("SocketClient", () => {
   test("sends commands and receives responses", async () => {
     const port = await getFreePort();
     const server = new SocketServer("127.0.0.1", port);
-    server.register("test.method", () =>
-      Promise.resolve({ result: "success" }),
-    );
+    server.register("test.method", () => Promise.resolve({ result: "success" }));
     await server.start();
 
     const client = new SocketClient("127.0.0.1", port);
@@ -64,9 +62,7 @@ describe("SocketClient", () => {
     const client = new SocketClient("127.0.0.1", port);
     await client.connect();
 
-    await expect(
-      client.sendCommand("nonexistent.method", {}),
-    ).rejects.toThrow();
+    await expect(client.sendCommand("nonexistent.method", {})).rejects.toThrow();
 
     client.close();
     await server.stop();
@@ -92,8 +88,7 @@ describe("SocketClient", () => {
     });
 
     // Subscribe to all events
-    const writer = (await import("../../src/core/transport/socket-server.js"))
-      .getConnectionWriter;
+    const writer = (await import("../../src/core/transport/socket-server.js")).getConnectionWriter;
 
     server.register("event.subscribe", async () => {
       const socket = writer();
@@ -115,9 +110,7 @@ describe("SocketClient", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(events.length).toBeGreaterThan(0);
-    const testEvent = events.find(
-      (e: unknown) => asRecord(e)["type"] === "session.created",
-    );
+    const testEvent = events.find((e: unknown) => asRecord(e)["type"] === "session.created");
     expect(testEvent).toBeDefined();
 
     client.close();
@@ -149,9 +142,7 @@ describe("SocketClient", () => {
   test("sendCommand before connect throws", async () => {
     const client = new SocketClient("127.0.0.1", 9999);
 
-    await expect(client.sendCommand("test.method", {})).rejects.toThrow(
-      "not connected",
-    );
+    await expect(client.sendCommand("test.method", {})).rejects.toThrow("not connected");
   });
 });
 

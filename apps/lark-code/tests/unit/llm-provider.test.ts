@@ -98,9 +98,7 @@ function makeMockStream(opts: {
 }
 
 // Mock Anthropic client with configurable stream behavior
-function makeMockClient(
-  streamFactory: () => ReturnType<typeof makeMockStream>,
-) {
+function makeMockClient(streamFactory: () => ReturnType<typeof makeMockStream>) {
   return {
     messages: {
       stream: () => streamFactory(),
@@ -137,9 +135,7 @@ describe("AnthropicProvider", () => {
     const orig = process.env["ANTHROPIC_API_KEY"];
     Reflect.deleteProperty(process.env, "ANTHROPIC_API_KEY");
     try {
-      expect(() => new AnthropicProvider("claude-sonnet-4-6")).toThrow(
-        "ANTHROPIC_API_KEY not set",
-      );
+      expect(() => new AnthropicProvider("claude-sonnet-4-6")).toThrow("ANTHROPIC_API_KEY not set");
     } finally {
       if (orig !== undefined) process.env["ANTHROPIC_API_KEY"] = orig;
     }
@@ -164,9 +160,7 @@ describe("AnthropicProvider", () => {
 
     await provider.chat([], [], bus, "run-1");
 
-    const selected = events.find(
-      (e: unknown) => asRecord(e)["type"] === "llm.model_selected",
-    );
+    const selected = events.find((e: unknown) => asRecord(e)["type"] === "llm.model_selected");
     expect(selected).toBeDefined();
     expect(asRecord(selected)["model"]).toBe("claude-sonnet-4-6");
   });
@@ -180,9 +174,7 @@ describe("AnthropicProvider", () => {
 
     await provider.chat([], [], bus, "run-1");
 
-    const tokens = events.filter(
-      (e: unknown) => asRecord(e)["type"] === "llm.token",
-    );
+    const tokens = events.filter((e: unknown) => asRecord(e)["type"] === "llm.token");
     expect(tokens).toHaveLength(3);
     expect(asRecord(tokens[0])["token"]).toBe("Hello");
     expect(asRecord(tokens[1])["token"]).toBe(" ");
@@ -206,9 +198,7 @@ describe("AnthropicProvider", () => {
 
     await provider.chat([], [], bus, "run-1");
 
-    const usage = events.find(
-      (e: unknown) => asRecord(e)["type"] === "llm.usage",
-    );
+    const usage = events.find((e: unknown) => asRecord(e)["type"] === "llm.usage");
     expect(usage).toBeDefined();
     expect(asRecord(usage)["input_tokens"]).toBe(100);
     expect(asRecord(usage)["output_tokens"]).toBe(50);
@@ -269,15 +259,11 @@ describe("AnthropicProvider", () => {
 
     const response = await provider.chat([], [], bus, "run-1");
     expect(response.thinkingBlocks).toHaveLength(1);
-    expect(response.thinkingBlocks[0].thinking).toBe(
-      "Let me think about this...",
-    );
+    expect(response.thinkingBlocks[0].thinking).toBe("Let me think about this...");
   });
 
   test("chat returns empty text for no tokens", async () => {
-    const provider = makeProvider("claude-sonnet-4-6", () =>
-      makeMockStream({ textChunks: [] }),
-    );
+    const provider = makeProvider("claude-sonnet-4-6", () => makeMockStream({ textChunks: [] }));
     const bus = new EventBus();
 
     const response = await provider.chat([], [], bus, "run-1");
@@ -306,9 +292,7 @@ describe("AnthropicProvider", () => {
     const provider = new AnthropicProvider("claude-sonnet-4-6", mockClient);
     const bus = new EventBus();
 
-    await expect(provider.chat([], [], bus, "run-1")).rejects.toThrow(
-      "401 Unauthorized",
-    );
+    await expect(provider.chat([], [], bus, "run-1")).rejects.toThrow("401 Unauthorized");
     expect(callCount).toBe(1); // No retry
   });
 
@@ -342,7 +326,7 @@ describe("AnthropicProvider", () => {
     expect(callCount).toBe(2); // Retried once
   });
 
-  test("token events emit during retry attempts", async () => {
+  test("token events suppressed on retry to avoid duplicates", async () => {
     let callCount = 0;
     const mockClient = {
       messages: {
@@ -366,13 +350,12 @@ describe("AnthropicProvider", () => {
     const bus = new EventBus();
     const events = collectEvents(bus);
 
-    await provider.chat([], [], bus, "run-1");
+    const response = await provider.chat([], [], bus, "run-1");
 
-    // Token events from attempt 2 should be present (fix verified)
-    const tokens = events.filter(
-      (e: unknown) => asRecord(e)["type"] === "llm.token",
-    );
-    expect(tokens.length).toBeGreaterThanOrEqual(1);
+    // Text is still collected from retry, but no token events are published
+    expect(response.text).toBe("retry-text");
+    const tokens = events.filter((e: unknown) => asRecord(e)["type"] === "llm.token");
+    expect(tokens.length).toBe(0);
   });
 
   test("exhausted retries throw the last error", async () => {
@@ -389,8 +372,6 @@ describe("AnthropicProvider", () => {
     const provider = new AnthropicProvider("claude-sonnet-4-6", mockClient);
     const bus = new EventBus();
 
-    await expect(provider.chat([], [], bus, "run-1")).rejects.toThrow(
-      "ECONNRESET",
-    );
+    await expect(provider.chat([], [], bus, "run-1")).rejects.toThrow("ECONNRESET");
   });
 });

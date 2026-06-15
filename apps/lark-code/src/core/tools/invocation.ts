@@ -95,28 +95,14 @@ export async function invokeTool(
 
   const tool = registry.get(toolUse.name);
   if (!tool) {
-    return fail(
-      bus,
-      runId,
-      toolUse,
-      "runtime_error",
-      `unknown tool: ${toolUse.name}`,
-      elapsed(),
-    );
+    return fail(bus, runId, toolUse, "runtime_error", `unknown tool: ${toolUse.name}`, elapsed());
   }
 
   // Parameter validation
   if (tool.paramsModel) {
     const result = tool.paramsModel.safeParse(toolUse.input);
     if (!result.success) {
-      return fail(
-        bus,
-        runId,
-        toolUse,
-        "schema_error",
-        String(result.error),
-        elapsed(),
-      );
+      return fail(bus, runId, toolUse, "schema_error", String(result.error), elapsed());
     }
   }
 
@@ -124,20 +110,14 @@ export async function invokeTool(
   if (permissionManager) {
     const params = isRecord(toolUse.input) ? toolUse.input : {};
 
-    const emitPermission = async (
-      raw: Record<string, unknown>,
-    ): Promise<void> => {
+    const emitPermission = async (raw: Record<string, unknown>): Promise<void> => {
       await bus.publish({
         type: "permission.requested",
         run_id: runId,
-        tool_use_id:
-          typeof raw["tool_use_id"] === "string"
-            ? raw["tool_use_id"]
-            : toolUse.id,
+        tool_use_id: typeof raw["tool_use_id"] === "string" ? raw["tool_use_id"] : toolUse.id,
         tool_name: toolUse.name,
         params,
-        params_preview:
-          typeof raw["param_preview"] === "string" ? raw["param_preview"] : "",
+        params_preview: typeof raw["param_preview"] === "string" ? raw["param_preview"] : "",
         session_id: sessionId,
         timestamp: now(),
       });

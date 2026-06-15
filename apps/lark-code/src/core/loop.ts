@@ -82,6 +82,12 @@ export class AgentLoop {
           context.markFailed("cancelled");
           throw exc;
         }
+        console.error(
+          "LLM call failed run_id=%s step=%d",
+          context.runId,
+          String(context.step),
+          exc,
+        );
         context.markFailed("llm_error");
         break;
       }
@@ -104,24 +110,13 @@ export class AgentLoop {
       // [act] execute each requested tool
       if (response.stopReason === "tool_use") {
         for (const tc of response.toolUses) {
-          const result = await invokeTool(
-            this._registry,
-            tc,
-            this._bus,
-            context.runId,
-            {
-              ...(this._permissionManager
-                ? { permissionManager: this._permissionManager }
-                : {}),
-              sessionId: this._sessionId,
-            },
-          );
+          const result = await invokeTool(this._registry, tc, this._bus, context.runId, {
+            ...(this._permissionManager ? { permissionManager: this._permissionManager } : {}),
+            sessionId: this._sessionId,
+          });
           context.addToolResult(tc.id, result.content, result.isError);
         }
-      } else if (
-        response.stopReason === "max_tokens" &&
-        response.toolUses.length > 0
-      ) {
+      } else if (response.stopReason === "max_tokens" && response.toolUses.length > 0) {
         for (const tc of response.toolUses) {
           context.addToolResult(
             tc.id,

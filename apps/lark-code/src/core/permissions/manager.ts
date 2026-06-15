@@ -50,17 +50,12 @@ export class PermissionManager {
   }) {
     this._policies = options?.policies ?? { ...DEFAULT_POLICIES };
     this._policyFile = options?.policyFile;
-    this._persistentAlways = this._policyFile
-      ? loadPolicyFile(this._policyFile)
-      : {};
+    this._persistentAlways = this._policyFile ? loadPolicyFile(this._policyFile) : {};
     this._timeoutS = options?.timeoutS ?? 60.0;
   }
 
   // Evaluate tool name + params through 4-tier static policy; does not suspend
-  evaluate(
-    toolName: string,
-    params: Record<string, unknown>,
-  ): PermissionDecision {
+  evaluate(toolName: string, params: Record<string, unknown>): PermissionDecision {
     const policy = this._policies[toolName];
     return evaluate(toolName, params, policy);
   }
@@ -74,8 +69,7 @@ export class PermissionManager {
     eventEmitter: (event: Record<string, unknown>) => Promise<void>,
   ): Promise<[boolean, string]> {
     const commandRaw = params["command"];
-    const command =
-      toolName === "bash" && typeof commandRaw === "string" ? commandRaw : "";
+    const command = toolName === "bash" && typeof commandRaw === "string" ? commandRaw : "";
     const hasPolicy = toolName in this._policies;
     const policy = this._policies[toolName];
 
@@ -160,11 +154,7 @@ export class PermissionManager {
   }
 
   // Apply approval decision and update caches
-  private _applyResponse(
-    decision: string,
-    sessionId: string,
-    toolName: string,
-  ): boolean {
+  private _applyResponse(decision: string, sessionId: string, toolName: string): boolean {
     const allow = decision === "allow_once" || decision === "always_allow";
 
     if (decision === "always_allow") {

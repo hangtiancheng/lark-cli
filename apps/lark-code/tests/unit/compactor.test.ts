@@ -73,9 +73,7 @@ describe("Compactor", () => {
     });
 
     const compactor = new Compactor(bus, "/tmp/session", "session-1");
-    const provider = stubProviderWithSummary(
-      "## 1. Original Goal\nTest summary",
-    );
+    const provider = stubProviderWithSummary("## 1. Original Goal\nTest summary");
     await compactor.compact(makeCtx("run-1"), provider);
 
     const compactEvents = events.filter((e) => e.type === "context.compacted");
@@ -131,10 +129,7 @@ describe("Compactor", () => {
     });
 
     const compactor = new Compactor(bus, "/tmp/s", "my-session-id");
-    await compactor.compact(
-      makeCtx("r2"),
-      stubProviderWithSummary("Summary text"),
-    );
+    await compactor.compact(makeCtx("r2"), stubProviderWithSummary("Summary text"));
 
     for (const evt of events) {
       if (evt.type === "context.compacted") {
@@ -183,9 +178,7 @@ describe("Compactor", () => {
     expect(ctx.messages[1].role).toBe("assistant");
 
     const summaryContent = ctx.messages[0].content;
-    expect(typeof summaryContent === "string" ? summaryContent : "").toContain(
-      "Summary",
-    );
+    expect(typeof summaryContent === "string" ? summaryContent : "").toContain("Summary");
   });
 
   // Feature: compactMessages passes focus parameter to LLM prompt
@@ -219,11 +212,7 @@ describe("Compactor", () => {
       { role: "assistant" as const, content: "Hi" },
     ];
 
-    await compactor.compactMessages(
-      messages,
-      capturingProvider,
-      "Focus on file operations",
-    );
+    await compactor.compactMessages(messages, capturingProvider, "Focus on file operations");
 
     // The focus text should appear in the messages sent to the LLM
     const allContent = JSON.stringify(capturedMessages);

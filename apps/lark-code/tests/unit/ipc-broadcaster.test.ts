@@ -21,9 +21,7 @@ function makeMockSocket(): net.Socket {
   const socket = new net.Socket();
   const tracker: WriteTracker = { data: [] };
   socket.write = (chunk: string | Uint8Array): boolean => {
-    tracker.data.push(
-      typeof chunk === "string" ? chunk : Buffer.from(chunk).toString(),
-    );
+    tracker.data.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString());
     return true;
   };
   trackerRegistry.set(socket, tracker);

@@ -16,9 +16,7 @@ function truncateToolResultBlock(
   if (content.length <= limit) return block;
   return {
     ...block,
-    content:
-      content.slice(0, keep) +
-      `\n[truncated ${String(content.length - keep)} chars]`,
+    content: content.slice(0, keep) + `\n[truncated ${String(content.length - keep)} chars]`,
   };
 }
 

@@ -133,8 +133,7 @@ export class SocketClient {
       params,
     };
 
-    const { promise, resolve, reject } =
-      Promise.withResolvers<Record<string, unknown>>();
+    const { promise, resolve, reject } = Promise.withResolvers<Record<string, unknown>>();
     this._pending.set(reqId, { resolve, reject });
 
     this._socket.write(JSON.stringify(request) + "\n", "utf-8");
@@ -161,11 +160,9 @@ export class SocketClient {
         this._pending.delete(reqId);
         if ("error" in msg) {
           const errRaw = msg["error"];
-          const errObj =
-            typeof errRaw === "object" && errRaw !== null ? errRaw : null;
+          const errObj = typeof errRaw === "object" && errRaw !== null ? errRaw : null;
           const errCode = errObj && "code" in errObj ? errObj.code : undefined;
-          const errMsg =
-            errObj && "message" in errObj ? errObj.message : undefined;
+          const errMsg = errObj && "message" in errObj ? errObj.message : undefined;
           pending.reject(
             new IpcError(
               typeof errCode === "number" ? errCode : -1,

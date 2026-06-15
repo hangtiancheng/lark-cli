@@ -174,10 +174,12 @@ func (p *AnthropicProvider) doStream(
 	resp.Usage.CacheReadInputTokens = int(accumulated.Usage.CacheReadInputTokens)
 	resp.Usage.CacheCreationInputTokens = int(accumulated.Usage.CacheCreationInputTokens)
 
-	// Calculate context window utilization percentage.
-	if ctxWindow, ok := modelContextWindows[p.model]; ok && ctxWindow > 0 {
-		resp.Usage.ContextPct = float64(resp.Usage.InputTokens) / float64(ctxWindow)
+	// Calculate context window utilization percentage (fallback to 200K for unknown models).
+	ctxWindow := 200_000
+	if w, ok := modelContextWindows[p.model]; ok && w > 0 {
+		ctxWindow = w
 	}
+	resp.Usage.ContextPct = float64(resp.Usage.InputTokens) / float64(ctxWindow)
 
 	// Publish the usage event.
 	if req.Bus != nil {
@@ -236,9 +238,10 @@ func convertMessageParam(msg map[string]any) (anthropic.MessageParam, error) {
 }
 
 // convertToolSchemas converts raw tool schema maps to anthropic.ToolUnionParam slices.
+// The last tool receives a cache_control ephemeral breakpoint for prompt caching efficiency.
 func convertToolSchemas(schemas []map[string]any) []anthropic.ToolUnionParam {
 	tools := make([]anthropic.ToolUnionParam, 0, len(schemas))
-	for _, schema := range schemas {
+	for i, schema := range schemas {
 		name, _ := schema["name"].(string)
 		desc, _ := schema["description"].(string)
 		inputSchema, _ := schema["input_schema"].(map[string]any)
@@ -249,6 +252,11 @@ func convertToolSchemas(schemas []map[string]any) []anthropic.ToolUnionParam {
 				Description: param.NewOpt(desc),
 				InputSchema: convertInputSchema(inputSchema),
 			},
+		}
+
+		// Add cache_control ephemeral breakpoint on the last tool schema
+		if i == len(schemas)-1 {
+			tool.OfTool.CacheControl = anthropic.NewCacheControlEphemeralParam()
 		}
 
 		tools = append(tools, tool)

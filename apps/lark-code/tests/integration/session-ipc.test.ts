@@ -33,10 +33,7 @@ function freePort(): Promise<number> {
   });
 }
 
-function sendRequest(
-  port: number,
-  req: Record<string, unknown>,
-): Promise<string> {
+function sendRequest(port: number, req: Record<string, unknown>): Promise<string> {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection(port, "127.0.0.1", () => {
       socket.write(JSON.stringify(req) + "\n");

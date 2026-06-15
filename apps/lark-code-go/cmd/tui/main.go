@@ -76,15 +76,22 @@ var (
 			BorderForeground(warningColor).
 			Padding(0, 1).
 			Margin(1, 0)
+
+	completionStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(accentColor).
+			Padding(0, 1)
 )
 
 // -- Model --
 
 type model struct {
-	client      *transport.Client
-	connected   bool
-	sessionID   string
-	events      []eventEntry
+	client    *transport.Client
+	connected bool
+	sessionID string
+	events    []eventEntry
+	eventCh   chan eventMsg
+
 	inputValue  string
 	inputCursor int
 	status      string // "idle", "running", "waiting", "connecting"
@@ -94,6 +101,14 @@ type model struct {
 
 	// Permission request state
 	permRequest *permissionRequest
+
+	// Usage stats
+	usage *usageStats
+
+	// Slash command completion
+	showCompletion  bool
+	completionItems []completionItem
+	completionIdx   int
 }
 
 type eventEntry struct {
@@ -106,6 +121,18 @@ type permissionRequest struct {
 	toolUseID    string
 	toolName     string
 	paramPreview string
+}
+
+type usageStats struct {
+	inputTokens  int
+	outputTokens int
+	cacheRead    int
+	contextPct   float64
+}
+
+type completionItem struct {
+	name        string
+	description string
 }
 
 // -- Messages --
@@ -125,12 +152,10 @@ type errorMsg struct {
 	err string
 }
 
-// type tickMsg struct{}
-
 // -- Init --
 
 func (m model) Init() tea.Cmd {
-	return m.connect()
+	return tea.Batch(m.connect(), m.waitForEvent())
 }
 
 func (m *model) connect() tea.Cmd {
@@ -145,7 +170,10 @@ func (m *model) connect() tea.Cmd {
 			return errorMsg{err: fmt.Sprintf("connect failed: %s", err)}
 		}
 
-		// Subscribe to server-side events
+		// Create the event channel for forwarding server events
+		eventCh := make(chan eventMsg, 256)
+
+		// Subscribe to server-side events and forward to channel
 		client.OnEvent(func(event json.RawMessage) error {
 			var evt struct {
 				Type string `json:"type"`
@@ -157,6 +185,12 @@ func (m *model) connect() tea.Cmd {
 			var data map[string]any
 			_ = json.Unmarshal(event, &data)
 
+			// Non-blocking send to avoid blocking the reader goroutine
+			select {
+			case eventCh <- eventMsg{eventType: evt.Type, data: data}:
+			default:
+				// Drop event if channel is full
+			}
 			return nil
 		})
 
@@ -177,7 +211,22 @@ func (m *model) connect() tea.Cmd {
 		}
 
 		m.client = client
+		m.eventCh = eventCh
 		return connectedMsg{sessionID: sessionResult.SessionID}
+	}
+}
+
+// waitForEvent returns a Bubble Tea command that blocks until an event arrives.
+func (m *model) waitForEvent() tea.Cmd {
+	return func() tea.Msg {
+		if m.eventCh == nil {
+			return nil
+		}
+		evt, ok := <-m.eventCh
+		if !ok {
+			return nil
+		}
+		return evt
 	}
 }
 
@@ -191,26 +240,73 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// Permission dialog key handlers (take priority when dialog is active)
+		if m.permRequest != nil {
+			switch msg.String() {
+			case "y":
+				return m, m.respondPermission("allow_once")
+			case "n":
+				return m, m.respondPermission("deny_once")
+			case "a":
+				return m, m.respondPermission("always_allow")
+			case "d":
+				return m, m.respondPermission("always_deny")
+			}
+		}
+
 		switch msg.String() {
 		case "ctrl+c":
 			if m.client != nil {
 				m.client.Close()
 			}
 			return m, tea.Quit
+
+		case "tab":
+			if m.showCompletion && len(m.completionItems) > 0 {
+				m.completionIdx = (m.completionIdx + 1) % len(m.completionItems)
+			}
+			return m, nil
+
 		case "enter":
+			// Slash completion selection
+			if m.showCompletion && len(m.completionItems) > 0 {
+				selected := m.completionItems[m.completionIdx]
+				m.inputValue = "/" + selected.name + " "
+				m.showCompletion = false
+				return m, nil
+			}
+			// Normal message send
 			if m.inputValue != "" && m.connected && m.status == "idle" {
 				text := m.inputValue
 				m.inputValue = ""
 				m.status = "running"
 				return m, m.sendMessage(text)
 			}
+
 		case "backspace":
 			if len(m.inputValue) > 0 {
 				m.inputValue = m.inputValue[:len(m.inputValue)-1]
+				m.updateCompletion()
 			}
+
+		case "up":
+			if m.showCompletion && len(m.completionItems) > 0 {
+				if m.completionIdx > 0 {
+					m.completionIdx--
+				}
+			}
+
+		case "down":
+			if m.showCompletion && len(m.completionItems) > 0 {
+				if m.completionIdx < len(m.completionItems)-1 {
+					m.completionIdx++
+				}
+			}
+
 		default:
 			if len(msg.String()) == 1 {
 				m.inputValue += msg.String()
+				m.updateCompletion()
 			}
 		}
 		return m, nil
@@ -224,7 +320,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			eventType: "system",
 			rendered:  fmt.Sprintf("Connected to session %s", msg.sessionID[:min(16, len(msg.sessionID))]),
 		})
-		return m, nil
+		return m, m.waitForEvent()
 
 	case disconnectedMsg:
 		m.connected = false
@@ -242,10 +338,46 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			data:      msg.data,
 			rendered:  rendered,
 		})
+
+		// Status updates from events
 		if msg.eventType == "run.finished" || msg.eventType == "session.waiting_for_input" {
 			m.status = "idle"
 		}
-		return m, nil
+		if msg.eventType == "run.started" {
+			m.status = "running"
+		}
+
+		// Permission request handling
+		if msg.eventType == "permission.requested" {
+			toolUseID, _ := msg.data["tool_use_id"].(string)
+			toolName, _ := msg.data["tool_name"].(string)
+			paramPreview, _ := msg.data["param_preview"].(string)
+			m.permRequest = &permissionRequest{
+				toolUseID:    toolUseID,
+				toolName:     toolName,
+				paramPreview: paramPreview,
+			}
+		}
+		if msg.eventType == "permission.granted" || msg.eventType == "permission.denied" {
+			m.permRequest = nil
+		}
+
+		// Usage stats tracking
+		if msg.eventType == "llm.usage" {
+			inputTokens, _ := msg.data["input_tokens"].(float64)
+			outputTokens, _ := msg.data["output_tokens"].(float64)
+			cacheRead, _ := msg.data["cache_read_input_tokens"].(float64)
+			contextPct, _ := msg.data["context_pct"].(float64)
+			m.usage = &usageStats{
+				inputTokens:  int(inputTokens),
+				outputTokens: int(outputTokens),
+				cacheRead:    int(cacheRead),
+				contextPct:   contextPct,
+			}
+		}
+
+		// Continue listening for events
+		return m, m.waitForEvent()
 
 	case errorMsg:
 		m.err = msg.err
@@ -271,6 +403,52 @@ func (m *model) sendMessage(text string) tea.Cmd {
 	}
 }
 
+func (m *model) respondPermission(decision string) tea.Cmd {
+	toolUseID := m.permRequest.toolUseID
+	return func() tea.Msg {
+		if m.client == nil {
+			return errorMsg{err: "not connected"}
+		}
+		_, err := m.client.SendCommand("permission.respond", map[string]any{
+			"tool_use_id": toolUseID,
+			"decision":    decision,
+		})
+		if err != nil {
+			return errorMsg{err: fmt.Sprintf("permission respond failed: %s", err)}
+		}
+		return nil
+	}
+}
+
+// -- Slash Command Completion --
+
+// builtinSkillNames lists the built-in skill names for completion.
+var builtinSkillNames = []completionItem{
+	{name: "init", description: "Analyze project structure and generate context.md"},
+	{name: "orchestrate", description: "Plan, execute, and review a multi-step task"},
+	{name: "review", description: "Review code changes with severity classification"},
+	{name: "summarize", description: "Compress session into a readable summary"},
+}
+
+func (m *model) updateCompletion() {
+	if !strings.HasPrefix(m.inputValue, "/") || strings.Contains(m.inputValue[1:], " ") {
+		m.showCompletion = false
+		return
+	}
+
+	prefix := strings.TrimPrefix(m.inputValue, "/")
+	var matches []completionItem
+	for _, item := range builtinSkillNames {
+		if strings.HasPrefix(item.name, prefix) {
+			matches = append(matches, item)
+		}
+	}
+
+	m.completionItems = matches
+	m.completionIdx = 0
+	m.showCompletion = len(matches) > 0
+}
+
 // -- View --
 
 func (m model) View() string {
@@ -282,6 +460,16 @@ func (m model) View() string {
 
 	// Events
 	maxEvents := m.height - 6 // header + status + input + padding
+	if m.permRequest != nil {
+		maxEvents -= 5 // permission dialog takes ~5 lines
+	}
+	if m.showCompletion && len(m.completionItems) > 0 {
+		maxEvents -= len(m.completionItems) + 2
+	}
+	if maxEvents < 3 {
+		maxEvents = 3
+	}
+
 	start := 0
 	if len(m.events) > maxEvents {
 		start = len(m.events) - maxEvents
@@ -289,6 +477,13 @@ func (m model) View() string {
 
 	for _, evt := range m.events[start:] {
 		b.WriteString(evt.rendered)
+		b.WriteString("\n")
+	}
+
+	// Slash completion popup
+	if m.showCompletion && len(m.completionItems) > 0 {
+		b.WriteString("\n")
+		b.WriteString(m.renderCompletion())
 		b.WriteString("\n")
 	}
 
@@ -355,6 +550,18 @@ func (m model) renderStatusBar() string {
 	// Event count
 	parts = append(parts, dimStyle.Render(fmt.Sprintf("events: %d", len(m.events))))
 
+	// Usage stats
+	if m.usage != nil {
+		parts = append(parts, dimStyle.Render(fmt.Sprintf(
+			"tokens: %d in / %d out / %d cache",
+			m.usage.inputTokens, m.usage.outputTokens, m.usage.cacheRead,
+		)))
+		// Context percentage bar
+		pct := int(m.usage.contextPct * 100)
+		bar := renderProgressBar(pct, 15)
+		parts = append(parts, dimStyle.Render(fmt.Sprintf("ctx: %s %d%%", bar, pct)))
+	}
+
 	return statusBarStyle.Width(m.width).Render(strings.Join(parts, "  "))
 }
 
@@ -383,9 +590,21 @@ func (m model) renderPermission() string {
 	b.WriteString(fmt.Sprintf("Tool: %s\n", toolStyle.Render(m.permRequest.toolName)))
 	b.WriteString(fmt.Sprintf("Parameters: %s\n", dimStyle.Render(m.permRequest.paramPreview)))
 	b.WriteString("\n")
-	b.WriteString(dimStyle.Render("Press [y] to allow, [n] to deny, [a] to always allow"))
+	b.WriteString(dimStyle.Render("[y] allow  [n] deny  [a] always allow  [d] always deny"))
 
 	return permissionStyle.Render(b.String())
+}
+
+func (m model) renderCompletion() string {
+	var items []string
+	for i, item := range m.completionItems {
+		if i == m.completionIdx {
+			items = append(items, accentStyle.Render(fmt.Sprintf("▸ %-14s %s", item.name, dimStyle.Render(item.description))))
+		} else {
+			items = append(items, dimStyle.Render(fmt.Sprintf("  %-14s %s", item.name, item.description)))
+		}
+	}
+	return completionStyle.Render(strings.Join(items, "\n"))
 }
 
 func renderEvent(eventType string, data map[string]any) string {
@@ -425,15 +644,52 @@ func renderEvent(eventType string, data map[string]any) string {
 		toolName, _ := data["tool_name"].(string)
 		return warningStyle.Render(fmt.Sprintf("? Permission requested: %s", toolName))
 
+	case "permission.granted":
+		return successStyle.Render("✓ Permission granted")
+
+	case "permission.denied":
+		return errorStyle.Render("✗ Permission denied")
+
 	case "context.compacted":
 		return dimStyle.Render("↻ Context compacted")
 
+	case "skill.invoked":
+		skillName, _ := data["skill_name"].(string)
+		return accentStyle.Render(fmt.Sprintf("⚡ Skill: %s", skillName))
+
+	case "session.resumed":
+		return dimStyle.Render("↻ Session resumed")
+
+	case "llm.usage":
+		// Usage is rendered in the status bar, not as an event line
+		return ""
+
 	case "system":
-		return dimStyle.Render(fmt.Sprintf("· %s", data["text"]))
+		text, _ := data["text"].(string)
+		return dimStyle.Render(fmt.Sprintf("· %s", text))
 
 	default:
 		return dimStyle.Render(fmt.Sprintf("  %s", eventType))
 	}
+}
+
+// renderProgressBar renders a progress bar with color coding.
+func renderProgressBar(pct, width int) string {
+	if pct < 0 {
+		pct = 0
+	}
+	if pct > 100 {
+		pct = 100
+	}
+	filled := pct * width / 100
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
+	if pct > 80 {
+		return warningStyle.Render(bar)
+	}
+	if pct > 60 {
+		return accentStyle.Render(bar)
+	}
+	return successStyle.Render(bar)
 }
 
 func truncate(s string, maxLen int) string {

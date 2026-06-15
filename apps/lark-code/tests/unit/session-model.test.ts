@@ -1,9 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  createSession,
-  sessionToDict,
-  sessionFromDict,
-} from "../../src/core/session/model.js";
+import { createSession, sessionToDict, sessionFromDict } from "../../src/core/session/model.js";
 
 describe("Session Model", () => {
   // Feature: createSession creates session with correct defaults

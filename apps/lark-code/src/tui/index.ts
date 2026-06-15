@@ -11,12 +11,9 @@ export async function launchTUI(): Promise<void> {
   const client = new SocketClient(config.host, config.port);
 
   try {
-    const instance = render(
-      React.createElement(App, { _config: config, client }),
-      {
-        exitOnCtrlC: false,
-      },
-    );
+    const instance = render(React.createElement(App, { _config: config, client }), {
+      exitOnCtrlC: false,
+    });
 
     // Wait for the app to exit
     await instance.waitUntilExit();

@@ -80,12 +80,7 @@ export function InputBar({
   const hasContent = lines.length > 0;
 
   return (
-    <Box
-      borderStyle="single"
-      borderColor={borderColor}
-      paddingX={1}
-      flexDirection="column"
-    >
+    <Box borderStyle="single" borderColor={borderColor} paddingX={1} flexDirection="column">
       <Box>
         <Text color={borderColor} bold>
           {displayLabel}{" "}

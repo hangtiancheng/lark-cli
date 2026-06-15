@@ -47,16 +47,12 @@ export class TaskUpdateTool implements BaseTool {
       const taskId = Number(String(params["task_id"]));
       const statusRaw = params["status"];
       const status =
-        statusRaw === "pending" ||
-        statusRaw === "in_progress" ||
-        statusRaw === "completed"
+        statusRaw === "pending" || statusRaw === "in_progress" || statusRaw === "completed"
           ? statusRaw
           : undefined;
 
       const addRaw = params["add_blocked_by"];
-      const addBlocked = Array.isArray(addRaw)
-        ? addRaw.map((x) => Number(String(x)))
-        : undefined;
+      const addBlocked = Array.isArray(addRaw) ? addRaw.map((x) => Number(String(x))) : undefined;
 
       const removeRaw = params["remove_blocked_by"];
       const removeBlocked = Array.isArray(removeRaw)
@@ -66,9 +62,7 @@ export class TaskUpdateTool implements BaseTool {
       const task = this._manager.update(taskId, {
         ...(status !== undefined ? { status } : {}),
         ...(addBlocked !== undefined ? { addBlockedBy: addBlocked } : {}),
-        ...(removeBlocked !== undefined
-          ? { removeBlockedBy: removeBlocked }
-          : {}),
+        ...(removeBlocked !== undefined ? { removeBlockedBy: removeBlocked } : {}),
       });
       return Promise.resolve(toolSuccess(JSON.stringify(task)));
     } catch (e) {

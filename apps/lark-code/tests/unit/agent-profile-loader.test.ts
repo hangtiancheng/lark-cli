@@ -23,18 +23,15 @@ describe("AgentProfileLoader", () => {
 
   // Feature: Load all three builtin roles
   // Design: Parameterized test for planner, executor, reviewer
-  test.each(["planner", "executor", "reviewer"])(
-    "loads builtin %s profile",
-    (role) => {
-      const loader = new AgentProfileLoader();
-      const profile = loader.load(role);
-      expect(profile).not.toBeNull();
-      if (profile) {
-        expect(profile.name).toBe(role);
-        expect(profile.allowedTools.length).toBeGreaterThan(0);
-      }
-    },
-  );
+  test.each(["planner", "executor", "reviewer"])("loads builtin %s profile", (role) => {
+    const loader = new AgentProfileLoader();
+    const profile = loader.load(role);
+    expect(profile).not.toBeNull();
+    if (profile) {
+      expect(profile.name).toBe(role);
+      expect(profile.allowedTools.length).toBeGreaterThan(0);
+    }
+  });
 
   // Feature: Return null for unknown role
   // Design: Load a non-existent role name, assert it returns null instead of throwing

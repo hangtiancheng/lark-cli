@@ -43,8 +43,7 @@ function paramsPreview(params?: Record<string, unknown>): string {
   const entries = Object.entries(params).slice(0, 3);
   return entries
     .map(([key, val]) => {
-      const v =
-        typeof val === "string" ? truncate(val, 30) : JSON.stringify(val);
+      const v = typeof val === "string" ? truncate(val, 30) : JSON.stringify(val);
       return `${key}=${v}`;
     })
     .join(" ");
@@ -72,9 +71,7 @@ export function ToolUseCard({
       <Box>
         <Text color={iconColor}>{icon} </Text>
         <Text color={theme.toolName}>{toolName}</Text>
-        {isExpanded && preview ? (
-          <Text color={theme.textDim}> {truncate(preview, 50)}</Text>
-        ) : null}
+        {isExpanded && preview ? <Text color={theme.textDim}> {truncate(preview, 50)}</Text> : null}
         {duration ? <Text color={theme.textMuted}> {duration}</Text> : null}
       </Box>
 

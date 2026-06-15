@@ -3,13 +3,7 @@ import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import {
-  newRunId,
-  runDir,
-  eventsFile,
-  ensureRunDir,
-  RUNS_DIR,
-} from "../../src/core/runs.js";
+import { newRunId, runDir, eventsFile, ensureRunDir, RUNS_DIR } from "../../src/core/runs.js";
 
 describe("Runs Module", () => {
   // Feature: newRunId generates ID in YYYYMMDD-HHMMSS-xxxxxx format
@@ -40,9 +34,7 @@ describe("Runs Module", () => {
   // Design: Call eventsFile, verify it ends with events.jsonl
   test("eventsFile returns correct path", () => {
     const file = eventsFile("20260612-120000-abc123");
-    expect(file).toBe(
-      path.join(RUNS_DIR, "20260612-120000-abc123", "events.jsonl"),
-    );
+    expect(file).toBe(path.join(RUNS_DIR, "20260612-120000-abc123", "events.jsonl"));
   });
 
   // Feature: ensureRunDir creates directory

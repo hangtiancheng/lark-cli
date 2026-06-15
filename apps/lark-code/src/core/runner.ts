@@ -99,11 +99,10 @@ export class AgentRunner {
       bus?: EventBus;
       sessionId?: string;
       toolWhitelist?: string[] | null;
+      childRunsDir?: string;
     },
   ): ToolRegistry {
-    const allowed = options?.toolWhitelist
-      ? new Set(options.toolWhitelist)
-      : null;
+    const allowed = options?.toolWhitelist ? new Set(options.toolWhitelist) : null;
     const ok = (name: string): boolean => !allowed || allowed.has(name);
 
     const registry = new ToolRegistry();
@@ -114,26 +113,19 @@ export class AgentRunner {
     if (ok("write_file")) registry.register(new WriteFileTool());
     if (ok("list_dir")) registry.register(new ListDirTool());
 
-    // Note save requires session context
-    if (options?.store && options.session && options.runId && ok("note_save")) {
-      registry.register(
-        new NoteSaveTool(options.store, options.session.id, options.runId),
-      );
-    }
-
     // Task tools (Python order: create, update, list, get)
     if (ok("task_create")) registry.register(new TaskCreateTool(taskManager));
     if (ok("task_update")) registry.register(new TaskUpdateTool(taskManager));
     if (ok("task_list")) registry.register(new TaskListTool(taskManager));
     if (ok("task_get")) registry.register(new TaskGetTool(taskManager));
 
-    // Subagent tools (require provider + bus + runId + sessionId)
-    if (
-      options?.provider &&
-      options.bus &&
-      options.runId &&
-      options.sessionId
-    ) {
+    // Note save requires session context
+    if (options?.store && options.session && options.runId && ok("note_save")) {
+      registry.register(new NoteSaveTool(options.store, options.session.id, options.runId));
+    }
+
+    // Subagent tools (require provider + bus + runId)
+    if (options?.provider && options.bus && options.runId) {
       if (ok("spawn_agent")) {
         registry.register(
           new SpawnAgentTool(
@@ -143,8 +135,8 @@ export class AgentRunner {
             this._permissionManager,
             this._config.agent.maxSteps,
             this._taskRegistry,
-            this._runsDir,
-            options.sessionId,
+            options.childRunsDir ?? this._runsDir,
+            options.sessionId ?? "",
             0,
           ),
         );
@@ -198,9 +190,7 @@ export class AgentRunner {
     }
     mkdirSync(runPath, { recursive: true });
 
-    const globalCtx = loadContextFile(
-      path.join(homedir(), ".lark", "context.md"),
-    );
+    const globalCtx = loadContextFile(path.join(homedir(), ".lark", "context.md"));
     const projectCtx = loadContextFile(path.join(".lark", "context.md"));
 
     const taskManager = new TaskManager(path.join(runPath, ".tasks"));
@@ -226,6 +216,7 @@ export class AgentRunner {
 
     const eventWriter = new EventWriter(path.join(runPath, "events.jsonl"));
     eventWriter.open();
+    let cancelled = false;
     try {
       eventWriter.subscribe(bus);
       await bus.publish({
@@ -237,8 +228,7 @@ export class AgentRunner {
 
       try {
         let provider: LLMProvider =
-          this._provider ??
-          new AnthropicProvider(this._config.llm.defaultModel);
+          this._provider ?? new AnthropicProvider(this._config.llm.defaultModel);
         if (this._trace) {
           provider = new TracingProvider(
             provider,
@@ -248,6 +238,10 @@ export class AgentRunner {
         }
 
         const sessionIdStr = options?.session?.id ?? "";
+        const childRunsDir =
+          options?.session && options.store
+            ? options.store.runsDir(options.session.id)
+            : this._runsDir;
         const registry = this._buildRegistry(taskManager, {
           ...(options?.session ? { session: options.session } : {}),
           ...(options?.store ? { store: options.store } : {}),
@@ -255,9 +249,8 @@ export class AgentRunner {
           provider,
           bus,
           sessionId: sessionIdStr,
-          ...(options?.toolWhitelist !== undefined
-            ? { toolWhitelist: options.toolWhitelist }
-            : {}),
+          ...(options?.toolWhitelist !== undefined ? { toolWhitelist: options.toolWhitelist } : {}),
+          childRunsDir,
         });
 
         const sessionDir =
@@ -267,17 +260,21 @@ export class AgentRunner {
         const compactor = new Compactor(bus, sessionDir, sessionIdStr);
 
         const loop = new AgentLoop(provider, registry, bus, {
-          ...(this._permissionManager
-            ? { permissionManager: this._permissionManager }
-            : {}),
+          ...(this._permissionManager ? { permissionManager: this._permissionManager } : {}),
           compactor,
           compactThreshold: this._config.compaction.autoThreshold,
           sessionId: sessionIdStr,
           ...(this._signal ? { signal: this._signal } : {}),
         });
         await loop.run(context);
-      } catch {
-        if (!context.isDone()) context.markFailed("cancelled");
+      } catch (exc) {
+        if (exc instanceof Error && exc.message === "cancelled") {
+          cancelled = true;
+          if (!context.isDone()) context.markFailed("cancelled");
+        } else {
+          console.error("agent run failed run_id=%s step=%d", runId, String(context.step), exc);
+          if (!context.isDone()) context.markFailed("llm_error");
+        }
       }
 
       await bus.publish({
@@ -293,11 +290,11 @@ export class AgentRunner {
     }
 
     if (options?.session && options.store) {
-      options.store.appendMessages(
-        options.session.id,
-        context.messages.slice(prefillLen),
-        runId,
-      );
+      options.store.appendMessages(options.session.id, context.messages.slice(prefillLen), runId);
+    }
+
+    if (cancelled) {
+      throw new Error("cancelled");
     }
 
     return {

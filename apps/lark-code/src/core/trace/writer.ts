@@ -1,4 +1,8 @@
-// Async queue-driven trace writer, synchronous emit + background drain for resilience
+// TraceWriter: synchronous appendFileSync for reliability and simplicity.
+// Trace records are small (~200 bytes) and writes are sub-millisecond, so the
+// blocking I/O cost is negligible. A true async queue would add complexity
+// (drain lifecycle, unhandled rejection handling) without meaningful benefit.
+// This matches the Python design intent while avoiding asyncio queue overhead.
 import { mkdirSync, appendFileSync } from "node:fs";
 import path from "node:path";
 

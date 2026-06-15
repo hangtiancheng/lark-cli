@@ -75,18 +75,14 @@ describe("AgentRunner", () => {
     expect(outcome.status).toBe("success");
     expect(outcome.result).toBe("Done");
 
-    const started = events.find(
-      (e: unknown) => asRecord(e)["type"] === "run.started",
-    );
+    const started = events.find((e: unknown) => asRecord(e)["type"] === "run.started");
     expect(started).toBeDefined();
     if (!started) {
       throw new Error("Expected started event to be defined");
     }
     expect(asRecord(started)["goal"]).toBe("test goal");
 
-    const finished = events.find(
-      (e: unknown) => asRecord(e)["type"] === "run.finished",
-    );
+    const finished = events.find((e: unknown) => asRecord(e)["type"] === "run.finished");
     expect(finished).toBeDefined();
     if (!finished) {
       throw new Error("Expected finished event to be defined");
@@ -270,10 +266,7 @@ describe("AgentRunner", () => {
   // Feature: Verify config maxSteps propagates to ExecutionContext
   // Design: Set maxSteps=2 in config, provider always returns tool_use, confirm run stops at max_steps
   test("config maxSteps propagates to loop", async () => {
-    const dir = path.join(
-      tmpdir(),
-      `test-runner-maxsteps-${String(Date.now())}`,
-    );
+    const dir = path.join(tmpdir(), `test-runner-maxsteps-${String(Date.now())}`);
     mkdirSync(dir, { recursive: true });
     const bus = new EventBus();
 
@@ -335,12 +328,8 @@ describe("AgentRunner", () => {
 
     await runner.run("test goal");
 
-    const started = events.find(
-      (e: unknown) => asRecord(e)["type"] === "run.started",
-    );
-    const finished = events.find(
-      (e: unknown) => asRecord(e)["type"] === "run.finished",
-    );
+    const started = events.find((e: unknown) => asRecord(e)["type"] === "run.started");
+    const finished = events.find((e: unknown) => asRecord(e)["type"] === "run.finished");
 
     expect(started).toBeDefined();
     expect(finished).toBeDefined();

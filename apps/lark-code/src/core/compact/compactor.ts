@@ -55,11 +55,7 @@ export class Compactor {
     provider: LLMProvider,
     focus = "",
   ): Promise<CompactionResult | null> {
-    const result = await this.compactMessages(
-      context.messages,
-      provider,
-      focus,
-    );
+    const result = await this.compactMessages(context.messages, provider, focus);
     if (!result) return null;
 
     context.messages = [
@@ -87,10 +83,7 @@ export class Compactor {
     provider: LLMProvider,
     focus = "",
   ): Promise<CompactionResult | null> {
-    const originalEstimate = messages.reduce(
-      (sum, m) => sum + this._estimateTokens(m.content),
-      0,
-    );
+    const originalEstimate = messages.reduce((sum, m) => sum + this._estimateTokens(m.content), 0);
 
     const historyText = this._messagesToText(messages);
     let prompt = COMPACT_PROMPT;
@@ -108,24 +101,17 @@ export class Compactor {
     try {
       // Use silent bus to avoid polluting parent event stream
       const silentBus = new EventBus();
-      const response = await provider.chat(
-        compressRequest,
-        [],
-        silentBus,
-        "compact",
-        {
-          step: 0,
-          system: "You are a helpful assistant that summarizes conversations.",
-        },
-      );
+      const response = await provider.chat(compressRequest, [], silentBus, "compact", {
+        step: 0,
+        system: "You are a helpful assistant that summarizes conversations.",
+      });
 
       const summaryText = response.text.trim();
       if (!summaryText) {
         return null;
       }
 
-      const summaryTokens =
-        response.usage?.outputTokens ?? Math.floor(summaryText.length / 4);
+      const summaryTokens = response.usage?.outputTokens ?? Math.floor(summaryText.length / 4);
 
       return {
         summaryText,
@@ -139,9 +125,7 @@ export class Compactor {
   }
 
   // Estimate token count from message content (rough approximation: chars / 4)
-  private _estimateTokens(
-    content: string | Anthropic.ContentBlockParam[],
-  ): number {
+  private _estimateTokens(content: string | Anthropic.ContentBlockParam[]): number {
     if (typeof content === "string") {
       return Math.floor(content.length / 4);
     }
@@ -170,12 +154,8 @@ export class Compactor {
             );
           } else if (block.type === "tool_result") {
             const resultContent =
-              typeof block.content === "string"
-                ? block.content
-                : JSON.stringify(block.content);
-            blocks.push(
-              `<tool_result id=${block.tool_use_id}>\n${resultContent}\n</tool_result>`,
-            );
+              typeof block.content === "string" ? block.content : JSON.stringify(block.content);
+            blocks.push(`<tool_result id=${block.tool_use_id}>\n${resultContent}\n</tool_result>`);
           }
         }
         parts.push(`[${role}]\n${blocks.join("\n")}`);
@@ -190,12 +170,10 @@ export class Compactor {
       mkdirSync(this._sessionDir, { recursive: true });
       const timestamp = new Date()
         .toISOString()
-        .replace(/[-:T]/g, "")
-        .slice(0, 15);
-      const summaryPath = path.join(
-        this._sessionDir,
-        `summary_${timestamp}.md`,
-      );
+        .slice(0, 19)
+        .replace(/[-:]/g, "")
+        .replace("T", "_");
+      const summaryPath = path.join(this._sessionDir, `summary_${timestamp}.md`);
       writeFileSync(summaryPath, text, "utf-8");
     } catch (error) {
       console.error("compactor: failed to write summary file", error);

@@ -126,8 +126,7 @@ describe("AgentLoop", () => {
       name: "test_tool",
       description: "Test tool",
       inputSchema: { type: "object" as const, properties: {} },
-      invoke: () =>
-        Promise.resolve({ content: "result", isError: false, errorType: null }),
+      invoke: () => Promise.resolve({ content: "result", isError: false, errorType: null }),
     });
     const bus = new EventBus();
     const loop = new AgentLoop(mockProvider, registry, bus);
@@ -297,8 +296,7 @@ describe("AgentLoop", () => {
       name: "test_tool",
       description: "Test tool",
       inputSchema: { type: "object" as const, properties: {} },
-      invoke: () =>
-        Promise.resolve({ content: "result", isError: false, errorType: null }),
+      invoke: () => Promise.resolve({ content: "result", isError: false, errorType: null }),
     });
     const bus = new EventBus();
     const loop = new AgentLoop(mockProvider, registry, bus, {
@@ -438,8 +436,7 @@ describe("AgentLoop", () => {
       name: "test_tool",
       description: "Test tool",
       inputSchema: { type: "object" as const, properties: {} },
-      invoke: () =>
-        Promise.resolve({ content: "result", isError: false, errorType: null }),
+      invoke: () => Promise.resolve({ content: "result", isError: false, errorType: null }),
     });
     const bus = new EventBus();
     const loop = new AgentLoop(mockProvider, registry, bus);
@@ -493,8 +490,7 @@ describe("AgentLoop", () => {
       name: "test_tool",
       description: "Test tool",
       inputSchema: { type: "object" as const, properties: {} },
-      invoke: () =>
-        Promise.resolve({ content: "result", isError: false, errorType: null }),
+      invoke: () => Promise.resolve({ content: "result", isError: false, errorType: null }),
     });
     const bus = new EventBus();
     const loop = new AgentLoop(mockProvider, registry, bus);
@@ -508,9 +504,7 @@ describe("AgentLoop", () => {
         Array.isArray(m.content) &&
         m.content.some((b) => {
           const record = asRecord(b);
-          return (
-            record["type"] === "tool_result" && record["is_error"] === true
-          );
+          return record["type"] === "tool_result" && record["is_error"] === true;
         }),
     );
     expect(toolResultMsg).toBeDefined();

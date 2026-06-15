@@ -53,7 +53,7 @@ export class BashTool implements BaseTool {
 
       const timer = setTimeout(() => {
         killed = true;
-        proc.kill("SIGKILL");
+        proc.kill("SIGTERM");
       }, timeout * 1000);
 
       const collectOutput = (chunk: Buffer): void => {
@@ -79,15 +79,11 @@ export class BashTool implements BaseTool {
         // Truncate output if needed
         if (Buffer.byteLength(output, "utf-8") > MAX_OUTPUT_BYTES) {
           const buf = Buffer.from(output, "utf-8");
-          output =
-            buf.subarray(0, MAX_OUTPUT_BYTES).toString("utf-8") +
-            "\n[truncated]";
+          output = buf.subarray(0, MAX_OUTPUT_BYTES).toString("utf-8") + "\n[truncated]";
         }
 
         if (code !== 0) {
-          resolve(
-            toolError(`[exit ${String(code)}]\n${output}`, "runtime_error"),
-          );
+          resolve(toolError(`[exit ${String(code)}]\n${output}`, "runtime_error"));
           return;
         }
 

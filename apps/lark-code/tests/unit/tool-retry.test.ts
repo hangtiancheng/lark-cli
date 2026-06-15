@@ -217,9 +217,7 @@ describe("Tool Retry", () => {
     };
     await invokeTool(registry, toolUse, bus, "r1");
 
-    const failedEvents = events.filter(
-      (e: unknown) => asRecord(e)["type"] === "tool.call_failed",
-    );
+    const failedEvents = events.filter((e: unknown) => asRecord(e)["type"] === "tool.call_failed");
     expect(failedEvents.length).toBeGreaterThan(0);
     for (const fe of failedEvents) {
       expect(asRecord(fe)["error_class"]).toBe("runtime_error");
@@ -264,9 +262,7 @@ describe("Tool Retry", () => {
 
     expect(callCount).toBe(2);
     expect(result.isError).toBe(false);
-    const failedEvents = events.filter(
-      (e: unknown) => asRecord(e)["type"] === "tool.call_failed",
-    );
+    const failedEvents = events.filter((e: unknown) => asRecord(e)["type"] === "tool.call_failed");
     expect(failedEvents.length).toBe(1);
     expect(asRecord(failedEvents[0])["error_class"]).toBe("rate_limited");
   });

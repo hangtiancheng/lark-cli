@@ -11,19 +11,14 @@ const MAX_DEPTH = 4;
 const MAX_ENTRIES = 200;
 
 export const ListDirParamsSchema = z.object({
-  path: z
-    .string()
-    .default(".")
-    .describe("Relative path to the directory (default '.')."),
+  path: z.string().default(".").describe("Relative path to the directory (default '.')."),
   max_depth: z
     .number()
     .int()
     .min(1)
     .max(MAX_DEPTH)
     .default(2)
-    .describe(
-      `How many levels deep to recurse (default 2, max ${String(MAX_DEPTH)}).`,
-    ),
+    .describe(`How many levels deep to recurse (default 2, max ${String(MAX_DEPTH)}).`),
 });
 
 interface DirEntry {
@@ -59,9 +54,8 @@ export class ListDirTool implements BaseTool {
     const rootPath = parsed.path;
     const maxDepth = parsed.max_depth;
 
-    // Path traversal check
-    const parts = path.normalize(rootPath).split(path.sep);
-    if (parts.includes("..")) {
+    // Path traversal check: reject raw path components before normalize
+    if (rootPath.split(path.sep).includes("..")) {
       throw new Error(`path traversal not allowed: ${rootPath}`);
     }
 

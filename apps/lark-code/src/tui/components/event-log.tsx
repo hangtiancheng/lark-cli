@@ -32,8 +32,7 @@ function mergeTokens(events: readonly AgentEvent[]): AgentEvent[] {
 
   for (const event of events) {
     if (event.type === "llm.token") {
-      const tok =
-        typeof event.data["token"] === "string" ? event.data["token"] : "";
+      const tok = typeof event.data["token"] === "string" ? event.data["token"] : "";
       tokenBuf.push(tok);
       if (!tokenTs) tokenTs = event.timestamp;
     } else {
@@ -79,10 +78,7 @@ export function EventLog({ events }: EventLogProps): React.JSX.Element {
     }
   });
 
-  const visibleEvents = displayEvents.slice(
-    scrollOffset,
-    scrollOffset + availableHeight,
-  );
+  const visibleEvents = displayEvents.slice(scrollOffset, scrollOffset + availableHeight);
   const isAtBottom = scrollOffset >= maxScroll;
 
   return (

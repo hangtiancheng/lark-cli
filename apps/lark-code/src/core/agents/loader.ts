@@ -59,12 +59,8 @@ export class AgentProfileLoader {
     const allowedRaw = agent["allowed_tools"];
     return {
       name,
-      description:
-        typeof agent["description"] === "string" ? agent["description"] : "",
-      systemPrompt:
-        typeof agent["system_prompt"] === "string"
-          ? agent["system_prompt"].trim()
-          : "",
+      description: typeof agent["description"] === "string" ? agent["description"] : "",
+      systemPrompt: typeof agent["system_prompt"] === "string" ? agent["system_prompt"].trim() : "",
       allowedTools: Array.isArray(allowedRaw) ? allowedRaw.map(String) : [],
       model: typeof agent["model"] === "string" ? agent["model"] : "",
     };

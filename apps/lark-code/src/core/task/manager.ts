@@ -1,11 +1,5 @@
 // TaskManager: file-based task CRUD with dependency tracking
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-  readdirSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import type { Task } from "./model.js";
@@ -84,8 +78,7 @@ export class TaskManager {
     if (!task) return null;
 
     if (updates.subject !== undefined) task.subject = updates.subject;
-    if (updates.description !== undefined)
-      task.description = updates.description;
+    if (updates.description !== undefined) task.description = updates.description;
     if (updates.status !== undefined) {
       const s = updates.status;
       if (s === "pending" || s === "in_progress" || s === "completed") {
@@ -173,28 +166,20 @@ export class TaskManager {
     for (const file of readdirSync(this._dir)) {
       if (!file.startsWith("task_") || !file.endsWith(".json")) continue;
       try {
-        const parsed: unknown = JSON.parse(
-          readFileSync(path.join(this._dir, file), "utf-8"),
-        );
+        const parsed: unknown = JSON.parse(readFileSync(path.join(this._dir, file), "utf-8"));
         if (!isRecord(parsed)) continue;
         const data = parsed;
         const id = typeof data["id"] === "string" ? data["id"] : "";
         if (!id) continue;
-        const subject =
-          typeof data["subject"] === "string" ? data["subject"] : "";
-        const description =
-          typeof data["description"] === "string" ? data["description"] : "";
+        const subject = typeof data["subject"] === "string" ? data["subject"] : "";
+        const description = typeof data["description"] === "string" ? data["description"] : "";
         const statusRaw = data["status"];
         const status =
-          statusRaw === "pending" ||
-          statusRaw === "in_progress" ||
-          statusRaw === "completed"
+          statusRaw === "pending" || statusRaw === "in_progress" || statusRaw === "completed"
             ? statusRaw
             : "pending";
-        const createdAt =
-          typeof data["createdAt"] === "string" ? data["createdAt"] : "";
-        const updatedAt =
-          typeof data["updatedAt"] === "string" ? data["updatedAt"] : "";
+        const createdAt = typeof data["createdAt"] === "string" ? data["createdAt"] : "";
+        const updatedAt = typeof data["updatedAt"] === "string" ? data["updatedAt"] : "";
         const blockedByRaw = data["blockedBy"];
         const blocksRaw = data["blocks"];
         this._tasks.set(id, {
@@ -202,9 +187,7 @@ export class TaskManager {
           subject,
           description,
           status,
-          blockedBy: Array.isArray(blockedByRaw)
-            ? blockedByRaw.map(String)
-            : [],
+          blockedBy: Array.isArray(blockedByRaw) ? blockedByRaw.map(String) : [],
           blocks: Array.isArray(blocksRaw) ? blocksRaw.map(String) : [],
           createdAt,
           updatedAt,

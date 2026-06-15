@@ -53,8 +53,8 @@ func (m *Manager) CheckAndWait(
 	sessionID string,
 	runID string,
 ) (Decision, error) {
-	// Check the session-level permission cache
-	cacheKey := toolName + ":" + fmt.Sprintf("%v", params)
+	// Check the session-level permission cache (keyed by session+tool for per-session approval)
+	cacheKey := sessionID + ":" + toolName
 	m.mu.Lock()
 	if cached, ok := m.session[cacheKey]; ok {
 		m.mu.Unlock()

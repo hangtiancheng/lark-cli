@@ -43,8 +43,7 @@ describe("SkillLoader", () => {
       name: "test-skill",
       description: "A test skill",
       allowedTools: [],
-      systemPromptTemplate:
-        "You are a helper. The user asks: $ARGUMENTS. Respond accordingly.",
+      systemPromptTemplate: "You are a helper. The user asks: $ARGUMENTS. Respond accordingly.",
     };
 
     const result = loader.renderPrompt(skill, "how do I sort an array?");

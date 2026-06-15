@@ -21,9 +21,7 @@ describe("StdoutPrinter", () => {
     };
     console.error = (...args: unknown[]) => {
       const first = args[0];
-      errorCalls.push(
-        typeof first === "string" ? first : JSON.stringify(first),
-      );
+      errorCalls.push(typeof first === "string" ? first : JSON.stringify(first));
     };
     printer = new StdoutPrinter((chunk: string) => {
       writeCalls.push(chunk);

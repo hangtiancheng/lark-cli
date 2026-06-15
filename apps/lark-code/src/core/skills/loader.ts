@@ -43,8 +43,7 @@ function parseSkillFile(filePath: string): Skill {
           i++;
           while (
             i < lines.length &&
-            ((lines[i] ?? "").startsWith(" ") ||
-              (lines[i] ?? "").startsWith("\t"))
+            ((lines[i] ?? "").startsWith(" ") || (lines[i] ?? "").startsWith("\t"))
           ) {
             parts.push((lines[i] ?? "").trim());
             i++;

@@ -2,6 +2,7 @@ package permissions
 
 import (
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -16,6 +17,26 @@ const (
 	DecisionAlwaysDeny  Decision = "always_deny"
 	DecisionAutoDeny    Decision = "auto_deny"
 )
+
+// DefaultToolDecisions maps tool names to their default permission decision
+// when no explicit policy is configured. Tools not listed default to DecisionAllowOnce (ASK).
+var DefaultToolDecisions = map[string]Decision{
+	"bash":       DecisionAllowOnce, // ASK
+	"write_file": DecisionAllowOnce, // ASK
+	"read_file":  DecisionAutoAllow, // ALLOW
+	"list_dir":   DecisionAutoAllow, // ALLOW
+	"note_save":  DecisionAutoAllow, // ALLOW
+}
+
+// bashOutsideCwdPatterns detects bash commands that access paths outside the working directory.
+var bashOutsideCwdPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(^|\s)/[^\s]`),             // absolute paths
+	regexp.MustCompile(`(^|\s)~`),                  // tilde expansion
+	regexp.MustCompile(`(^|\s)\.\.(/|$|\s)`),       // parent traversal
+	regexp.MustCompile(`\$\{?HOME\b`),              // $HOME or ${HOME}
+	regexp.MustCompile(`\$\{?PWD\b`),               // $PWD or ${PWD}
+	regexp.MustCompile(`(^|\s|;|&&|\|\|)cd(\s|$)`), // cd command
+}
 
 // ToolPolicy defines permission rules for a tool.
 type ToolPolicy struct {
@@ -32,14 +53,21 @@ type PolicyStore struct {
 // Priority order: deny > OUTSIDE_CWD > allow > default.
 func (p *PolicyStore) Evaluate(toolName string, params map[string]any, cwd string) Decision {
 	policy, ok := p.Tools[toolName]
+
+	// Determine the base decision: explicit policy or default
+	baseDecision := DecisionAllowOnce // unknown tools require ASK
 	if !ok {
-		return DecisionAllowOnce // Default: allow once (requires user confirmation)
+		if d, found := DefaultToolDecisions[toolName]; found {
+			baseDecision = d
+		}
 	}
 
 	// Tier 3 (highest): deny mode - force deny
-	for _, pattern := range policy.DenyPatterns {
-		if matchParamPattern(pattern, params) {
-			return DecisionAutoDeny
+	if ok {
+		for _, pattern := range policy.DenyPatterns {
+			if matchParamPattern(pattern, params) {
+				return DecisionAutoDeny
+			}
 		}
 	}
 
@@ -47,16 +75,20 @@ func (p *PolicyStore) Evaluate(toolName string, params map[string]any, cwd strin
 	if isOutsideCWD(toolName, params, cwd) {
 		return DecisionAllowOnce
 	}
+	if toolName == "bash" && isBashOutsideCWD(params) {
+		return DecisionAllowOnce
+	}
 
 	// Tier 1: allow mode - auto-allow
-	for _, pattern := range policy.AllowPatterns {
-		if matchParamPattern(pattern, params) {
-			return DecisionAutoAllow
+	if ok {
+		for _, pattern := range policy.AllowPatterns {
+			if matchParamPattern(pattern, params) {
+				return DecisionAutoAllow
+			}
 		}
 	}
 
-	// Tier 0 (default): requires user confirmation
-	return DecisionAllowOnce
+	return baseDecision
 }
 
 // matchParamPattern checks if any parameter value matches the given glob pattern.
@@ -101,6 +133,21 @@ func isOutsideCWD(toolName string, params map[string]any, cwd string) bool {
 			if err != nil || strings.HasPrefix(rel, "..") {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// isBashOutsideCWD checks whether a bash command accesses paths outside the working directory
+// using heuristic regex patterns (absolute paths, tilde, parent traversal, env vars, cd).
+func isBashOutsideCWD(params map[string]any) bool {
+	cmd, ok := params["command"].(string)
+	if !ok {
+		return false
+	}
+	for _, re := range bashOutsideCwdPatterns {
+		if re.MatchString(cmd) {
+			return true
 		}
 	}
 	return false

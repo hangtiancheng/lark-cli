@@ -124,28 +124,20 @@ export const SessionCreatedEventSchema = z.object({
 export type SessionCreatedEvent = z.infer<typeof SessionCreatedEventSchema>;
 
 export const SessionMessageReceivedEventSchema = z.object({
-  type: z
-    .literal("session.message_received")
-    .default("session.message_received"),
+  type: z.literal("session.message_received").default("session.message_received"),
   session_id: z.string(),
   content: z.string(),
   timestamp: z.string(),
 });
-export type SessionMessageReceivedEvent = z.infer<
-  typeof SessionMessageReceivedEventSchema
->;
+export type SessionMessageReceivedEvent = z.infer<typeof SessionMessageReceivedEventSchema>;
 
 export const SessionWaitingForInputEventSchema = z.object({
-  type: z
-    .literal("session.waiting_for_input")
-    .default("session.waiting_for_input"),
+  type: z.literal("session.waiting_for_input").default("session.waiting_for_input"),
   session_id: z.string(),
   last_run_id: z.string(),
   timestamp: z.string(),
 });
-export type SessionWaitingForInputEvent = z.infer<
-  typeof SessionWaitingForInputEventSchema
->;
+export type SessionWaitingForInputEvent = z.infer<typeof SessionWaitingForInputEventSchema>;
 
 export const SessionResumedEventSchema = z.object({
   type: z.literal("session.resumed").default("session.resumed"),
@@ -181,9 +173,7 @@ export const PermissionRequestedEventSchema = z.object({
   session_id: z.string(),
   timestamp: z.string(),
 });
-export type PermissionRequestedEvent = z.infer<
-  typeof PermissionRequestedEventSchema
->;
+export type PermissionRequestedEvent = z.infer<typeof PermissionRequestedEventSchema>;
 
 export const PermissionGrantedEventSchema = z.object({
   type: z.literal("permission.granted").default("permission.granted"),
@@ -192,9 +182,7 @@ export const PermissionGrantedEventSchema = z.object({
   decision: z.string(),
   timestamp: z.string(),
 });
-export type PermissionGrantedEvent = z.infer<
-  typeof PermissionGrantedEventSchema
->;
+export type PermissionGrantedEvent = z.infer<typeof PermissionGrantedEventSchema>;
 
 export const PermissionDeniedEventSchema = z.object({
   type: z.literal("permission.denied").default("permission.denied"),

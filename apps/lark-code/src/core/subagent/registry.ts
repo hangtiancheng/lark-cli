@@ -9,11 +9,7 @@ interface TaskEntry {
 export class BackgroundTaskRegistry {
   private _tasks = new Map<string, TaskEntry>();
 
-  register(
-    taskId: string,
-    promise: Promise<void>,
-    context: ExecutionContext,
-  ): void {
+  register(taskId: string, promise: Promise<void>, context: ExecutionContext): void {
     this._tasks.set(taskId, { promise, context });
   }
 

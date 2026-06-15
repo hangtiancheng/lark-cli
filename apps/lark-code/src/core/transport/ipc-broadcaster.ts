@@ -39,9 +39,7 @@ export class IpcEventBroadcaster {
 
   // Remove all subscriptions for a given socket
   unsubscribe(socket: net.Socket): void {
-    this._subscriptions = this._subscriptions.filter(
-      (s) => s.socket !== socket,
-    );
+    this._subscriptions = this._subscriptions.filter((s) => s.socket !== socket);
   }
 
   // Push event to all matching subscribers; clean up dead connections on write failure
@@ -60,9 +58,7 @@ export class IpcEventBroadcaster {
         const ok = writeLine(sub.socket, envelope);
         if (!ok) {
           // Backpressure: wait for drain
-          await new Promise<void>((resolve) =>
-            sub.socket.once("drain", resolve),
-          );
+          await new Promise<void>((resolve) => sub.socket.once("drain", resolve));
         }
         // Trace: CORE->CLIENT push
         if (this._trace) {
@@ -88,10 +84,7 @@ export class IpcEventBroadcaster {
   }
 
   // Check if event type matches any of the subscription's topic matchers
-  private _matchesTopic(
-    eventType: string,
-    matchers: picomatch.Matcher[],
-  ): boolean {
+  private _matchesTopic(eventType: string, matchers: picomatch.Matcher[]): boolean {
     return matchers.some((m) => m(eventType));
   }
 

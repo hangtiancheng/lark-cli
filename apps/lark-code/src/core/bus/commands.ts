@@ -6,11 +6,7 @@ import { z } from "zod";
 export const SessionModeSchema = z.enum(["one_shot", "chat"]);
 export type SessionMode = z.infer<typeof SessionModeSchema>;
 
-export const SessionStatusSchema = z.enum([
-  "active",
-  "waiting_for_input",
-  "closed",
-]);
+export const SessionStatusSchema = z.enum(["active", "waiting_for_input", "closed"]);
 export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 
 // ---- Commands ----
@@ -71,31 +67,23 @@ export const SessionSendMessageCommandSchema = z.object({
   session_id: z.string(),
   content: z.string(),
 });
-export type SessionSendMessageCommand = z.infer<
-  typeof SessionSendMessageCommandSchema
->;
+export type SessionSendMessageCommand = z.infer<typeof SessionSendMessageCommandSchema>;
 
 export const SessionSendMessageResultSchema = z.object({
   run_id: z.string(),
 });
-export type SessionSendMessageResult = z.infer<
-  typeof SessionSendMessageResultSchema
->;
+export type SessionSendMessageResult = z.infer<typeof SessionSendMessageResultSchema>;
 
 export const SessionGetHistoryCommandSchema = z.object({
   type: z.literal("session.get_history").default("session.get_history"),
   session_id: z.string(),
 });
-export type SessionGetHistoryCommand = z.infer<
-  typeof SessionGetHistoryCommandSchema
->;
+export type SessionGetHistoryCommand = z.infer<typeof SessionGetHistoryCommandSchema>;
 
 export const SessionGetHistoryResultSchema = z.object({
   messages: z.array(z.record(z.string(), z.unknown())),
 });
-export type SessionGetHistoryResult = z.infer<
-  typeof SessionGetHistoryResultSchema
->;
+export type SessionGetHistoryResult = z.infer<typeof SessionGetHistoryResultSchema>;
 
 export const SessionCloseCommandSchema = z.object({
   type: z.literal("session.close").default("session.close"),
@@ -113,16 +101,12 @@ export const PermissionRespondCommandSchema = z.object({
   tool_use_id: z.string(),
   decision: z.string(),
 });
-export type PermissionRespondCommand = z.infer<
-  typeof PermissionRespondCommandSchema
->;
+export type PermissionRespondCommand = z.infer<typeof PermissionRespondCommandSchema>;
 
 export const PermissionRespondResultSchema = z.object({
   ok: z.boolean().default(true),
 });
-export type PermissionRespondResult = z.infer<
-  typeof PermissionRespondResultSchema
->;
+export type PermissionRespondResult = z.infer<typeof PermissionRespondResultSchema>;
 
 export const SessionCompactCommandSchema = z.object({
   type: z.literal("session.compact").default("session.compact"),

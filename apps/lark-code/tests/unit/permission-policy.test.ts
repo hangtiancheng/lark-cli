@@ -82,9 +82,7 @@ describe("evaluate", () => {
       allowPatterns: [".*"],
       denyPatterns: [],
     };
-    expect(evaluate("bash", { command: "cd /tmp && echo test" }, policy)).toBe(
-      "ask",
-    );
+    expect(evaluate("bash", { command: "cd /tmp && echo test" }, policy)).toBe("ask");
   });
 
   test("OUTSIDE_CWD forces ASK even with default allow", () => {
@@ -168,21 +166,15 @@ describe("evaluate", () => {
 
 describe("paramPreview", () => {
   test("bash shows command=value", () => {
-    expect(paramPreview("bash", { command: "echo hello" })).toBe(
-      "command=echo hello",
-    );
+    expect(paramPreview("bash", { command: "echo hello" })).toBe("command=echo hello");
   });
 
   test("read_file shows path=value", () => {
-    expect(paramPreview("read_file", { path: "test.txt" })).toBe(
-      "path=test.txt",
-    );
+    expect(paramPreview("read_file", { path: "test.txt" })).toBe("path=test.txt");
   });
 
   test("write_file shows path=value", () => {
-    expect(paramPreview("write_file", { path: "test.txt" })).toBe(
-      "path=test.txt",
-    );
+    expect(paramPreview("write_file", { path: "test.txt" })).toBe("path=test.txt");
   });
 
   test("list_dir shows path=value", () => {
@@ -190,9 +182,7 @@ describe("paramPreview", () => {
   });
 
   test("note_save shows content=value", () => {
-    expect(paramPreview("note_save", { content: "my note" })).toBe(
-      "content=my note",
-    );
+    expect(paramPreview("note_save", { content: "my note" })).toBe("content=my note");
   });
 
   test("long values are truncated to 60 chars", () => {

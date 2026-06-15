@@ -137,8 +137,7 @@ async function main(): Promise<void> {
   }
 }
 
-const isDirectRun =
-  process.argv[1].endsWith("/main.ts") || process.argv[1].endsWith("/main.js");
+const isDirectRun = process.argv[1].endsWith("/main.ts") || process.argv[1].endsWith("/main.js");
 
 if (isDirectRun) {
   void main();

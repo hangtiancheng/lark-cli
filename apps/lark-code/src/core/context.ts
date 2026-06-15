@@ -1,9 +1,6 @@
 // ExecutionContext: State container for each agent run
 import type Anthropic from "@anthropic-ai/sdk";
-import type {
-  ToolResultBlockParam,
-  ContentBlockParam,
-} from "@anthropic-ai/sdk/resources";
+import type { ToolResultBlockParam, ContentBlockParam } from "@anthropic-ai/sdk/resources";
 
 export class ExecutionContext {
   readonly runId: string;

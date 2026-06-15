@@ -1,8 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  SpawnAgentTool,
-  AgentResultTool,
-} from "../../src/core/subagent/tool.js";
+import { SpawnAgentTool, AgentResultTool } from "../../src/core/subagent/tool.js";
 import { BackgroundTaskRegistry } from "../../src/core/subagent/registry.js";
 import { EventBus } from "../../src/core/events/bus.js";
 import { ExecutionContext } from "../../src/core/context.js";

@@ -3,10 +3,7 @@
 import { describe, expect, test } from "vitest";
 import { ZodError } from "zod";
 
-import {
-  PingCommandSchema,
-  PongResultSchema,
-} from "../../src/core/bus/commands.js";
+import { PingCommandSchema, PongResultSchema } from "../../src/core/bus/commands.js";
 import {
   CoreStartedEventSchema,
   SubagentStartedEventSchema,

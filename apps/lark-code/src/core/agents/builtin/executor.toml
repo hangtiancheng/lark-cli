@@ -15,12 +15,5 @@ After execution is complete, report:
 - Any issues encountered (if applicable).
 - Any incomplete portions (if applicable).
 """
-allowed_tools = [
-  "bash",
-  "read_file",
-  "write_file",
-  "list_dir",
-  "task_update",
-  "task_list"
-]
+allowed_tools = ["bash", "read_file", "write_file", "list_dir", "task_update", "task_list"]
 model = "claude-sonnet-4-6"

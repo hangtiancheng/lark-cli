@@ -1,10 +1,14 @@
 {
   "cSpell.words": [
+    "anthropics",
+    "bubbletea",
     "charmbracelet",
+    "gopkg",
     "hangtiancheng",
     "httpx",
     "larkd",
     "lipgloss",
+    "modelcontextprotocol",
     "pydantic",
     "pyyaml"
   ]

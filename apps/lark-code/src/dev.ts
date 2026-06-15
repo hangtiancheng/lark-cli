@@ -7,11 +7,7 @@ import { getConfig } from "./core/config.js";
 import { launchTUI } from "./tui/index.js";
 
 // Wait for daemon to be ready by polling TCP connection
-function waitForDaemon(
-  host: string,
-  port: number,
-  timeoutMs = 10_000,
-): Promise<void> {
+function waitForDaemon(host: string, port: number, timeoutMs = 10_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   return new Promise<void>((resolve, reject) => {
     const tryConnect = (): void => {
@@ -40,9 +36,7 @@ async function main(): Promise<void> {
   let daemon: ReturnType<typeof fork> | null = null;
 
   if (isDaemonRunning) {
-    console.log(
-      `[dev] daemon already running at ${config.host}:${String(config.port)}`,
-    );
+    console.log(`[dev] daemon already running at ${config.host}:${String(config.port)}`);
   } else {
     // Spawn daemon as a detached background process
     const daemonPath = path.resolve("src/core/app.ts");
@@ -56,9 +50,7 @@ async function main(): Promise<void> {
 
     try {
       await waitForDaemon(config.host, config.port);
-      console.log(
-        `[dev] daemon ready at ${config.host}:${String(config.port)}`,
-      );
+      console.log(`[dev] daemon ready at ${config.host}:${String(config.port)}`);
     } catch (err) {
       console.error("[dev] daemon failed to start:", String(err));
       daemon.kill("SIGTERM");

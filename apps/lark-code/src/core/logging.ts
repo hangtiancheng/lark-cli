@@ -1,5 +1,6 @@
-// Initialize pino logger from config (pino v10: multistream supports formatters, transport.targets does not)
-import { mkdirSync } from "node:fs";
+// Initialize pino logger from config with file rotation support
+// (pino v10: multistream supports formatters, transport.targets does not)
+import { existsSync, mkdirSync, renameSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 
@@ -9,15 +10,12 @@ import type { LarkConfig } from "./config.js";
 
 type PinoLevel = "fatal" | "error" | "warn" | "info" | "debug" | "trace";
 
+// Log rotation settings (matches Python RotatingFileHandler: 10MB, 5 backups)
+const MAX_LOG_BYTES = 10 * 1024 * 1024;
+const MAX_BACKUPS = 5;
+
 // Valid pino log level set
-const VALID_LEVELS = new Set<string>([
-  "fatal",
-  "error",
-  "warn",
-  "info",
-  "debug",
-  "trace",
-]);
+const VALID_LEVELS = new Set<string>(["fatal", "error", "warn", "info", "debug", "trace"]);
 
 // Convert config level string to pino-compatible PinoLevel
 function toPinoLevel(raw: string): PinoLevel {
@@ -46,6 +44,26 @@ function expandUser(p: string): string {
   return p;
 }
 
+// Rotate log file if it exceeds MAX_LOG_BYTES, shifting backups .1 through .5
+function rotateFile(logPath: string): void {
+  if (!existsSync(logPath)) return;
+  try {
+    const stat = statSync(logPath);
+    if (stat.size < MAX_LOG_BYTES) return;
+  } catch {
+    return;
+  }
+  for (let i = MAX_BACKUPS; i >= 1; i--) {
+    const src = i === 1 ? logPath : `${logPath}.${String(i - 1)}`;
+    const dest = `${logPath}.${String(i)}`;
+    try {
+      renameSync(src, dest);
+    } catch {
+      // Skip missing files or permission errors during rotation
+    }
+  }
+}
+
 // Create and return pino logger instance from config
 export function setupLogging(config: LarkConfig): pino.Logger {
   const level = toPinoLevel(config.logging.level);
@@ -56,10 +74,11 @@ export function setupLogging(config: LarkConfig): pino.Logger {
     { stream: process.stderr, level },
   ];
 
-  // Optional file output (pino.destination provides high-performance sync writing)
+  // Optional file output with rotation (matches Python RotatingFileHandler)
   if (config.logging.file) {
     const logPath = expandUser(config.logging.file);
     mkdirSync(path.dirname(logPath), { recursive: true });
+    rotateFile(logPath);
     streams.push({
       stream: pino.destination({ dest: logPath, append: true, mkdir: true }),
       level,

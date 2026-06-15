@@ -28,18 +28,11 @@ export function Header({
       </Text>
       <Text color={theme.textDim}> v{version}</Text>
       <Text color={dotColor}> {dot}</Text>
-      {sessionTitle ? (
-        <Text color={theme.textMuted}> {sessionTitle}</Text>
-      ) : null}
+      {sessionTitle ? <Text color={theme.textMuted}> {sessionTitle}</Text> : null}
       <Box flexGrow={1}>
-        <Text color={theme.textMuted}>
-          {" "}
-          {theme.indicator.thinDash.repeat(2)}
-        </Text>
+        <Text color={theme.textMuted}> {theme.indicator.thinDash.repeat(2)}</Text>
       </Box>
-      {errorMessage ? (
-        <Text color={theme.error}> err:{errorMessage}</Text>
-      ) : null}
+      {errorMessage ? <Text color={theme.error}> err:{errorMessage}</Text> : null}
     </Box>
   );
 }

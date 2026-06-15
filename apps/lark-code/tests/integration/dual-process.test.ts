@@ -97,9 +97,7 @@ describe("dual process integration", () => {
     await client.connect();
 
     try {
-      await expect(
-        client.sendCommand("nonexistent.method", {}),
-      ).rejects.toThrow();
+      await expect(client.sendCommand("nonexistent.method", {})).rejects.toThrow();
     } finally {
       client.close();
     }

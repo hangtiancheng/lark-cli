@@ -14,9 +14,7 @@ import {
 import type { JsonRpcSuccess } from "../bus/envelope.js";
 import type { TraceWriter } from "../trace/writer.js";
 
-export type CommandHandler = (
-  params: Record<string, unknown>,
-) => Promise<unknown>;
+export type CommandHandler = (params: Record<string, unknown>) => Promise<unknown>;
 
 // Per-connection context: the socket currently being processed (for handlers to read connection context)
 const writerStorage = new AsyncLocalStorage<net.Socket>();
@@ -73,9 +71,7 @@ export class SocketServer {
     // Probe if port is already in use
     const isOccupied = await this._probePort();
     if (isOccupied) {
-      throw new Error(
-        `core already running at ${this._host}:${String(this._port)}`,
-      );
+      throw new Error(`core already running at ${this._host}:${String(this._port)}`);
     }
 
     return new Promise<string>((resolve, reject) => {
@@ -139,10 +135,7 @@ export class SocketServer {
     rl.on("line", (line) => {
       currentLineBytes += Buffer.byteLength(line, "utf-8") + 1;
       if (currentLineBytes > MAX_LINE_BYTES) {
-        void sendJson(
-          socket,
-          makeError(null, INVALID_REQUEST, "Request too large"),
-        );
+        void sendJson(socket, makeError(null, INVALID_REQUEST, "Request too large"));
         socket.destroy();
         return;
       }
@@ -167,19 +160,13 @@ export class SocketServer {
     try {
       parsed = JSON.parse(line);
     } catch (e) {
-      await sendJson(
-        socket,
-        makeError(null, PARSE_ERROR, `Parse error: ${String(e)}`),
-      );
+      await sendJson(socket, makeError(null, PARSE_ERROR, `Parse error: ${String(e)}`));
       return;
     }
 
     const reqResult = JsonRpcRequestSchema.safeParse(parsed);
     if (!reqResult.success) {
-      await sendJson(
-        socket,
-        makeError(null, INVALID_REQUEST, "Invalid Request"),
-      );
+      await sendJson(socket, makeError(null, INVALID_REQUEST, "Invalid Request"));
       return;
     }
 
@@ -201,11 +188,7 @@ export class SocketServer {
 
     const handler = this._handlers.get(req.method);
     if (!handler) {
-      const errorResponse = makeError(
-        req.id,
-        METHOD_NOT_FOUND,
-        `Method not found: ${req.method}`,
-      );
+      const errorResponse = makeError(req.id, METHOD_NOT_FOUND, `Method not found: ${req.method}`);
       // Trace: CORE->CLIENT error
       if (this._trace) {
         this._trace.emit({
@@ -265,10 +248,7 @@ export class SocketServer {
         await sendJson(socket, makeError(req.id, e.code, e.message, e.data));
       } else if (e instanceof Error) {
         console.error(`handler ${req.method} raised:`, e);
-        await sendJson(
-          socket,
-          makeError(req.id, INTERNAL_ERROR, "Internal error"),
-        );
+        await sendJson(socket, makeError(req.id, INTERNAL_ERROR, "Internal error"));
       }
     }
   }

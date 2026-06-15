@@ -10,11 +10,7 @@ import { toolError, toolSuccess } from "../base.js";
 const MAX_BYTES = 512 * 1024;
 
 export const ReadFileParamsSchema = z.object({
-  path: z
-    .string()
-    .describe(
-      "Relative path to the file (relative to current working directory).",
-    ),
+  path: z.string().describe("Relative path to the file (relative to current working directory)."),
 });
 
 export class ReadFileTool implements BaseTool {
@@ -28,8 +24,7 @@ export class ReadFileTool implements BaseTool {
     properties: {
       path: {
         type: "string",
-        description:
-          "Relative path to the file (relative to current working directory).",
+        description: "Relative path to the file (relative to current working directory).",
       },
     },
     required: ["path"],
@@ -40,12 +35,9 @@ export class ReadFileTool implements BaseTool {
     const parsed = ReadFileParamsSchema.parse(params);
     const filePath = parsed.path;
 
-    // Path traversal check
-    const parts = path.normalize(filePath).split(path.sep);
-    if (parts.includes("..")) {
-      return Promise.resolve(
-        toolError(`path traversal not allowed: ${filePath}`, "runtime_error"),
-      );
+    // Path traversal check: reject raw path components before normalize
+    if (filePath.split(path.sep).includes("..")) {
+      return Promise.resolve(toolError(`path traversal not allowed: ${filePath}`, "runtime_error"));
     }
 
     try {

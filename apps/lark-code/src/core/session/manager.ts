@@ -80,15 +80,10 @@ export class SessionManager {
   }
 
   // Handle user message, append to thread and start an agent run
-  async sendMessage(
-    sid: string,
-    content: string,
-    runId?: string,
-  ): Promise<string> {
+  async sendMessage(sid: string, content: string, runId?: string): Promise<string> {
     const session = this._getSession(sid);
     const mutex = this._mutexes.get(sid);
-    if (!mutex)
-      throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
+    if (!mutex) throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
     if (!mutex.tryAcquire()) {
       throw new HandlerError(SESSION_BUSY, "session is busy");
     }
@@ -133,8 +128,7 @@ export class SessionManager {
         if (skill) {
           goal = this._skillLoader.renderPrompt(skill, arguments_);
           systemPromptOverride = skill.systemPromptTemplate;
-          toolWhitelist =
-            skill.allowedTools.length > 0 ? skill.allowedTools : null;
+          toolWhitelist = skill.allowedTools.length > 0 ? skill.allowedTools : null;
           await this._bus.publish({
             type: "skill.invoked",
             skill_name: skillName,
@@ -182,8 +176,7 @@ export class SessionManager {
   async close(sid: string): Promise<void> {
     const session = this._getSession(sid);
     const mutex = this._mutexes.get(sid);
-    if (!mutex)
-      throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
+    if (!mutex) throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
     if (!mutex.tryAcquire()) {
       throw new HandlerError(SESSION_BUSY, "session is busy");
     }
@@ -205,13 +198,9 @@ export class SessionManager {
   async compact(sid: string, focus = ""): Promise<SessionCompactResult> {
     this._getSession(sid);
     const mutex = this._mutexes.get(sid);
-    if (!mutex)
-      throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
+    if (!mutex) throw new HandlerError(SESSION_NOT_FOUND, "session mutex missing");
     if (!this._provider) {
-      throw new HandlerError(
-        PROVIDER_NOT_AVAILABLE,
-        "provider not available for compaction",
-      );
+      throw new HandlerError(PROVIDER_NOT_AVAILABLE, "provider not available for compaction");
     }
 
     if (!mutex.tryAcquire()) {
@@ -221,17 +210,10 @@ export class SessionManager {
       const messages = this._store.readMessages(sid);
       const sessionDir = this._store.sessionDir(sid);
       const compactor = new Compactor(this._bus, sessionDir, sid);
-      const result = await compactor.compactMessages(
-        messages,
-        this._provider,
-        focus,
-      );
+      const result = await compactor.compactMessages(messages, this._provider, focus);
 
       if (!result) {
-        throw new HandlerError(
-          COMPACTION_FAILED,
-          "compaction failed or not beneficial",
-        );
+        throw new HandlerError(COMPACTION_FAILED, "compaction failed or not beneficial");
       }
 
       this._store.writeCompacted(sid, [
@@ -246,10 +228,7 @@ export class SessionManager {
 
       return {
         summaryTokens: result.summaryTokens,
-        savedTokens: Math.max(
-          0,
-          result.originalTokenEstimate - result.summaryTokens,
-        ),
+        savedTokens: Math.max(0, result.originalTokenEstimate - result.summaryTokens),
       };
     } finally {
       mutex.release();
@@ -265,8 +244,7 @@ export class SessionManager {
   // Retrieve session from in-memory index; throw JSON-RPC error if not found
   private _getSession(sid: string): Session {
     const session = this._sessions.get(sid);
-    if (!session)
-      throw new HandlerError(SESSION_NOT_FOUND, "session not found");
+    if (!session) throw new HandlerError(SESSION_NOT_FOUND, "session not found");
     return session;
   }
 }

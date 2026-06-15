@@ -41,8 +41,7 @@ function sleep(ms: number): Promise<void> {
 // Check if an error is a transient network failure worth retrying
 function isRetryableError(exc: unknown): boolean {
   if (!(exc instanceof Error)) return false;
-  const code =
-    "code" in exc && typeof exc.code === "string" ? exc.code : undefined;
+  const code = "code" in exc && typeof exc.code === "string" ? exc.code : undefined;
   if (
     code === "ECONNRESET" ||
     code === "ECONNREFUSED" ||
@@ -136,13 +135,17 @@ export class AnthropicProvider implements LLMProvider {
         const stream = this._client.messages.stream(args);
 
         // Collect tokens via text event (MessageStream has no textStream property)
+        // Only publish token events on the first attempt to avoid TUI duplicates
+        const isFirstAttempt = attempt === 1;
         stream.on("text", (textDelta) => {
-          void bus.publish({
-            type: "llm.token",
-            run_id: runId,
-            token: textDelta,
-            timestamp: now(),
-          });
+          if (isFirstAttempt) {
+            void bus.publish({
+              type: "llm.token",
+              run_id: runId,
+              token: textDelta,
+              timestamp: now(),
+            });
+          }
           textParts.push(textDelta);
         });
 

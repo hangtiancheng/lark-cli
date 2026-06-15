@@ -81,27 +81,18 @@ export function SlashCompletePopup({
               <Text color={theme.accentBright} bold>
                 ❯ /{cmd.name}
               </Text>
-              <Text color={theme.textMuted}>
-                {" "}
-                {truncate(cmd.description, 50)}
-              </Text>
+              <Text color={theme.textMuted}> {truncate(cmd.description, 50)}</Text>
             </>
           ) : (
             <>
               <Text color={theme.text}> /{cmd.name}</Text>
-              <Text color={theme.textMuted}>
-                {" "}
-                {truncate(cmd.description, 50)}
-              </Text>
+              <Text color={theme.textMuted}> {truncate(cmd.description, 50)}</Text>
             </>
           )}
         </Box>
       ))}
       {filtered.length > 10 ? (
-        <Text color={theme.textMuted}>
-          {" "}
-          ... and {String(filtered.length - 10)} more
-        </Text>
+        <Text color={theme.textMuted}> ... and {String(filtered.length - 10)} more</Text>
       ) : null}
       <Text color={theme.textDim}> ↑↓ navigate enter confirm esc cancel</Text>
     </Box>

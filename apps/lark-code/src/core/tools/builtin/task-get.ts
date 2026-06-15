@@ -5,8 +5,7 @@ import type { TaskManager } from "../../task/manager.js";
 
 export class TaskGetTool implements BaseTool {
   readonly name = "task_get";
-  readonly description =
-    "Get full details of a task by its integer ID. Returns the task as JSON.";
+  readonly description = "Get full details of a task by its integer ID. Returns the task as JSON.";
   readonly inputSchema = {
     type: "object" as const,
     properties: {

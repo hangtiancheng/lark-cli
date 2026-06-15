@@ -39,16 +39,10 @@ export class McpTool implements BaseTool {
         );
       }
       if (exc instanceof Error && exc.name === "McpToolError") {
-        return toolError(
-          `mcp tool '${this.name}' error: ${exc.message}`,
-          "runtime_error",
-        );
+        return toolError(`mcp tool '${this.name}' error: ${exc.message}`, "runtime_error");
       }
       const msg = exc instanceof Error ? exc.message : String(exc);
-      return toolError(
-        `mcp tool '${this.name}' unexpected error: ${msg}`,
-        "runtime_error",
-      );
+      return toolError(`mcp tool '${this.name}' unexpected error: ${msg}`, "runtime_error");
     }
   }
 }

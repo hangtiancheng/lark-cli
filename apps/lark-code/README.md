@@ -1,258 +1,488 @@
 # LarkCode
 
-ln -s ~/.lark ./.home-lark
+A dual-process local AI agent system written in TypeScript. LarkCode runs an LLM-powered agent daemon that executes shell commands, reads and writes files, manages tasks, coordinates sub-agents, and integrates with external tools via the Model Context Protocol (MCP). Clients connect over a JSON-RPC 2.0 protocol on TCP, with both a terminal UI (React + Ink) and a command-line interface provided out of the box.
 
-A dual-process local AI agent system with a TypeScript implementation of the LarkClaude architecture. It runs an LLM-powered agent that can execute shell commands, read/write files, manage tasks, and coordinate sub-agents through a JSON-RPC 2.0 protocol over TCP.
+## Table of Contents
+
+- [Architecture](#architecture)
+- [Core Subsystems](#core-subsystems)
+  - [Agent Loop](#agent-loop)
+  - [LLM Provider](#llm-provider)
+  - [Tool System](#tool-system)
+  - [Permission System](#permission-system)
+  - [Session Management](#session-management)
+  - [Context Compaction](#context-compaction)
+  - [Sub-Agent Orchestration](#sub-agent-orchestration)
+  - [Skills](#skills)
+  - [Agent Profiles](#agent-profiles)
+  - [Task Management](#task-management)
+  - [MCP Integration](#mcp-integration)
+  - [Tracing](#tracing)
+  - [Event System](#event-system)
+  - [Transport Layer](#transport-layer)
+- [Terminal UI](#terminal-ui)
+- [CLI Reference](#cli-reference)
+- [Configuration](#configuration)
+  - [4-Tier Priority Chain](#4-tier-priority-chain)
+  - [TOML Configuration](#toml-configuration)
+  - [Environment Variables](#environment-variables)
+- [JSON-RPC Protocol](#json-rpc-protocol)
+  - [Commands](#commands)
+  - [Events](#events)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [Development](#development)
+  - [Test Coverage](#test-coverage)
+  - [Coding Standards](#coding-standards)
+- [Data Directories](#data-directories)
+- [License](#license)
+
+---
 
 ## Architecture
 
-LarkCode follows a daemon + client architecture:
+LarkCode follows a daemon + client architecture. The core daemon is a long-running process that manages sessions, permissions, LLM interactions, tool execution, and tracing. Clients (TUI or CLI) connect over TCP using newline-delimited JSON-RPC 2.0.
 
 ```
-                    TCP (JSON-RPC 2.0)
-  CLI / TUI  <-------------------------->  Daemon (lark-core)
-   (client)        localhost:7437           |
-                                            ├── EventBus (pub/sub)
-                                            ├── SessionManager
-                                            ├── AgentRunner
-                                            │     ├── AgentLoop (plan-act-observe)
-                                            │     ├── ToolRegistry
-                                            │     │     ├── bash, read_file, write_file, list_dir
-                                            │     │     ├── task_create, task_get, task_list, task_update
-                                            │     │     ├── note_save
-                                            │     │     ├── spawn_agent, agent_result
-                                            │     │     └── MCP tools (when configured)
-                                            │     ├── Compactor (LLM-driven context compression)
-                                            │     └── TracingProvider
-                                            ├── PermissionManager (6-tier policy evaluation)
-                                            ├── TraceWriter (NDJSON trace log)
-                                            └── IpcEventBroadcaster (topic-based event streaming)
+                         TCP (JSON-RPC 2.0 / NDJSON)
+   CLI / TUI    <--------------------------------------->    Daemon (lark-core)
+    (client)             localhost:7437                        |
+                                                               ├── SocketServer (TCP, 64 MB frame limit)
+                                                               ├── IpcEventBroadcaster (topic-based pub/sub)
+                                                               ├── SessionManager
+                                                               │     ├── PromiseMutex (per-session concurrency control)
+                                                               │     ├── SkillLoader (3-tier resolution)
+                                                               │     └── AgentRunner
+                                                               │           ├── AgentLoop (plan-act-observe)
+                                                               │           ├── ToolRegistry
+                                                               │           │     ├── bash, read_file, write_file, list_dir
+                                                               │           │     ├── note_save
+                                                               │           │     ├── task_create, task_get, task_list, task_update
+                                                               │           │     ├── spawn_agent, agent_result
+                                                               │           │     └── MCP tools (dynamically discovered)
+                                                               │           ├── Compactor (LLM-driven context compression)
+                                                               │           ├── TracingProvider (decorator)
+                                                               │           └── TaskManager (file-based CRUD)
+                                                               ├── PermissionManager (6-tier policy evaluation)
+                                                               ├── McpServerManager (multi-server lifecycle)
+                                                               ├── TraceWriter (synchronous NDJSON)
+                                                               └── EventBus (in-process pub/sub)
 ```
 
-## Features
+The separation of daemon and client provides several advantages: the daemon persists across client disconnections, multiple clients can observe the same session via event subscriptions, and the LLM API key lives only in the daemon process.
 
-### Core Agent
+---
 
-- **Plan-act-observe loop**: Calls the LLM, executes tool calls, appends results, and repeats until the goal is achieved or the step limit is reached.
-- **Prompt caching**: Uses Anthropic's cache control for system prompts and tool schemas to reduce API costs.
-- **Stream retry**: Automatic retry with exponential backoff (1s, 2s, 4s) on network failures, up to 3 attempts.
-- **Context compaction**: LLM-driven conversation summarization with a 6-section structured prompt (Original Goal, Completed Steps, Key Constraints, Current File State, Remaining TODOs, Critical Data).
+## Core Subsystems
 
-### Built-in Tools
+### Agent Loop
 
-| Tool           | Description                                                                          |
-| -------------- | ------------------------------------------------------------------------------------ |
-| `bash`         | Execute shell commands with timeout (1-120s) and 64KB output truncation              |
-| `read_file`    | Read file contents with 512KB limit and path traversal protection                    |
-| `write_file`   | Write file contents with 1MB limit, auto-creates parent directories                  |
-| `list_dir`     | Recursive directory tree with configurable depth (max 4) and entry limit (200)       |
-| `note_save`    | Persist session notes for cross-turn context                                         |
-| `task_create`  | Create tracked tasks with dependency support                                         |
-| `task_get`     | Retrieve task details by ID                                                          |
-| `task_list`    | List all tasks with formatted output                                                 |
-| `task_update`  | Update task status; completing a task auto-clears it from dependents                 |
-| `spawn_agent`  | Spawn isolated sub-agents (foreground or background), supports nesting up to depth 2 |
-| `agent_result` | Query background sub-agent status and results                                        |
+The `AgentLoop` class implements a plan-act-observe loop that drives the agent:
+
+1. **Plan**: Call the LLM with the current conversation history, available tool schemas, and system prompt (assembled from base prompt, global context, project context, and session notes).
+2. **Act**: Execute each tool call returned by the LLM through the full invocation pipeline (validation, permission check, execution with timeout, retry on transient failures).
+3. **Observe**: Append tool results to the conversation history and evaluate termination conditions.
+
+**Termination conditions** (checked in order each iteration):
+
+| Condition                       | Status  | Reason               |
+| ------------------------------- | ------- | -------------------- |
+| `AbortSignal` aborted           | failed  | `cancelled`          |
+| LLM returns `end_turn`          | success | --                   |
+| Step counter reaches `maxSteps` | failed  | `exceeded_max_steps` |
+| LLM provider throws unhandled   | failed  | `llm_error`          |
+
+**Auto-compaction**: When the estimated context usage (as a percentage of the model's context window) exceeds the configured threshold (default 0.0, meaning disabled), the loop invokes the `Compactor` to summarize the conversation history in-place before the next iteration.
+
+**max_tokens handling**: When the LLM returns `max_tokens` alongside pending tool calls, the loop injects an error tool result informing the LLM that the output was truncated, allowing it to recover and continue.
+
+### LLM Provider
+
+The `AnthropicProvider` class wraps the Anthropic Messages API with streaming, retry, and prompt caching:
+
+- **Streaming**: Uses the `messages.stream()` endpoint. Text deltas are emitted as `llm.token` events in real time. Thinking blocks (extended thinking) are captured and returned alongside text and tool use blocks.
+- **Prompt caching**: The system prompt and the last tool schema carry `cache_control: { type: "ephemeral" }` markers, enabling Anthropic's prompt caching to reduce latency and cost on subsequent calls.
+- **Retry with exponential backoff**: On transient network errors (ECONNRESET, ECONNREFUSED, ETIMEDOUT, EPIPE, EAI_AGAIN, socket hang up, connection reset), the provider retries up to 3 times with delays of 1s, 2s, and 4s. Non-retryable errors (authentication failures, 400 Bad Request) are thrown immediately.
+- **Model context windows**: All Claude models are mapped to a 200,000-token context window for compaction threshold calculations.
+- **max_tokens**: Set to 8,192 per request.
+- **Dependency injection**: The constructor accepts an optional `Anthropic` client instance, enabling test doubles without monkey-patching.
+
+### Tool System
+
+The tool system provides a uniform interface for all agent capabilities:
+
+**`BaseTool` interface**:
+
+- `name`: Unique tool identifier (snake_case).
+- `description`: Human-readable description sent to the LLM.
+- `inputSchema`: JSON Schema object describing the tool's parameters (used by the LLM for structured output).
+- `paramsModel` (optional): Zod schema for runtime parameter validation.
+- `invoke(params)`: Async function returning a `ToolResult`.
+
+**`ToolResult`**:
+
+- `content`: String output (success message or error description).
+- `isError`: Boolean flag.
+- `errorType`: One of `runtime_error`, `timeout`, `schema_error`, `permission_denied` (null on success).
+
+**Invocation pipeline** (`invokeTool()`):
+
+```
+params ──> Zod validation ──> permission check ──> timeout-wrapped invoke ──> retry logic ──> ToolResult
+              │                    │                      │                      │
+              ▼                    ▼                      ▼                      ▼
+         schema_error      permission_denied          timeout           runtime_error / rate_limited
+```
+
+- **Zod validation**: If the tool defines a `paramsModel`, invalid parameters produce a `schema_error` without invoking the tool.
+- **Permission check**: Calls `PermissionManager.checkAndWait()`, which may block until the user responds to a permission prompt.
+- **Timeout**: Tool invocations are wrapped in a `Promise.race` with a configurable timeout (default 120s).
+- **Retry**: On `runtime_error` or `rate_limited`, the invocation retries up to 2 times with exponential backoff (2s base). `schema_error`, `timeout`, and `permission_denied` are never retried.
+- **No-throw guarantee**: `invokeTool()` never throws. All errors are converted to `ToolResult` with `isError: true`.
+
+#### Built-in Tools
+
+| Tool           | Description                                                                                             | Limits                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `bash`         | Execute shell commands via `sh -c`. Returns combined stdout+stderr.                                     | Timeout: default 60s, max 120s. Output: 64 KB. SIGKILL on timeout. |
+| `read_file`    | Read file contents with synchronous I/O.                                                                | 512 KB truncation. Path traversal protection (rejects `..`).       |
+| `write_file`   | Write file contents, creating parent directories as needed.                                             | 1 MB content limit. Path traversal protection.                     |
+| `list_dir`     | Recursive directory listing in tree format with Unicode connectors.                                     | Max depth: 4. Max entries: 200. Path traversal protection.         |
+| `note_save`    | Persist durable facts to session notes (visible in future turns).                                       | Requires active session context.                                   |
+| `task_create`  | Create a tracked task with optional dependency list (`blocked_by`).                                     | --                                                                 |
+| `task_get`     | Retrieve full task details by integer ID.                                                               | --                                                                 |
+| `task_list`    | List all tasks with status and dependency information.                                                  | --                                                                 |
+| `task_update`  | Update task status or dependency lists. Completing a task auto-clears it from dependents' `blocked_by`. | --                                                                 |
+| `spawn_agent`  | Spawn an isolated sub-agent (foreground or background). Supports agent profile selection.               | Nesting limit: depth 2.                                            |
+| `agent_result` | Query the status and result of a background sub-agent.                                                  | --                                                                 |
 
 ### Permission System
 
-6-tier evaluation for every tool call:
+Every tool invocation passes through a 6-tier permission evaluation:
 
-1. **deny_patterns**: Regex-based auto-deny (bash only)
-2. **OUTSIDE_CWD_HEURISTICS**: Forced ASK for commands operating outside the working directory
-3. **Session cache**: In-memory per-session always-allow/deny
-4. **Persistent cache**: `~/.lark/policy.toml` always-allow/deny
-5. **allow_patterns**: Regex-based auto-allow (bash only)
-6. **Tool default**: Static policy (bash=ASK, write_file=ASK, read_file=ALLOW, list_dir=ALLOW, note_save=ALLOW)
+| Tier | Source                 | Scope     | Behavior                                                                                          |
+| ---- | ---------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| 1    | `deny_patterns`        | bash only | Regex match on command string. Auto-deny.                                                         |
+| 2    | OUTSIDE_CWD heuristics | bash only | 6 regex patterns detecting absolute paths, `~`, `..`, `$HOME`, `$PWD`, `cd` commands. Forces ASK. |
+| 3    | Session cache          | all tools | In-memory per-session `always_allow` / `always_deny` map.                                         |
+| 4    | Persistent cache       | all tools | `~/.lark/policy.toml` always-allow/deny entries. Survives daemon restarts.                        |
+| 5    | `allow_patterns`       | bash only | Regex match on command string. Auto-allow.                                                        |
+| 6    | Tool default           | all tools | Static policy: bash=ASK, write_file=ASK, read_file=ALLOW, list_dir=ALLOW, note_save=ALLOW.        |
 
-### Sessions
+**ASK flow**: When the evaluation reaches ASK, the `PermissionManager` creates a pending promise, emits a `permission.requested` event (with tool name, parameter preview, and session context), and blocks until the user responds or the timeout expires (default 60s).
 
-- **one_shot**: Single-goal execution, closes after completion
-- **chat**: Multi-turn interactive sessions with message persistence
-- **Skill resolution**: `/skill_name args` syntax triggers skill templates with tool whitelisting
-- **Manual compaction**: `session.compact` command compresses thread history via LLM
+**Decisions**:
+
+- `allow_once`: Allow this single invocation.
+- `deny_once`: Deny this single invocation.
+- `always_allow`: Allow and persist to both session cache and `policy.toml`.
+- `always_deny`: Deny and persist to both session cache and `policy.toml`.
+
+**Session isolation**: `cancelSession()` rejects all pending permission requests for a specific session (e.g., on disconnect), without affecting other sessions.
+
+### Session Management
+
+The `SessionManager` manages the lifecycle of agent sessions:
+
+**Session modes**:
+
+- `one_shot`: Single-goal execution. The session closes automatically after the agent completes.
+- `chat`: Multi-turn interactive sessions. Messages are persisted to `thread.jsonl` and survive across turns.
+
+**Session lifecycle**:
+
+1. `session.create` allocates a new session with a UUID-based ID (`session-{12chars}`).
+2. `session.send_message` acquires a per-session mutex, appends the user message, resolves skill invocations (if the message starts with `/`), creates an `AgentRunner`, and executes the agent loop.
+3. `session.get_history` returns the persisted message history.
+4. `session.close` marks the session as closed.
+5. `session.compact` triggers manual context compaction.
+
+**Concurrency control**: A `PromiseMutex` enforces mutual exclusion per session. If a second `send_message` arrives while the first is still processing, it is rejected immediately with `SESSION_BUSY` (-32012). The mutex supports both blocking `acquire()` (FIFO queue) and non-blocking `tryAcquire()` (immediate rejection).
+
+**Skill resolution**: When a message starts with `/skillName args`, the `SessionManager` resolves the skill via the `SkillLoader`, renders the prompt template (replacing `$ARGUMENTS` with user input), and optionally overrides the system prompt and restricts the available tool set.
+
+**Error codes**:
+
+| Code   | Name                   | Meaning                            |
+| ------ | ---------------------- | ---------------------------------- |
+| -32010 | SESSION_NOT_FOUND      | No session with the given ID       |
+| -32011 | SESSION_CLOSED         | Session is already closed          |
+| -32012 | SESSION_BUSY           | Another message is being processed |
+| -32020 | PROVIDER_NOT_AVAILABLE | No LLM provider configured         |
+| -32021 | COMPACTION_FAILED      | LLM-driven compaction failed       |
+
+### Context Compaction
+
+The `Compactor` class performs LLM-driven conversation summarization to manage context window usage:
+
+**Structured summary format** (6 sections):
+
+1. **Original Goal**: One-sentence description of the user's objective.
+2. **Completed Steps**: Specific actions taken (file paths, commands, decisions).
+3. **Key Constraints and Discoveries**: Facts learned during the run that affect future decisions.
+4. **Current File State**: Path and one-line description for each created or modified file.
+5. **Remaining TODOs**: Ordered list of outstanding work items.
+6. **Critical Data**: Verbatim values the next LLM needs (IDs, tokens, exact error messages, config values).
+
+**Two modes of operation**:
+
+- `compact()`: In-place replacement of `ExecutionContext.messages` with `[summary, acknowledgment]`. Writes a summary file to the session directory. Publishes `context.compacted` event.
+- `compactMessages()`: Pure functional compression. Returns a `CompactionResult` or null on failure. Uses a silent `EventBus` to avoid polluting the parent event stream.
+
+**Token estimation**: Uses a `chars / 4` approximation for both input and output token counting.
+
+**Tool result truncation** (budget management): Before compaction, oversized tool results in the message history are truncated to `tool_result_limit` characters (default 8,000), keeping the first `tool_result_keep` characters (default 4,000) and appending a `[truncated N chars]` marker.
+
+### Sub-Agent Orchestration
+
+LarkCode supports spawning isolated child agents for parallel or delegated work:
+
+**`SpawnAgentTool`**:
+
+- Creates a clean `ExecutionContext` with only the provided prompt (no parent history leakage).
+- Supports two execution modes:
+  - **Foreground**: Blocks until the child agent completes. Returns the full result.
+  - **Background**: Returns immediately with a `run_id`. The result is retrieved later via `agent_result`.
+- Child events are bridged to the parent `EventBus` via `subagent.started` and `subagent.finished` events.
+- **Nesting limit**: Depth >= 2 returns an error, preventing unbounded recursion.
+- **Tool whitelist**: The child agent's tool registry is restricted to the tools specified in the agent profile's `allowed_tools` list.
+
+**`AgentResultTool`**:
+
+- Queries the `BackgroundTaskRegistry` for a sub-agent's status.
+- Returns "still running" for pending agents, the full result for completed agents, or an error for failed agents.
+
+**Built-in multi-agent workflow** (via the `orchestrate` skill):
+
+1. **Planner**: Analyzes the objective and produces a numbered execution plan.
+2. **Executor**: Carries out the plan step by step.
+3. **Reviewer**: Verifies execution results against the original objective.
 
 ### Skills
 
-Markdown files with YAML front matter, resolved via 3-tier search (project local > user global > builtin):
+Skills are Markdown files with YAML frontmatter that define reusable agent workflows:
 
-- `init` -- Analyze project and generate `.lark/context.md`
-- `orchestrate` -- planner -> executor -> reviewer multi-agent workflow
-- `review` -- Code review with severity/suggestion/optional classification
-- `summarize` -- Compress session conversation into a readable summary
+```yaml
+---
+name: skill_name
+description: What the skill does
+allowed_tools:
+  - tool_a
+  - tool_b
+---
+System prompt template. Use $ARGUMENTS as a placeholder for user input.
+```
+
+**3-tier resolution** (first match wins):
+
+1. Project-local: `.lark/skills/{name}.md` or `.lark/skills/{name}/SKILL.md`
+2. User-global: `~/.lark/skills/{name}.md` or `~/.lark/skills/{name}/SKILL.md`
+3. Built-in: Bundled with the application
+
+#### Built-in Skills
+
+| Skill         | Description                                                               | Allowed Tools                                                            |
+| ------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `init`        | Analyze the current project and generate `.lark/context.md`               | `read_file`, `list_dir`, `write_file`, `bash`                            |
+| `orchestrate` | Three-stage planner-executor-reviewer multi-agent workflow                | `spawn_agent`, `agent_result`, `task_create`, `task_update`, `task_list` |
+| `review`      | Code review with three severity tiers (critical / recommended / optional) | `read_file`, `list_dir`, `bash`                                          |
+| `summarize`   | Compress session conversation into a readable summary                     | `note_save`                                                              |
 
 ### Agent Profiles
 
-TOML-based role definitions with 3-tier search:
+Agent profiles are TOML files that define specialized agent roles:
 
-- `planner` -- Read-only goal analysis and task decomposition
-- `executor` -- Step-by-step plan execution
-- `reviewer` -- Result verification and quality assessment
+```toml
+[agent]
+description = "Role description"
+system_prompt = """Multi-line system prompt"""
+allowed_tools = ["read_file", "list_dir"]
+model = "claude-sonnet-4-6"
+```
+
+**3-tier resolution**: Same search order as skills (project-local > user-global > built-in).
+
+#### Built-in Agent Profiles
+
+| Profile    | Role                                           | Allowed Tools                                                             | Model             |
+| ---------- | ---------------------------------------------- | ------------------------------------------------------------------------- | ----------------- |
+| `planner`  | Read-only goal analysis and task decomposition | `read_file`, `list_dir`, `task_create`, `task_update`                     | claude-sonnet-4-6 |
+| `executor` | Step-by-step plan execution                    | `bash`, `read_file`, `write_file`, `list_dir`, `task_update`, `task_list` | claude-sonnet-4-6 |
+| `reviewer` | Result verification and quality assessment     | `read_file`, `list_dir`, `bash`                                           | claude-sonnet-4-6 |
+
+### Task Management
+
+The `TaskManager` provides file-based task persistence with dependency tracking:
+
+- **Storage**: Each task is persisted as `task_{id}.json` in a `.tasks/` directory.
+- **Auto-incrementing IDs**: Integer IDs assigned sequentially.
+- **Bidirectional dependencies**: Tasks maintain both `blockedBy` (upstream) and `blocks` (downstream) arrays.
+- **Auto-cleanup**: Completing a task automatically removes it from other tasks' `blockedBy` lists.
+- **Status lifecycle**: `pending` -> `in_progress` -> `completed`.
+
+### MCP Integration
+
+LarkCode integrates with external tool servers via the Model Context Protocol (MCP):
+
+**`McpClient`**:
+
+- Full JSON-RPC 2.0 client supporting both `stdio` (subprocess) and `tcp` transports.
+- MCP protocol version: `2024-11-05`.
+- `PromiseQueue` serializes concurrent JSON-RPC calls to prevent interleaving.
+- 30-second read timeout per line.
+- Graceful subprocess termination: SIGTERM followed by SIGKILL after a 5-second grace period.
+
+**`McpServerManager`**:
+
+- Manages the lifecycle of multiple MCP server connections.
+- On startup, connects to each configured server sequentially, discovers available tools via `tools/list`, and caches them for registry injection.
+- Failed servers are logged and skipped (non-fatal).
+
+**`McpTool`**:
+
+- Wraps an MCP server tool as a `BaseTool` for transparent use in the `ToolRegistry`.
+- Tool names are prefixed with `{serverName}__` to prevent naming conflicts.
+- Error handling distinguishes connection-level errors (`McpServerUnavailableError`) from application-level errors (`McpToolError`).
 
 ### Tracing
 
-NDJSON trace log at `~/.lark/traces/daemon.jsonl` with color-coded direction display:
+The tracing subsystem records all daemon activity in NDJSON format:
 
-- `CLIENT->CORE` (cyan), `CORE->CLIENT` (yellow), `CORE` (green), `CORE->LLM` (magenta), `LLM->CORE` (blue)
-- Supports `--raw` for NDJSON output, `--follow` for tail mode
-- Filterable by `--layer` (ipc/event/llm), `--direction`, and `run_id`
+**`TraceWriter`**:
 
-## Project Structure
+- Synchronous `appendFileSync`-based writer for zero-latency trace recording.
+- Queue-free design: `emit()` writes directly, silently skips on I/O failure.
+- Output: `~/.lark/traces/daemon.jsonl`.
+
+**`TracingProvider`**:
+
+- Decorator pattern: wraps any `LLMProvider` to record request and response traces.
+- Measures latency via `performance.now()`.
+- `includePayload` flag controls whether full message content and tool schemas are logged (useful for debugging, expensive for storage).
+
+**Trace directions**:
+
+| Direction      | Color   | Meaning                                     |
+| -------------- | ------- | ------------------------------------------- |
+| `CLIENT->CORE` | cyan    | Client sent a command to the daemon         |
+| `CORE->CLIENT` | yellow  | Daemon sent a response or event to a client |
+| `CORE`         | green   | Internal daemon operation                   |
+| `CORE->LLM`    | magenta | LLM API request                             |
+| `LLM->CORE`    | blue    | LLM API response                            |
+
+**Trace layers**: `ipc` (JSON-RPC commands/responses), `event` (pub/sub events), `llm` (model interactions).
+
+### Event System
+
+The event system provides both in-process and cross-process pub/sub:
+
+**`EventBus`** (in-process):
+
+- Simple publish-subscribe pattern.
+- `publish()` awaits handlers sequentially (no concurrent dispatch).
+- Used internally by the daemon for component coordination.
+
+**`IpcEventBroadcaster`** (cross-process):
+
+- Manages client event subscriptions with glob-based topic matching (via `picomatch`).
+- Scope filtering: `"global"` receives all events, `"run:{runId}"` receives events for a specific run.
+- Dead connection cleanup on write failure.
+- Backpressure handling: waits for socket drain events before continuing.
+
+**`EventWriter`** (persistence):
+
+- Serializes events to JSONL files for replay and audit.
+- Supports `Symbol.asyncDispose` for `using` declarations.
+
+**21 event types** (all use snake_case field names and a `type` discriminator):
+
+`core.started`, `run.started`, `run.finished`, `step.started`, `step.finished`, `tool.call_started`, `tool.call_finished`, `tool.call_failed`, `llm.token`, `llm.usage`, `llm.model_selected`, `log.line`, `session.created`, `session.message_received`, `session.waiting_for_input`, `session.resumed`, `session.closed`, `context.compacted`, `permission.requested`, `permission.granted`, `permission.denied`, `subagent.started`, `subagent.finished`, `skill.invoked`
+
+### Transport Layer
+
+**`SocketServer`**:
+
+- TCP server built on `node:net`.
+- NDJSON protocol with `readline`-based line parsing.
+- 64 MB maximum frame size (`MAX_LINE_BYTES`).
+- `AsyncLocalStorage<net.Socket>` provides per-connection context for event routing.
+- Port probing before start to detect an already-running daemon.
+- Graceful shutdown: destroys active sockets with a 2-second timeout.
+
+**`SocketClient`**:
+
+- TCP client with JSON-RPC request/response correlation.
+- `sendCommand()` returns a promise resolved when the server responds.
+- `onEvent()` registers persistent event handlers that survive across reconnections.
+- `waitForDisconnect()` resolves when the connection drops (useful for auto-reconnect loops).
+- `IpcError` class wraps JSON-RPC error responses with structured error codes.
+
+---
+
+## Terminal UI
+
+The TUI is built with React and Ink, rendering a rich interactive terminal interface:
+
+**Theme**: Warm amber accent (#d4a017) on a deep neutral background (#0a0a0a), with Unicode status indicators for each event type.
+
+**Components**:
+
+| Component            | Purpose                                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `App`                | Main orchestrator with auto-reconnect loop (2s retry delay), event accumulation, and slash command dispatch |
+| `Header`             | Brand name, connection indicator, session label, error messages                                             |
+| `StatusBar`          | Inline display of current step, token counts, elapsed time, context percentage                              |
+| `EventLog`           | Scrollable event stream with token merging, keyboard navigation (j/k/arrows, G/g)                           |
+| `EventCard`          | Polymorphic renderer for 17+ event types                                                                    |
+| `ToolUseCard`        | Inline tool execution indicator with status icons                                                           |
+| `InputBar`           | Multi-line text input (Enter to submit, Alt/Shift+Enter for newline)                                        |
+| `PermissionPrompt`   | Keyboard-driven 4-choice permission overlay (y/a/n/d or 1/2/3/4)                                            |
+| `SlashCompletePopup` | Autocomplete popup for slash commands with filtering                                                        |
+
+**Keyboard shortcuts**:
+
+- `Ctrl+C`: Close session and exit.
+- `Ctrl+L`: Clear event log.
+- `j` / `k` / arrows: Navigate event log.
+- `G` / `g`: Jump to bottom / top of event log.
+
+---
+
+## CLI Reference
 
 ```
-lark-code/
-├── src/
-│   ├── index.ts                    # Version export
-│   ├── dev.ts                      # Dev launcher (daemon + TUI)
-│   ├── cli/
-│   │   ├── main.ts                 # CLI entry point with subcommand dispatch
-│   │   └── commands/
-│   │       ├── chat.ts             # Multi-turn interactive chat
-│   │       ├── core.ts             # Daemon lifecycle (start/stop/status)
-│   │       ├── run.ts              # One-shot agent task runner
-│   │       ├── trace.ts            # Trace log viewer
-│   │       └── version.ts          # Version display
-│   ├── core/
-│   │   ├── app.ts                  # Daemon entry: TCP server + handler registration
-│   │   ├── config.ts               # 4-tier config: defaults -> TOML -> .env -> env vars
-│   │   ├── context.ts              # ExecutionContext: messages, step counter, status
-│   │   ├── loop.ts                 # AgentLoop: plan-act-observe driver
-│   │   ├── runner.ts               # AgentRunner: dependency assembly + run execution
-│   │   ├── runs.ts                 # Run ID generation and directory management
-│   │   ├── logging.ts              # Pino logger setup
-│   │   ├── agents/
-│   │   │   ├── loader.ts           # 3-tier agent profile loader
-│   │   │   └── builtin/            # planner.toml, executor.toml, reviewer.toml
-│   │   ├── bus/
-│   │   │   ├── commands.ts        # Zod schemas for all JSON-RPC commands/results
-│   │   │   ├── events.ts           # Zod schemas for all 24 event types
-│   │   │   ├── envelope.ts         # JSON-RPC 2.0 envelope types
-│   │   │   └── index.ts            # Barrel export
-│   │   ├── compact/
-│   │   │   ├── budget.ts           # Tool result truncation
-│   │   │   └── compactor.ts        # LLM-driven context compression
-│   │   ├── events/
-│   │   │   ├── bus.ts              # EventBus pub/sub
-│   │   │   └── writer.ts           # NDJSON event writer
-│   │   ├── llm/
-│   │   │   ├── base.ts             # LLMProvider interface
-│   │   │   ├── provider.ts         # AnthropicProvider with streaming + retry
-│   │   │   └── types.ts            # LlmResponse, UsageStats, ToolCallBlock
-│   │   ├── mcp/
-│   │   │   ├── client.ts           # MCP JSON-RPC client (placeholder)
-│   │   │   ├── server.ts           # MCP server manager (placeholder)
-│   │   │   └── tool.ts             # MCP tool wrapper
-│   │   ├── memory/
-│   │   │   └── loader.ts           # Context file loader (~/.lark/context.md)
-│   │   ├── permissions/
-│   │   │   ├── errors.ts           # PermissionDeniedError
-│   │   │   ├── manager.ts          # 6-tier permission evaluation
-│   │   │   ├── policy.ts           # Default policies + OUTSIDE_CWD heuristics
-│   │   │   └── storage.ts          # policy.toml persistence
-│   │   ├── session/
-│   │   │   ├── manager.ts          # Session lifecycle, skill resolution, compaction
-│   │   │   ├── model.ts            # Session data model + serialization
-│   │   │   └── store.ts            # File-based session persistence
-│   │   ├── skills/
-│   │   │   ├── loader.ts           # 3-tier skill loader with front matter parsing
-│   │   │   └── builtin/            # init.md, orchestrate.md, review.md, summarize.md
-│   │   ├── subagent/
-│   │   │   ├── registry.ts         # Background task registry
-│   │   │   └── tool.ts             # SpawnAgentTool + AgentResultTool
-│   │   ├── task/
-│   │   │   ├── manager.ts          # File-based task CRUD with dependency tracking
-│   │   │   └── model.ts            # Task data model + status enum
-│   │   ├── tools/
-│   │   │   ├── base.ts             # BaseTool interface + ToolResult
-│   │   │   ├── errors.ts           # RateLimitedError
-│   │   │   ├── invocation.ts       # Tool invocation with permissions + retry
-│   │   │   ├── registry.ts         # ToolRegistry with Anthropic schema export
-│   │   │   └── builtin/            # 9 built-in tools
-│   │   ├── trace/
-│   │   │   ├── provider.ts         # TracingProvider decorator
-│   │   │   ├── record.ts           # TraceRecord schema (snake_case)
-│   │   │   └── writer.ts           # Synchronous NDJSON trace writer
-│   │   └── transport/
-│   │       ├── ipc-broadcaster.ts  # Topic-based event broadcasting
-│   │       ├── socket-client.ts    # TCP JSON-RPC client
-│   │       └── socket-server.ts    # TCP JSON-RPC server
-│   └── tui/
-│       ├── index.ts                # TUI entry point
-│       ├── run-tui.ts              # TUI launcher
-│       ├── app.tsx                 # Main TUI application (Ink + React)
-│       ├── theme.ts                # Tailwind-aligned color palette
-│       └── components/             # 7 React components
-├── tests/
-│   ├── integration/
-│   │   └── ping-roundtrip.test.ts  # End-to-end TCP ping test
-│   └── unit/                       # 42 unit test files
-├── package.json
-├── tsconfig.json
-├── vitest.config.ts
-├── eslint.config.js
-└── README.md
+lark ping                        # Health check (returns server version and uptime)
+lark run --goal "<description>"  # One-shot agent task
+lark chat                        # Interactive multi-turn chat session
+lark tui                         # Launch the terminal UI
+lark core start                  # Start the daemon (background)
+lark core stop                   # Stop the daemon
+lark core status                 # Check daemon status
+lark trace                       # View trace log
+lark trace --follow              # Tail mode (live updates)
+lark trace --raw                 # Raw NDJSON output
+lark trace --layer llm           # Filter by layer (ipc / event / llm)
+lark trace --direction CORE->LLM # Filter by direction
+lark trace <run_id>              # Filter by run ID
+lark version                     # Print version
 ```
 
-## Prerequisites
-
-- Node.js >= 20
-- pnpm >= 10
-- `ANTHROPIC_API_KEY` environment variable
-
-## Getting Started
-
-```bash
-# Install dependencies
-pnpm install
-
-# Set your API key
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Start daemon + TUI
-pnpm dev
-
-# Or start them separately:
-pnpm dev:core    # Daemon only (background)
-pnpm dev:tui     # TUI only (requires daemon running)
-```
-
-## CLI Commands
-
-```bash
-# Check if daemon is running
-lark ping
-
-# Run a one-shot agent task
-lark run --goal "list all .ts files in src/"
-
-# Start an interactive chat session
-lark chat
-
-# Start/stop/check daemon
-lark core start
-lark core stop
-lark core status
-
-# View trace log
-lark trace
-lark trace --follow           # Tail mode
-lark trace --raw              # Raw NDJSON output
-lark trace --layer llm        # Filter by layer
-lark trace --direction CORE→LLM  # Filter by direction
-lark trace <run_id>           # Filter by run ID
-
-# Show version
-lark version
-```
+---
 
 ## Configuration
 
-### 4-tier Priority Chain
+### 4-Tier Priority Chain
 
-1. **Defaults** (built-in)
-2. **TOML** (`~/.lark/config.toml` or `.lark/config.toml`)
-3. **dotenv** (`.env` file)
-4. **Environment variables** (`LARK_*` prefix)
+Configuration values are resolved in the following order (later tiers override earlier ones):
+
+1. **Built-in defaults** (hardcoded)
+2. **Global TOML** (`~/.lark/config.toml`)
+3. **Project-local TOML** (`.lark/config.toml`)
+4. **dotenv** (`.env` file)
+5. **Environment variables** (`LARK_*` prefix)
+
+TOML configuration uses strict validation: unknown keys throw errors, and every field is type-checked with descriptive error messages.
 
 ### TOML Configuration
 
@@ -262,9 +492,9 @@ host = "127.0.0.1"
 port = 7437
 
 [logging]
-level = "INFO"
+level = "INFO"                      # DEBUG, INFO, WARN, ERROR
 file = "~/.lark/logs/core.log"
-format = "text"
+format = "text"                     # text, json
 
 [agent]
 max_steps = 20
@@ -282,56 +512,214 @@ include_llm_payload = true
 timeout_s = 60.0
 
 [compaction]
-auto_threshold = 0.0
-tool_result_limit = 8000
-tool_result_keep = 4000
+auto_threshold = 0.0               # 0.0 = disabled, 0.8 = compact at 80% context
+tool_result_limit = 8000            # Max chars per tool result before truncation
+tool_result_keep = 4000             # Chars to keep when truncating
 
 [[mcp.servers]]
 name = "my-server"
-transport = "stdio"
+transport = "stdio"                 # stdio, tcp
 command = "npx"
 args = ["-y", "my-mcp-server"]
 ```
 
 ### Environment Variables
 
-| Variable                    | Description                         |
-| --------------------------- | ----------------------------------- |
-| `LARK_CONFIG`               | Path to TOML config file            |
-| `LARK_HOST`                 | Daemon bind host                    |
-| `LARK_PORT`                 | Daemon bind port                    |
-| `LARK_LOG_LEVEL`            | Log level (DEBUG/INFO/WARN/ERROR)   |
-| `LARK_LOG_FILE`             | Log file path                       |
-| `LARK_MAX_STEPS`            | Maximum agent loop steps            |
-| `LARK_LLM_DEFAULT_MODEL`    | Default LLM model                   |
-| `LARK_TRACE_ENABLED`        | Enable/disable tracing              |
-| `LARK_TRACE_FILE`           | Trace file path                     |
-| `LARK_PERMISSION_TIMEOUT_S` | Permission prompt timeout           |
-| `LARK_COMPACT_THRESHOLD`    | Auto-compaction threshold (0.0-1.0) |
+| Variable                         | Default                       | Description                          |
+| -------------------------------- | ----------------------------- | ------------------------------------ |
+| `ANTHROPIC_API_KEY`              | (required)                    | Anthropic API key                    |
+| `ANTHROPIC_BASE_URL`             | (SDK default)                 | Override API base URL                |
+| `LARK_CONFIG`                    | `~/.lark/config.toml`         | Path to TOML config file             |
+| `LARK_HOST`                      | `127.0.0.1`                   | Daemon bind host                     |
+| `LARK_PORT`                      | `7437`                        | Daemon bind port                     |
+| `LARK_LOG_LEVEL`                 | `INFO`                        | Log level                            |
+| `LARK_LOG_FILE`                  | `~/.lark/logs/core.log`       | Log file path                        |
+| `LARK_LOG_FORMAT`                | `text`                        | Log format (text / json)             |
+| `LARK_MAX_STEPS`                 | `20`                          | Maximum agent loop steps             |
+| `LARK_LLM_DEFAULT_MODEL`         | `claude-sonnet-4-6`           | Default LLM model                    |
+| `LARK_TRACE_ENABLED`             | `true`                        | Enable/disable tracing               |
+| `LARK_TRACE_FILE`                | `~/.lark/traces/daemon.jsonl` | Trace file path                      |
+| `LARK_TRACE_INCLUDE_LLM_PAYLOAD` | `true`                        | Include full LLM payloads in traces  |
+| `LARK_PERMISSION_TIMEOUT_S`      | `60`                          | Permission prompt timeout (seconds)  |
+| `LARK_COMPACT_THRESHOLD`         | `0.0`                         | Auto-compaction threshold (0.0-1.0)  |
+| `LARK_COMPACT_TOOL_LIMIT`        | `8000`                        | Tool result truncation limit (chars) |
+| `LARK_COMPACT_TOOL_KEEP`         | `4000`                        | Tool result keep size (chars)        |
+
+---
 
 ## JSON-RPC Protocol
 
-All communication uses JSON-RPC 2.0 over TCP with newline-delimited JSON framing.
+All client-daemon communication uses JSON-RPC 2.0 over TCP with newline-delimited JSON (NDJSON) framing.
 
 ### Commands
 
-| Method                 | Description                                                        |
-| ---------------------- | ------------------------------------------------------------------ |
-| `core.ping`            | Health check, returns `server_version`, `uptime_ms`, `received_at` |
-| `agent.run`            | One-shot agent task, returns `run_id`                              |
-| `event.subscribe`      | Subscribe to event topics with glob patterns                       |
-| `session.create`       | Create session (one_shot or chat)                                  |
-| `session.send_message` | Send message to session                                            |
-| `session.get_history`  | Get session message history                                        |
-| `session.close`        | Close session                                                      |
-| `session.compact`      | Manually compact session thread                                    |
-| `permission.respond`   | Respond to permission request                                      |
+| Method                 | Parameters                | Description                                                                                 |
+| ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------- |
+| `core.ping`            | --                        | Health check. Returns `server_version`, `uptime_ms`, `received_at`.                         |
+| `agent.run`            | `goal`, `max_steps?`      | One-shot agent task. Returns `run_id`.                                                      |
+| `event.subscribe`      | `topics[]`, `scope?`      | Subscribe to event topics with glob patterns. Returns `subscription_id`.                    |
+| `session.create`       | `mode`, `title?`          | Create a session (`one_shot` or `chat`). Returns session metadata.                          |
+| `session.send_message` | `session_id`, `message`   | Send a message to a session. Returns `run_id`.                                              |
+| `session.get_history`  | `session_id`              | Retrieve message history.                                                                   |
+| `session.close`        | `session_id`              | Close a session.                                                                            |
+| `session.compact`      | `session_id`, `focus?`    | Manually compact session thread.                                                            |
+| `permission.respond`   | `tool_use_id`, `decision` | Respond to a permission request (`allow_once`, `deny_once`, `always_allow`, `always_deny`). |
 
-### Events (24 types)
+### Events
 
-All events use snake_case field names and a `type` discriminator:
+All events use snake_case field names and a `type` discriminator. Clients subscribe via `event.subscribe` with glob patterns (e.g., `["*"]` for all, `["llm.*"]` for LLM events only).
 
-`core.started`, `run.started`, `run.finished`, `step.started`, `step.finished`, `tool.call_started`, `tool.call_finished`, `tool.call_failed`, `llm.token`, `llm.usage`, `llm.model_selected`, `log.line`, `session.created`, `session.message_received`, `session.waiting_for_input`, `session.resumed`, `session.closed`, `context.compacted`, `permission.requested`, `permission.granted`, `permission.denied`, `subagent.started`, `subagent.finished`, `skill.invoked`
+| Event Type                  | Key Fields                                                                      | Emitted When                   |
+| --------------------------- | ------------------------------------------------------------------------------- | ------------------------------ |
+| `core.started`              | `server_version`, `port`                                                        | Daemon starts listening        |
+| `run.started`               | `run_id`, `goal`, `max_steps`                                                   | Agent run begins               |
+| `run.finished`              | `run_id`, `status`, `result`, `reason`                                          | Agent run ends                 |
+| `step.started`              | `run_id`, `step`                                                                | LLM call begins for a step     |
+| `step.finished`             | `run_id`, `step`                                                                | Step completes (LLM + tools)   |
+| `tool.call_started`         | `run_id`, `tool_name`, `tool_use_id`, `params`                                  | Tool invocation begins         |
+| `tool.call_finished`        | `run_id`, `tool_name`, `tool_use_id`, `result`                                  | Tool invocation succeeds       |
+| `tool.call_failed`          | `run_id`, `tool_name`, `tool_use_id`, `error_class`, `error_message`            | Tool invocation fails          |
+| `llm.token`                 | `run_id`, `step`, `text`                                                        | Streaming text delta           |
+| `llm.usage`                 | `run_id`, `step`, `input_tokens`, `output_tokens`, `cache_*`, `context_percent` | Token usage report             |
+| `llm.model_selected`        | `run_id`, `model`                                                               | Model chosen for request       |
+| `session.created`           | `session_id`, `mode`                                                            | New session created            |
+| `session.message_received`  | `session_id`, `run_id`                                                          | User message accepted          |
+| `session.waiting_for_input` | `session_id`                                                                    | Agent finished, awaiting input |
+| `session.resumed`           | `session_id`, `run_id`                                                          | Chat session resumed           |
+| `session.closed`            | `session_id`                                                                    | Session closed                 |
+| `context.compacted`         | `session_id`, `run_id`, `original_tokens`, `summary_tokens`                     | Context compaction completed   |
+| `permission.requested`      | `tool_use_id`, `tool_name`, `param_preview`, `session_id`                       | Permission prompt needed       |
+| `permission.granted`        | `tool_use_id`, `decision`                                                       | Permission allowed             |
+| `permission.denied`         | `tool_use_id`, `decision`                                                       | Permission denied              |
+| `subagent.started`          | `run_id`, `parent_run_id`, `description`                                        | Sub-agent spawned              |
+| `subagent.finished`         | `run_id`, `parent_run_id`, `status`, `result`                                   | Sub-agent completed            |
+| `skill.invoked`             | `session_id`, `skill_name`                                                      | Skill activated                |
+| `log.line`                  | `level`, `message`                                                              | Log output                     |
+
+---
+
+## Project Structure
+
+```
+lark-code/
+├── src/
+│   ├── index.ts                         # Version export
+│   ├── dev.ts                           # Dev launcher (daemon + TUI)
+│   ├── cli/
+│   │   ├── main.ts                      # CLI entry point with subcommand dispatch
+│   │   └── commands/
+│   │       ├── chat.ts                  # Multi-turn interactive chat
+│   │       ├── core.ts                  # Daemon lifecycle (start/stop/status)
+│   │       ├── run.ts                   # One-shot agent task runner
+│   │       ├── trace.ts                 # Trace log viewer
+│   │       └── version.ts              # Version display
+│   ├── core/
+│   │   ├── app.ts                       # Daemon entry: TCP server + handler registration
+│   │   ├── config.ts                    # 4-tier config: defaults -> TOML -> .env -> env vars
+│   │   ├── context.ts                   # ExecutionContext: messages, step counter, status
+│   │   ├── loop.ts                      # AgentLoop: plan-act-observe driver
+│   │   ├── runner.ts                    # AgentRunner: dependency assembly + run execution
+│   │   ├── runs.ts                      # Run ID generation and directory management
+│   │   ├── logging.ts                   # Pino logger setup
+│   │   ├── agents/
+│   │   │   ├── loader.ts               # 3-tier agent profile loader
+│   │   │   └── builtin/                # planner.toml, executor.toml, reviewer.toml
+│   │   ├── bus/
+│   │   │   ├── commands.ts             # Zod schemas for all JSON-RPC commands/results
+│   │   │   ├── events.ts               # Zod schemas for all event types
+│   │   │   ├── envelope.ts             # JSON-RPC 2.0 envelope types + HandlerError
+│   │   │   └── index.ts                # Barrel export
+│   │   ├── compact/
+│   │   │   ├── budget.ts               # Tool result truncation
+│   │   │   └── compactor.ts            # LLM-driven context compression
+│   │   ├── events/
+│   │   │   ├── bus.ts                   # EventBus pub/sub
+│   │   │   └── writer.ts               # NDJSON event writer
+│   │   ├── llm/
+│   │   │   ├── base.ts                  # LLMProvider interface
+│   │   │   ├── provider.ts             # AnthropicProvider with streaming + retry
+│   │   │   └── types.ts                # LlmResponse, UsageStats, ToolCallBlock
+│   │   ├── mcp/
+│   │   │   ├── client.ts               # MCP JSON-RPC client (stdio + tcp)
+│   │   │   ├── server.ts               # MCP server lifecycle manager
+│   │   │   └── tool.ts                 # MCP tool wrapper
+│   │   ├── memory/
+│   │   │   └── loader.ts               # Context file loader (~/.lark/context.md)
+│   │   ├── permissions/
+│   │   │   ├── errors.ts               # PermissionDeniedError
+│   │   │   ├── manager.ts              # 6-tier permission evaluation
+│   │   │   ├── policy.ts               # Default policies + OUTSIDE_CWD heuristics
+│   │   │   └── storage.ts              # policy.toml persistence
+│   │   ├── session/
+│   │   │   ├── manager.ts              # Session lifecycle + PromiseMutex
+│   │   │   ├── model.ts                # Session data model + serialization
+│   │   │   └── store.ts                # File-based session persistence
+│   │   ├── skills/
+│   │   │   ├── loader.ts               # 3-tier skill loader with YAML frontmatter
+│   │   │   └── builtin/                # init.md, orchestrate.md, review.md, summarize.md
+│   │   ├── subagent/
+│   │   │   ├── registry.ts             # Background task registry
+│   │   │   └── tool.ts                 # SpawnAgentTool + AgentResultTool
+│   │   ├── task/
+│   │   │   ├── manager.ts              # File-based task CRUD with dependencies
+│   │   │   └── model.ts                # Task data model + status enum
+│   │   ├── tools/
+│   │   │   ├── base.ts                  # BaseTool interface + ToolResult
+│   │   │   ├── errors.ts               # RateLimitedError
+│   │   │   ├── invocation.ts           # Tool invocation pipeline
+│   │   │   ├── registry.ts             # ToolRegistry with Anthropic schema export
+│   │   │   └── builtin/                # 9 built-in tools
+│   │   ├── trace/
+│   │   │   ├── provider.ts             # TracingProvider decorator
+│   │   │   ├── record.ts               # TraceRecord schema (snake_case)
+│   │   │   └── writer.ts               # Synchronous NDJSON trace writer
+│   │   └── transport/
+│   │       ├── ipc-broadcaster.ts      # Topic-based event broadcasting
+│   │       ├── socket-client.ts        # TCP JSON-RPC client
+│   │       └── socket-server.ts        # TCP JSON-RPC server
+│   └── tui/
+│       ├── index.ts                     # TUI entry point
+│       ├── run-tui.ts                   # TUI launcher
+│       ├── app.tsx                      # Main TUI application (Ink + React)
+│       ├── theme.ts                     # Color palette and Unicode indicators
+│       └── components/                  # React components for terminal rendering
+├── tests/
+│   ├── integration/                     # End-to-end TCP tests
+│   └── unit/                            # Unit tests for all core modules
+├── package.json
+├── tsconfig.json
+├── tsup.config.ts                       # Build configuration (ESM, Node 24)
+├── vitest.config.ts                     # Test configuration (V8 coverage)
+├── eslint.config.js                     # Strict type-checked ESLint
+└── README.md
+```
+
+---
+
+## Prerequisites
+
+- Node.js >= 20
+- pnpm >= 10
+- `ANTHROPIC_API_KEY` environment variable
+
+## Getting Started
+
+```bash
+# Install dependencies
+pnpm install
+
+# Set your API key
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Start daemon + TUI (development mode)
+pnpm dev
+
+# Or start them separately:
+pnpm dev:core    # Daemon only (background)
+pnpm dev:tui     # TUI only (requires daemon running)
+```
+
+---
 
 ## Development
 
@@ -339,7 +727,7 @@ All events use snake_case field names and a `type` discriminator:
 # Type check
 pnpm typecheck
 
-# Lint
+# Lint (with auto-fix)
 pnpm lint
 
 # Run tests
@@ -348,7 +736,7 @@ pnpm test
 # Run tests with coverage
 pnpm test:coverage
 
-# Run all checks
+# Run all quality checks (typecheck + lint + test + format)
 pnpm qa
 
 # Format code
@@ -356,38 +744,53 @@ pnpm format
 
 # Generate protocol documentation
 pnpm doc
+
+# Build for production
+pnpm build
 ```
 
 ### Test Coverage
 
-- **43 test files** with **231 tests**
-- Unit tests cover all core modules: bus, compact, config, context, events, llm, memory, permissions, session, skills, subagent, task, tools, trace, transport
-- Integration test covers end-to-end TCP JSON-RPC roundtrip
-- Coverage reports generated via `pnpm test:coverage` using V8 provider
+- **46 test files** covering all core modules
+- Unit tests: bus, compact, config, context, events, llm, memory, permissions, session, skills, subagent, task, tools, trace, transport
+- Integration tests: end-to-end TCP JSON-RPC roundtrip, full daemon lifecycle
+- Coverage provider: V8 with 50% threshold for branches, functions, lines, and statements
+- Hand-rolled test stubs (no mocking libraries)
 
 ### Coding Standards
 
-- Strict TypeScript with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`
-- Zero type assertions (`as`), zero `eslint-disable` comments
-- Zod v4 schemas for all wire protocol types (snake_case fields)
-- Hand-rolled test stubs (no mocking libraries)
-- kebab-case filenames, camelCase code identifiers
+- **Strict TypeScript**: `strict`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noPropertyAccessFromIndexSignature`, `verbatimModuleSyntax`
+- **Zero type assertions**: The ESLint rule `@typescript-eslint/consistent-type-assertions` is set to `assertionStyle: "never"`. All type narrowing uses runtime type guards or Zod validation.
+- **Zero eslint-disable comments**: No suppression directives anywhere in the codebase.
+- **Zod v4 schemas**: All wire protocol types (commands, events, tool parameters) are defined with Zod schemas and validated at runtime boundaries.
+- **snake_case wire format**: All JSON-RPC fields use snake_case, enforced by Zod schemas.
+- **kebab-case filenames**, camelCase code identifiers.
+- **ESM-only**: `"type": "module"` with NodeNext module resolution.
+- **Target**: ES2024, Node.js 24.
+
+---
 
 ## Data Directories
 
-| Path                          | Purpose                                          |
-| ----------------------------- | ------------------------------------------------ |
-| `~/.lark/config.toml`         | Global configuration                             |
-| `~/.lark/policy.toml`         | Persistent permission policies                   |
-| `~/.lark/sessions/`           | Session data (meta.json, thread.jsonl, notes.md) |
-| `~/.lark/traces/daemon.jsonl` | Trace log                                        |
-| `~/.lark/context.md`          | Global context injected into agent runs          |
-| `~/.lark/agents/`             | User-global agent profiles                       |
-| `~/.lark/skills/`             | User-global skill definitions                    |
-| `.lark/config.toml`           | Project-local configuration                      |
-| `.lark/context.md`            | Project-local context                            |
-| `.lark/agents/`               | Project-local agent profiles                     |
-| `.lark/skills/`               | Project-local skill definitions                  |
+| Path                                   | Purpose                                                               |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| `~/.lark/config.toml`                  | Global configuration                                                  |
+| `~/.lark/policy.toml`                  | Persistent permission policies (always-allow / always-deny)           |
+| `~/.lark/sessions/`                    | Session data: `meta.json`, `thread.jsonl`, `notes.md`, `summary_*.md` |
+| `~/.lark/sessions/{sid}/runs/{runId}/` | Per-run event logs (`events.jsonl`)                                   |
+| `~/.lark/traces/daemon.jsonl`          | Trace log (NDJSON)                                                    |
+| `~/.lark/logs/core.log`                | Application log (Pino)                                                |
+| `~/.lark/context.md`                   | Global context injected into agent system prompts                     |
+| `~/.lark/agents/`                      | User-global agent profiles (TOML)                                     |
+| `~/.lark/skills/`                      | User-global skill definitions (Markdown + YAML)                       |
+| `~/.lark/lark-core.pid`                | Daemon PID file                                                       |
+| `.lark/config.toml`                    | Project-local configuration                                           |
+| `.lark/context.md`                     | Project-local context                                                 |
+| `.lark/agents/`                        | Project-local agent profiles                                          |
+| `.lark/skills/`                        | Project-local skill definitions                                       |
+| `.tasks/`                              | Per-run task persistence (`task_{id}.json`)                           |
+
+---
 
 ## License
 

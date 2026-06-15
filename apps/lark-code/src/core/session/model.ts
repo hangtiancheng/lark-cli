@@ -14,11 +14,7 @@ export interface Session {
 }
 
 // Create a new Session
-export function createSession(
-  id: string,
-  mode: SessionMode,
-  title: string,
-): Session {
+export function createSession(id: string, mode: SessionMode, title: string): Session {
   const ts = new Date().toISOString();
   return {
     id,
@@ -54,9 +50,7 @@ export function sessionFromDict(data: Record<string, unknown>): Session {
     id: String(data["id"]),
     mode: modeRaw === "one_shot" || modeRaw === "chat" ? modeRaw : "chat",
     status:
-      statusRaw === "active" ||
-      statusRaw === "waiting_for_input" ||
-      statusRaw === "closed"
+      statusRaw === "active" || statusRaw === "waiting_for_input" || statusRaw === "closed"
         ? statusRaw
         : "active",
     title: typeof titleRaw === "string" ? titleRaw : "",

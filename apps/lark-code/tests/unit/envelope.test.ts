@@ -34,17 +34,15 @@ describe("JsonRpcRequest", () => {
   // Feature: Verify zod validation fails when required id field is missing
   // Design: Pass object without id, confirm id is a required field
   test("missing id raises ZodError", () => {
-    expect(() =>
-      JsonRpcRequestSchema.parse({ jsonrpc: "2.0", method: "x" }),
-    ).toThrow(ZodError);
+    expect(() => JsonRpcRequestSchema.parse({ jsonrpc: "2.0", method: "x" })).toThrow(ZodError);
   });
 
   // Feature: Verify zod validation fails when jsonrpc field is not "2.0"
   // Design: Pass "1.0" to confirm z.literal("2.0") constraint works
   test("wrong version raises ZodError", () => {
-    expect(() =>
-      JsonRpcRequestSchema.parse({ jsonrpc: "1.0", id: "1", method: "x" }),
-    ).toThrow(ZodError);
+    expect(() => JsonRpcRequestSchema.parse({ jsonrpc: "1.0", id: "1", method: "x" })).toThrow(
+      ZodError,
+    );
   });
 });
 

@@ -67,29 +67,16 @@ export class SessionStore {
   }
 
   // Append a single message to thread.jsonl
-  appendMessage(
-    sid: string,
-    role: string,
-    content: unknown,
-    runId?: string,
-  ): void {
+  appendMessage(sid: string, role: string, content: unknown, runId?: string): void {
     const row: Record<string, unknown> = { ts: now(), role, content };
     if (runId !== undefined) row["run_id"] = runId;
     const dir = this.sessionDir(sid);
     mkdirSync(dir, { recursive: true });
-    appendFileSync(
-      path.join(dir, "thread.jsonl"),
-      JSON.stringify(row) + "\n",
-      "utf-8",
-    );
+    appendFileSync(path.join(dir, "thread.jsonl"), JSON.stringify(row) + "\n", "utf-8");
   }
 
   // Batch-append messages from a single run to thread.jsonl
-  appendMessages(
-    sid: string,
-    messages: Anthropic.MessageParam[],
-    runId: string,
-  ): void {
+  appendMessages(sid: string, messages: Anthropic.MessageParam[], runId: string): void {
     for (const msg of messages) {
       this.appendMessage(sid, msg.role, msg.content, runId);
     }
@@ -124,9 +111,7 @@ export class SessionStore {
   }
 
   // Trim trailing unpaired tool_use blocks and all messages after them
-  private _trimOrphanToolUse(
-    messages: Anthropic.MessageParam[],
-  ): Anthropic.MessageParam[] {
+  private _trimOrphanToolUse(messages: Anthropic.MessageParam[]): Anthropic.MessageParam[] {
     const pending = new Set<string>();
     let lastBalanced = 0;
 

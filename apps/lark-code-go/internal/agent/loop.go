@@ -10,6 +10,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/compact"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/events"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/llm"
+	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/permissions"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/tools"
 )
 
@@ -36,13 +37,34 @@ type ToolInvoker interface {
 	Invoke(ctx context.Context, registry *tools.Registry, toolCallID, toolName string, params map[string]any) *tools.ToolResult
 }
 
-// DefaultToolInvoker is the default implementation that delegates to tools.InvokeTool.
+// DefaultToolInvoker is the default implementation that delegates to tools.InvokeTool
+// with optional permission gating.
 type DefaultToolInvoker struct {
-	Bus   *events.EventBus
-	RunID string
+	Bus       *events.EventBus
+	RunID     string
+	PermMgr   *permissions.Manager // optional: nil disables permission checks
+	SessionID string
 }
 
 func (d *DefaultToolInvoker) Invoke(ctx context.Context, registry *tools.Registry, toolCallID, toolName string, params map[string]any) *tools.ToolResult {
+	// Permission gate: check and wait for user approval before executing the tool
+	if d.PermMgr != nil {
+		decision, err := d.PermMgr.CheckAndWait(toolName, toolCallID, params, d.SessionID, d.RunID)
+		if err != nil {
+			return &tools.ToolResult{
+				Content:   fmt.Sprintf("permission error: %s", err),
+				IsError:   true,
+				ErrorType: tools.ErrorTypeRuntime,
+			}
+		}
+		if decision == permissions.DecisionDenyOnce || decision == permissions.DecisionAlwaysDeny {
+			return &tools.ToolResult{
+				Content:   fmt.Sprintf("Permission denied for tool '%s'. Try an alternative approach.", toolName),
+				IsError:   true,
+				ErrorType: tools.ErrorTypePermission,
+			}
+		}
+	}
 	return tools.InvokeTool(ctx, registry, toolCallID, toolName, params, d.Bus, d.RunID)
 }
 
@@ -54,6 +76,8 @@ type AgentLoop struct {
 	bus       *events.EventBus
 	compactor *compact.Compactor
 	invoker   ToolInvoker
+	permMgr   *permissions.Manager
+	sessionID string
 }
 
 // RunOutcome is the return value of AgentLoop.Run().
@@ -86,10 +110,21 @@ func (al *AgentLoop) SetInvoker(invoker ToolInvoker) {
 	al.invoker = invoker
 }
 
+// SetPermManager configures the permission manager for tool invocation gating.
+func (al *AgentLoop) SetPermManager(mgr *permissions.Manager, sessionID string) {
+	al.permMgr = mgr
+	al.sessionID = sessionID
+}
+
 // Run executes the agent loop until end_turn, max_steps is reached, or the context is cancelled.
 func (al *AgentLoop) Run(ctx context.Context, ec *ExecutionContext, runID string) (*RunOutcome, error) {
 	if al.invoker == nil {
-		al.invoker = &DefaultToolInvoker{Bus: al.bus, RunID: runID}
+		al.invoker = &DefaultToolInvoker{
+			Bus:       al.bus,
+			RunID:     runID,
+			PermMgr:   al.permMgr,
+			SessionID: al.sessionID,
+		}
 	}
 
 	// Publish the run.started event

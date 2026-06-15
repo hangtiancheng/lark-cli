@@ -135,15 +135,9 @@ describe("TracingProvider", () => {
     const tracer = new TracingProvider(mockProvider, writer, true);
     const bus = new EventBus();
 
-    await tracer.chat(
-      [{ role: "user", content: "hello world" }],
-      [],
-      bus,
-      "r1",
-      {
-        step: 1,
-      },
-    );
+    await tracer.chat([{ role: "user", content: "hello world" }], [], bus, "r1", {
+      step: 1,
+    });
 
     void writer.stop();
 
@@ -181,12 +175,7 @@ describe("TracingProvider", () => {
     const tracer = new TracingProvider(mockProvider, writer, false);
     const bus = new EventBus();
 
-    await tracer.chat(
-      [{ role: "user", content: "secret message" }],
-      [],
-      bus,
-      "r1",
-    );
+    await tracer.chat([{ role: "user", content: "secret message" }], [], bus, "r1");
 
     void writer.stop();
 

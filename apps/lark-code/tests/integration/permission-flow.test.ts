@@ -32,11 +32,7 @@ function makeConfig(maxSteps: number): LarkConfig {
   };
 }
 
-function makeToolUse(
-  id: string,
-  name: string,
-  input: Record<string, unknown>,
-): ToolUseBlock {
+function makeToolUse(id: string, name: string, input: Record<string, unknown>): ToolUseBlock {
   return {
     type: "tool_use",
     id,
@@ -170,12 +166,7 @@ describe("permission flow integration", () => {
         return Promise.resolve();
       });
 
-      const runner = makeRunner(
-        singleBashProvider(),
-        bus,
-        manager,
-        path.join(dir, "runs"),
-      );
+      const runner = makeRunner(singleBashProvider(), bus, manager, path.join(dir, "runs"));
       const outcome = await runner.runAndCapture("run bash");
 
       expect(eventTypes).toContain("permission.requested");
@@ -208,12 +199,7 @@ describe("permission flow integration", () => {
         return Promise.resolve();
       });
 
-      const runner = makeRunner(
-        singleBashProvider(),
-        bus,
-        manager,
-        path.join(dir, "runs"),
-      );
+      const runner = makeRunner(singleBashProvider(), bus, manager, path.join(dir, "runs"));
       await runner.runAndCapture("run bash");
 
       expect(eventTypes).toContain("permission.requested");
@@ -248,12 +234,7 @@ describe("permission flow integration", () => {
         return Promise.resolve();
       });
 
-      const runner = makeRunner(
-        twoBashProvider(),
-        bus,
-        manager,
-        path.join(dir, "runs"),
-      );
+      const runner = makeRunner(twoBashProvider(), bus, manager, path.join(dir, "runs"));
       const outcome = await runner.runAndCapture("run two bash commands");
 
       expect(permRequestedCount).toBe(1);

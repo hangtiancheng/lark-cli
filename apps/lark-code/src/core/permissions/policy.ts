@@ -5,8 +5,7 @@ export const PermissionDecision = {
   ASK: "ask",
 } as const;
 
-export type PermissionDecision =
-  (typeof PermissionDecision)[keyof typeof PermissionDecision];
+export type PermissionDecision = (typeof PermissionDecision)[keyof typeof PermissionDecision];
 
 // Regex rules to detect bash commands operating outside cwd
 const OUTSIDE_CWD_HEURISTICS = [
@@ -30,10 +29,7 @@ export interface ToolPolicy {
 }
 
 // Convenience factory for ToolPolicy
-function policy(
-  def: PermissionDecision,
-  opts?: { allow?: string[]; deny?: string[] },
-): ToolPolicy {
+function policy(def: PermissionDecision, opts?: { allow?: string[]; deny?: string[] }): ToolPolicy {
   return {
     default: def,
     allowPatterns: opts?.allow ?? [],
@@ -60,10 +56,7 @@ const PREVIEW_KEY: Record<string, string> = {
 const PREVIEW_MAX = 60;
 
 // Generate a human-readable param summary for permission approval events
-export function paramPreview(
-  toolName: string,
-  params: Record<string, unknown>,
-): string {
+export function paramPreview(toolName: string, params: Record<string, unknown>): string {
   const key = PREVIEW_KEY[toolName];
   if (key && key in params) {
     const raw = params[key];
@@ -81,14 +74,11 @@ export function evaluate(
   params: Record<string, unknown>,
   toolPolicy?: ToolPolicy,
 ): PermissionDecision {
-  const pol =
-    toolPolicy ??
-    (toolName in DEFAULT_POLICIES ? DEFAULT_POLICIES[toolName] : undefined);
+  const pol = toolPolicy ?? (toolName in DEFAULT_POLICIES ? DEFAULT_POLICIES[toolName] : undefined);
   if (!pol) return PermissionDecision.ASK;
 
   const commandRaw = params["command"];
-  const command =
-    toolName === "bash" && typeof commandRaw === "string" ? commandRaw : "";
+  const command = toolName === "bash" && typeof commandRaw === "string" ? commandRaw : "";
 
   // Tier 1: deny_patterns (bash only)
   if (command) {

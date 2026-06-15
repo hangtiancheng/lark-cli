@@ -56,13 +56,11 @@ export class SpawnAgentTool implements BaseTool {
       },
       run_in_background: {
         type: "boolean",
-        description:
-          "When true, returns immediately with a run_id; use agent_result to poll.",
+        description: "When true, returns immediately with a run_id; use agent_result to poll.",
       },
       subagent_type: {
         type: "string",
-        description:
-          "Agent role profile (planner/executor/reviewer). Leave empty for default.",
+        description: "Agent role profile (planner/executor/reviewer). Leave empty for default.",
       },
     },
     required: ["description", "prompt"],
@@ -106,16 +104,13 @@ export class SpawnAgentTool implements BaseTool {
 
     if (this._depth >= 2) {
       return {
-        content:
-          "Subagent nesting limit (2) reached; cannot spawn further subagents.",
+        content: "Subagent nesting limit (2) reached; cannot spawn further subagents.",
         isError: true,
         errorType: "runtime_error",
       };
     }
 
-    const profile = p.subagent_type
-      ? profileLoader.load(p.subagent_type)
-      : null;
+    const profile = p.subagent_type ? profileLoader.load(p.subagent_type) : null;
 
     const childRunId = newRunId();
     const childContext = new ExecutionContext({
@@ -132,15 +127,9 @@ export class SpawnAgentTool implements BaseTool {
       await this._parentBus.publish(event);
     });
 
-    const childRegistry = this._buildChildRegistry(
-      childBus,
-      childRunId,
-      profile,
-    );
+    const childRegistry = this._buildChildRegistry(childBus, childRunId, profile);
     const childLoop = new AgentLoop(this._provider, childRegistry, childBus, {
-      ...(this._permissionManager
-        ? { permissionManager: this._permissionManager }
-        : {}),
+      ...(this._permissionManager ? { permissionManager: this._permissionManager } : {}),
       sessionId: this._sessionId,
     });
 
@@ -172,9 +161,7 @@ export class SpawnAgentTool implements BaseTool {
     }
 
     // Foreground execution
-    const eventWriter = new EventWriter(
-      path.join(childRunPath, "events.jsonl"),
-    );
+    const eventWriter = new EventWriter(path.join(childRunPath, "events.jsonl"));
     eventWriter.open();
     eventWriter.subscribe(childBus);
     try {
@@ -193,8 +180,7 @@ export class SpawnAgentTool implements BaseTool {
 
     if (childContext.status === "success") {
       return {
-        content:
-          childContext.result || "Subagent completed with no text output.",
+        content: childContext.result || "Subagent completed with no text output.",
         isError: false,
         errorType: null,
       };
@@ -237,27 +223,18 @@ export class SpawnAgentTool implements BaseTool {
     childRunId: string,
     profile: AgentProfile | null,
   ): ToolRegistry {
-    const allowed = profile?.allowedTools.length
-      ? new Set(profile.allowedTools)
-      : null;
+    const allowed = profile?.allowedTools.length ? new Set(profile.allowedTools) : null;
     const isAllowed = (name: string): boolean => !allowed || allowed.has(name);
 
     const registry = new ToolRegistry();
-    const allTools = [
-      new ReadFileTool(),
-      new BashTool(),
-      new WriteFileTool(),
-      new ListDirTool(),
-    ];
+    const allTools = [new ReadFileTool(), new BashTool(), new WriteFileTool(), new ListDirTool()];
     for (const t of allTools) {
       if (isAllowed(t.name)) {
         registry.register(t);
       }
     }
 
-    const childTaskManager = new TaskManager(
-      path.join(this._runsDir, childRunId, ".tasks"),
-    );
+    const childTaskManager = new TaskManager(path.join(this._runsDir, childRunId, ".tasks"));
     const taskTools = [
       new TaskCreateTool(childTaskManager),
       new TaskUpdateTool(childTaskManager),
@@ -308,8 +285,7 @@ export class AgentResultTool implements BaseTool {
     properties: {
       run_id: {
         type: "string",
-        description:
-          "The run_id returned by spawn_agent(run_in_background=true)",
+        description: "The run_id returned by spawn_agent(run_in_background=true)",
       },
     },
     required: ["run_id"],

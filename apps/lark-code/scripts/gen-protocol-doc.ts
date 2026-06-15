@@ -72,17 +72,12 @@ function asStringArray(value: unknown): string[] {
 // would use Object's default toString (avoiding @typescript-eslint/no-base-to-string)
 function asString(value: unknown, fallback: string): string {
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
   return fallback;
 }
 
 // Generate a Markdown section with field table, JSON Schema, and optional example from a zod schema
-function modelSection(
-  name: string,
-  schema: z.ZodType,
-  example?: Record<string, unknown>,
-): string {
+function modelSection(name: string, schema: z.ZodType, example?: Record<string, unknown>): string {
   const jsonSchema = z.toJSONSchema(schema);
   const propsRaw: unknown = jsonSchema.properties;
   const props = isRecord(propsRaw) ? propsRaw : {};
@@ -211,29 +206,13 @@ function generate(): string {
     "\n",
     modelSection("AgentRunResult", AgentRunResultSchema, agentRunRespExample),
     "\n",
-    modelSection(
-      "EventSubscribeCommand",
-      EventSubscribeCommandSchema,
-      subscribeReqExample,
-    ),
+    modelSection("EventSubscribeCommand", EventSubscribeCommandSchema, subscribeReqExample),
     "\n",
-    modelSection(
-      "EventSubscribeResult",
-      EventSubscribeResultSchema,
-      subscribeRespExample,
-    ),
+    modelSection("EventSubscribeResult", EventSubscribeResultSchema, subscribeRespExample),
     "\n",
-    modelSection(
-      "SessionCreateCommand",
-      SessionCreateCommandSchema,
-      sessionCreateReqExample,
-    ),
+    modelSection("SessionCreateCommand", SessionCreateCommandSchema, sessionCreateReqExample),
     "\n",
-    modelSection(
-      "SessionCreateResult",
-      SessionCreateResultSchema,
-      sessionCreateRespExample,
-    ),
+    modelSection("SessionCreateResult", SessionCreateResultSchema, sessionCreateRespExample),
     "\n",
     modelSection(
       "SessionSendMessageCommand",
@@ -256,11 +235,7 @@ function generate(): string {
     modelSection("SessionCloseResult", SessionCloseResultSchema),
     "\n## Server Push\n\n",
     "Events pushed from daemon to subscribed clients over the same TCP connection.\n\n",
-    modelSection(
-      "EventPushEnvelope",
-      EventPushEnvelopeSchema,
-      eventPushExample,
-    ),
+    modelSection("EventPushEnvelope", EventPushEnvelopeSchema, eventPushExample),
     "\n## IPC Events\n\n",
     "Events sent over the IPC socket (daemon → client).\n\n",
     modelSection("CoreStartedEvent", CoreStartedEventSchema),
@@ -367,27 +342,19 @@ function generate(): string {
       timestamp: timestamp,
     }),
     "\n",
-    modelSection(
-      "SessionMessageReceivedEvent",
-      SessionMessageReceivedEventSchema,
-      {
-        type: "session.message_received",
-        session_id: sessionId,
-        content: "Summarize README.md",
-        timestamp: timestamp,
-      },
-    ),
+    modelSection("SessionMessageReceivedEvent", SessionMessageReceivedEventSchema, {
+      type: "session.message_received",
+      session_id: sessionId,
+      content: "Summarize README.md",
+      timestamp: timestamp,
+    }),
     "\n",
-    modelSection(
-      "SessionWaitingForInputEvent",
-      SessionWaitingForInputEventSchema,
-      {
-        type: "session.waiting_for_input",
-        session_id: sessionId,
-        last_run_id: runId,
-        timestamp: timestamp,
-      },
-    ),
+    modelSection("SessionWaitingForInputEvent", SessionWaitingForInputEventSchema, {
+      type: "session.waiting_for_input",
+      session_id: sessionId,
+      last_run_id: runId,
+      timestamp: timestamp,
+    }),
     "\n",
     modelSection("SessionResumedEvent", SessionResumedEventSchema, {
       type: "session.resumed",
@@ -431,9 +398,7 @@ function main(): void {
       }
       console.log(`OK: ${OUTPUT_PATH} is up to date.`);
     } catch {
-      console.error(
-        `ERROR: ${OUTPUT_PATH} not found — run: tsx scripts/gen-protocol-doc.ts`,
-      );
+      console.error(`ERROR: ${OUTPUT_PATH} not found — run: tsx scripts/gen-protocol-doc.ts`);
       process.exit(1);
     }
   } else {

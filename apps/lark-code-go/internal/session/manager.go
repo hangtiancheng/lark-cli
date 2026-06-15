@@ -2,12 +2,14 @@ package session
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/bus"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/events"
+	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/skills"
 )
 
 // RunFunc is the callback type for executing an agent run.
@@ -15,9 +17,10 @@ type RunFunc func(session *Session, goal string, systemPromptOverride string, to
 
 // Manager manages the session lifecycle.
 type Manager struct {
-	store *Store
-	bus   *events.EventBus
-	runFn RunFunc
+	store  *Store
+	bus    *events.EventBus
+	runFn  RunFunc
+	skills *skills.Loader
 
 	mu       sync.Mutex
 	sessions map[string]*Session
@@ -33,6 +36,11 @@ func NewManager(store *Store, busInst *events.EventBus, runFn RunFunc) *Manager 
 		sessions: make(map[string]*Session),
 		locks:    make(map[string]*sync.Mutex),
 	}
+}
+
+// SetSkills configures the skill loader for "/" prefix skill invocation.
+func (m *Manager) SetSkills(loader *skills.Loader) {
+	m.skills = loader
 }
 
 // Create creates a new session with the specified mode and title.
@@ -92,6 +100,15 @@ func (m *Manager) SendMessage(sid, content string) (string, error) {
 		return "", fmt.Errorf("session %s is closed", sid)
 	}
 
+	// Publish session resumed event if recovering from waiting_for_input
+	if sess.Status == StatusWaitingForInput {
+		m.bus.Publish(&bus.SessionResumedEvent{
+			Type:      "session.resumed",
+			SessionID: sid,
+			TS:        time.Now().UTC().Format(time.RFC3339),
+		})
+	}
+
 	// Publish the message received event
 	m.bus.Publish(&bus.SessionMessageReceivedEvent{
 		Type:      "session.message_received",
@@ -109,13 +126,45 @@ func (m *Manager) SendMessage(sid, content string) (string, error) {
 		sess.Title = title
 	}
 
+	// Check for skill invocation ("/" prefix)
+	var systemPromptOverride string
+	var toolWhitelist []string
+
+	if strings.HasPrefix(content, "/") && m.skills != nil {
+		parts := strings.SplitN(strings.TrimPrefix(content, "/"), " ", 2)
+		skillName := parts[0]
+		args := ""
+		if len(parts) > 1 {
+			args = parts[1]
+		}
+
+		skill, err := m.skills.Resolve(skillName, "")
+		if err != nil {
+			return "", fmt.Errorf("skill error: %w", err)
+		}
+
+		systemPromptOverride = skill.SystemPrompt
+		if len(skill.AllowedTools) > 0 {
+			toolWhitelist = skill.AllowedTools
+		}
+		content = m.skills.RenderPrompt(skill, args)
+
+		// Publish skill.invoked event
+		m.bus.Publish(&bus.SkillInvokedEvent{
+			Type:      "skill.invoked",
+			SkillName: skillName,
+			Arguments: args,
+			TS:        time.Now().UTC().Format(time.RFC3339),
+		})
+	}
+
 	// Append the user message to the thread file
 	if err := m.store.AppendMessage(sid, "user", content, ""); err != nil {
 		return "", fmt.Errorf("failed to append message: %w", err)
 	}
 
 	// Execute the agent run
-	runID, err := m.runFn(sess, content, "", nil)
+	runID, err := m.runFn(sess, content, systemPromptOverride, toolWhitelist)
 	if err != nil {
 		return "", err
 	}

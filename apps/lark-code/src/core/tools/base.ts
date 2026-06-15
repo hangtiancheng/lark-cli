@@ -16,10 +16,7 @@ export function toolSuccess(content: string): ToolResult {
 }
 
 // Create a failed ToolResult
-export function toolError(
-  content: string,
-  errorType = "runtime_error",
-): ToolResult {
+export function toolError(content: string, errorType = "runtime_error"): ToolResult {
   return { content, isError: true, errorType };
 }
 

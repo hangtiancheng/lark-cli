@@ -86,9 +86,7 @@ export function PermissionPrompt({
         <Text color={theme.toolName} bold>
           {toolName}
         </Text>
-        {paramsPreview ? (
-          <Text color={theme.textDim}> {truncate(paramsPreview, 70)}</Text>
-        ) : null}
+        {paramsPreview ? <Text color={theme.textDim}> {truncate(paramsPreview, 70)}</Text> : null}
       </Box>
       <Box flexDirection="column" marginLeft={2}>
         {CHOICES.map((choice, i) => (

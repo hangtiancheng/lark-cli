@@ -23,10 +23,7 @@ export class McpServerManager {
           `mcp: server '${cfg.name}' connected, ${String(toolDefs.length)} tool(s) discovered`,
         );
       } catch (exc) {
-        console.error(
-          `mcp: server '${cfg.name}' failed to start, skipping`,
-          exc,
-        );
+        console.error(`mcp: server '${cfg.name}' failed to start, skipping`, exc);
       }
     }
   }
@@ -55,17 +52,13 @@ export class McpServerManager {
     const client = new McpClient();
     if (cfg.transport === "stdio") {
       if (!cfg.command) {
-        throw new Error(
-          `mcp server '${cfg.name}': stdio transport requires 'command'`,
-        );
+        throw new Error(`mcp server '${cfg.name}': stdio transport requires 'command'`);
       }
       await client.connectStdio(cfg.command, cfg.args, cfg.env);
     } else if (cfg.transport === "tcp") {
       await client.connectTcp(cfg.host, cfg.port);
     } else {
-      throw new Error(
-        `mcp server '${cfg.name}': unknown transport '${cfg.transport}'`,
-      );
+      throw new Error(`mcp server '${cfg.name}': unknown transport '${cfg.transport}'`);
     }
     return client;
   }

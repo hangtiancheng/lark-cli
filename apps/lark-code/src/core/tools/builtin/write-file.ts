@@ -10,11 +10,7 @@ import { toolError, toolSuccess } from "../base.js";
 const MAX_BYTES = 1 * 1024 * 1024;
 
 export const WriteFileParamsSchema = z.object({
-  path: z
-    .string()
-    .describe(
-      "Relative path to the file (relative to current working directory).",
-    ),
+  path: z.string().describe("Relative path to the file (relative to current working directory)."),
   content: z.string().describe("Text content to write."),
 });
 
@@ -29,8 +25,7 @@ export class WriteFileTool implements BaseTool {
     properties: {
       path: {
         type: "string",
-        description:
-          "Relative path to the file (relative to current working directory).",
+        description: "Relative path to the file (relative to current working directory).",
       },
       content: { type: "string", description: "Text content to write." },
     },
@@ -43,9 +38,8 @@ export class WriteFileTool implements BaseTool {
     const filePath = parsed.path;
     const content = parsed.content;
 
-    // Path traversal check
-    const parts = path.normalize(filePath).split(path.sep);
-    if (parts.includes("..")) {
+    // Path traversal check: reject raw path components before normalize
+    if (filePath.split(path.sep).includes("..")) {
       throw new Error(`path traversal not allowed: ${filePath}`);
     }
 
@@ -63,8 +57,6 @@ export class WriteFileTool implements BaseTool {
     mkdirSync(dir, { recursive: true });
     writeFileSync(filePath, content, "utf-8");
 
-    return Promise.resolve(
-      toolSuccess(`wrote ${String(encoded.length)} bytes to ${filePath}`),
-    );
+    return Promise.resolve(toolSuccess(`wrote ${String(encoded.length)} bytes to ${filePath}`));
   }
 }

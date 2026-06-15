@@ -83,8 +83,7 @@ function summarize(record: TraceRecord): string {
 
   if (kind === "api_response") {
     const usage = isRecord(data["usage"]) ? data["usage"] : {};
-    const outTokens =
-      typeof usage["output_tokens"] === "number" ? usage["output_tokens"] : "?";
+    const outTokens = typeof usage["output_tokens"] === "number" ? usage["output_tokens"] : "?";
     return `stop=${str(data["stop_reason"])}  latency=${str(data["latency_ms"])}ms  out_tokens=${String(outTokens)}`;
   }
 
@@ -132,8 +131,7 @@ function processLine(
       kind: parsed["kind"],
       run_id: typeof parsed["run_id"] === "string" ? parsed["run_id"] : null,
       step: typeof parsed["step"] === "number" ? parsed["step"] : null,
-      client_id:
-        typeof parsed["client_id"] === "string" ? parsed["client_id"] : null,
+      client_id: typeof parsed["client_id"] === "string" ? parsed["client_id"] : null,
       data: parsed["data"],
     };
 
@@ -180,13 +178,7 @@ export function cmdTrace(
   // Read and process existing content
   const content = readFileSync(tracePath, "utf-8");
   for (const line of content.split("\n")) {
-    processLine(
-      line,
-      runId,
-      options?.layer,
-      options?.direction,
-      options?.raw ?? false,
-    );
+    processLine(line, runId, options?.layer, options?.direction, options?.raw ?? false);
   }
 
   // Follow mode: tail the file
@@ -198,13 +190,7 @@ export function cmdTrace(
     });
 
     rl.on("line", (line) => {
-      processLine(
-        line,
-        runId,
-        options.layer,
-        options.direction,
-        options.raw ?? false,
-      );
+      processLine(line, runId, options.layer, options.direction, options.raw ?? false);
     });
 
     // Keep process alive

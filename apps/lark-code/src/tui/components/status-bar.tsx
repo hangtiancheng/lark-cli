@@ -61,25 +61,18 @@ export function StatusBar({
   contextPercent,
 }: StatusBarProps): React.JSX.Element {
   const { color, label, icon } = statusInfo(runStatus);
-  const ctxPct =
-    contextPercent !== undefined
-      ? `${String(Math.round(contextPercent * 100))}%`
-      : "";
+  const ctxPct = contextPercent !== undefined ? `${String(Math.round(contextPercent * 100))}%` : "";
 
   return (
     <Box paddingX={1}>
       <Text color={color}>
         {icon} {label}
       </Text>
-      {step > 0 ? (
-        <Text color={theme.textDim}> step:{String(step)}</Text>
-      ) : null}
+      {step > 0 ? <Text color={theme.textDim}> step:{String(step)}</Text> : null}
       {totalTokens > 0 ? (
         <Text color={theme.textDim}> tok:{totalTokens.toLocaleString()}</Text>
       ) : null}
-      {elapsedMs > 0 ? (
-        <Text color={theme.textDim}> {formatDuration(elapsedMs)}</Text>
-      ) : null}
+      {elapsedMs > 0 ? <Text color={theme.textDim}> {formatDuration(elapsedMs)}</Text> : null}
       {ctxPct ? <Text color={theme.textMuted}> ctx:{ctxPct}</Text> : null}
     </Box>
   );

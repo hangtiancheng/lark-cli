@@ -23,6 +23,7 @@ import (
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/mcp"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/permissions"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/session"
+	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/skills"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/subagent"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/tools"
 	"github.com/hangtiancheng/lark-cli/apps/lark-code-go/internal/trace"
@@ -130,6 +131,7 @@ func (a *CoreApp) Run() error {
 	a.sessionsDir = filepath.Join(homeDir, ".lark", "sessions")
 	sessStore := session.NewStore(a.sessionsDir)
 	a.sessMgr = session.NewManager(sessStore, a.bus, a.runAgent)
+	a.sessMgr.SetSkills(skills.NewLoader())
 
 	// 9. Start the TCP server
 	a.server = transport.NewServer(cfg.Host, cfg.Port)
@@ -277,6 +279,7 @@ func (a *CoreApp) runAgent(sess *session.Session, goal string, systemPromptOverr
 
 	// Create and run the AgentLoop
 	loop := agent.NewAgentLoop(loopCfg, provider, registry, a.bus, compactor)
+	loop.SetPermManager(a.permMgr, sess.ID)
 	outcome, runErr := loop.Run(ctx, ec, runID)
 
 	// Persist new messages to storage

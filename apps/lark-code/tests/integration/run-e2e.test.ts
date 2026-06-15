@@ -1,12 +1,6 @@
 // End-to-end integration test for the agent pipeline.
 // Requires a real ANTHROPIC_API_KEY — skipped automatically when absent.
-import {
-  mkdtempSync,
-  rmSync,
-  readFileSync,
-  writeFileSync,
-  readdirSync,
-} from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -103,9 +97,7 @@ describeIfKey("run e2e integration", () => {
       expect(finished["status"]).toBe("success");
 
       // read_file was actually invoked
-      const toolStarts = events.filter(
-        (e) => e["type"] === "tool.call_started",
-      );
+      const toolStarts = events.filter((e) => e["type"] === "tool.call_started");
       expect(toolStarts.some((e) => e["tool_name"] === "read_file")).toBe(true);
 
       // run_id is consistent across the event stream
