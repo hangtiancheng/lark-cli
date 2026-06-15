@@ -230,8 +230,8 @@ export type HookConfig = z.infer<typeof HookConfigSchema>;
 const AppConfigSchema = z.object({
   providers: z.array(ProviderConfigSchema),
   permission_mode: z.string().optional(),
-  mcp_servers: z.array(MCPServerConfigSchema),
-  hooks: z.array(HookConfigSchema),
+  mcp_servers: z.array(MCPServerConfigSchema).default([]),
+  hooks: z.array(HookConfigSchema).default([]),
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;
@@ -264,7 +264,7 @@ function loadSingleFile(path: string): AppConfig {
   let hooks: HookConfig[] = [];
 
   if ("providers" in raw) {
-    const parsed = safeParse(ProviderConfigSchema, raw.providers);
+    const parsed = safeParse(z.array(ProviderConfigSchema), raw.providers);
     if (parsed.success) {
       providers = parsed.data;
     }
@@ -273,13 +273,13 @@ function loadSingleFile(path: string): AppConfig {
     permissionMode = raw.permission_mode;
   }
   if ("mcp_servers" in raw) {
-    const parsed = safeParse(MCPServerConfigSchema, raw.mcp_servers);
+    const parsed = safeParse(z.array(MCPServerConfigSchema), raw.mcp_servers);
     if (parsed.success) {
       mcpServers = parsed.data;
     }
   }
   if ("hooks" in raw) {
-    const parsed = safeParse(HookConfigSchema, raw.hooks);
+    const parsed = safeParse(z.array(HookConfigSchema), raw.hooks);
     if (parsed.success) {
       hooks = parsed.data;
     }
