@@ -145,7 +145,7 @@ describe("Tool Invocation", () => {
 
     expect(result.isError).toBe(true);
     expect(result.errorType).toBe("schema_error");
-    expect(result.content).toContain("Expected string");
+    expect(result.content).toContain("expected string");
   });
 
   // Feature: Verify invokeTool classifies timeout errors
@@ -155,7 +155,7 @@ describe("Tool Invocation", () => {
       name: "slow_tool",
       description: "Slow tool",
       inputSchema: { type: "object" as const, properties: {} },
-      invoke: () => new Promise((resolve) => setTimeout(() => resolve(toolSuccess("done")), 10000)),
+      invoke: () => new Promise((resolve) => setTimeout(() => { resolve(toolSuccess("done")); }, 10000)),
     };
     const registry = new ToolRegistry();
     registry.register(tool);

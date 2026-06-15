@@ -356,7 +356,7 @@ describe("AgentLoop", () => {
         m.content.some((b: unknown) => (b as Record<string, unknown>)["type"] === "tool_result"),
     );
     expect(toolResultMsg).toBeDefined();
-    const content = (toolResultMsg as { content: Array<Record<string, unknown>> }).content;
+    const content = (toolResultMsg as { content: Record<string, unknown>[] }).content;
     const toolResult = content.find((b) => b["type"] === "tool_result");
     expect(toolResult!["is_error"]).toBe(true);
   });
@@ -480,7 +480,7 @@ describe("AgentLoop", () => {
         ),
     );
     expect(toolResultMsg).toBeDefined();
-    const content = (toolResultMsg as { content: Array<Record<string, unknown>> }).content;
+    const content = (toolResultMsg as { content: Record<string, unknown>[] }).content;
     const errorResult = content.find(
       (b) => b["type"] === "tool_result" && b["is_error"] === true,
     );

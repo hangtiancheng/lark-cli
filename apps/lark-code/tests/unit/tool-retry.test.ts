@@ -145,7 +145,7 @@ describe("Tool Retry", () => {
       inputSchema: { type: "object" as const, properties: {} },
       invoke: () => {
         callCount++;
-        return new Promise((resolve) => setTimeout(() => resolve(toolSuccess("done")), 10000));
+        return new Promise((resolve) => setTimeout(() => { resolve(toolSuccess("done")); }, 10000));
       },
     };
     const registry = new ToolRegistry();
