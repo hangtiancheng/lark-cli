@@ -7,6 +7,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import yaml from "js-yaml";
 import { z } from "zod";
+import { safeParse } from "@modelcontextprotocol/sdk/server/zod-compat";
 
 const ENV_KEY_MAP = {
   anthropic: "ANTHROPIC_API_KEY",
@@ -28,19 +29,35 @@ export class ConfigError extends Error {
   }
 }
 
-export interface ProviderConfig {
-  name: string;
+// export interface ProviderConfig {
+//   name: string;
+//   /**
+//    * enum: ["anthropic", "openai", "openai-compat"]
+//    */
+//   protocol: string;
+//   base_url: string;
+//   model: string;
+//   api_key?: string;
+//   thinking?: boolean;
+//   context_window?: number;
+//   max_output_tokens?: number;
+// }
+
+export const ProviderConfigSchema = z.object({
+  name: z.string(),
   /**
    * enum: ["anthropic", "openai", "openai-compat"]
    */
-  protocol: string;
-  base_url: string;
-  model: string;
-  api_key?: string;
-  thinking?: boolean;
-  context_window?: number;
-  max_output_tokens?: number;
-}
+  protocol: z.enum(["anthropic", "openai", "openai-compat"]),
+  base_url: z.string(),
+  model: z.string(),
+  api_key: z.string().optional(),
+  thinking: z.boolean().optional(),
+  context_window: z.coerce.number().optional(),
+  max_output_tokens: z.coerce.number().optional(),
+});
+
+export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 
 // Built-in model-name → context-window map
 // Values are reasonable starting points and MAY become stale as vendors update models — if a value is wrong,
@@ -145,50 +162,83 @@ export function resolveAPIKey(p: ProviderConfig): string {
   return process.env[envVar] ?? "";
 }
 
-export interface MCPServerConfig {
-  name: string;
-  command?: string;
-  args?: string[];
-  url?: string;
-  transport?: string;
-  headers?: Record<string, string>;
-  env?: Record<string, string>;
-}
+// export interface MCPServerConfig {
+//   name: string;
+//   command?: string;
+//   args?: string[];
+//   url?: string;
+//   transport?: string;
+//   headers?: Record<string, string>;
+//   env?: Record<string, string>;
+// }
 
-export interface HookConfig {
-  id?: string;
-  event: string;
-  condition?: string;
-  action: {
-    type: string;
-    command?: string;
-    url?: string;
-    method?: string;
-    prompt?: string;
-  };
-  reject?: boolean;
-  once?: boolean;
-  async?: boolean;
-  on_error?: string;
-}
+const MCPServerConfigSchema = z.object({
+  name: z.string(),
+  command: z.string().optional(),
+  args: z.array(z.string()).optional(),
+  url: z.string().optional(),
+  transport: z.string().optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
+});
 
-export interface AppConfig {
-  providers: ProviderConfig[];
-  permission_mode?: string | undefined;
-  mcp_servers: MCPServerConfig[];
-  hooks: HookConfig[];
-}
+export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>;
+
+// export interface HookConfig {
+//   id?: string;
+//   event: string;
+//   condition?: string;
+//   action: {
+//     type: string;
+//     command?: string;
+//     url?: string;
+//     method?: string;
+//     prompt?: string;
+//   };
+//   reject?: boolean;
+//   once?: boolean;
+//   async?: boolean;
+//   on_error?: string;
+// }
+
+export const HookConfigSchema = z.object({
+  id: z.string().optional(),
+  event: z.string(),
+  condition: z.string().optional(),
+  action: z.object({
+    type: z.string(),
+    command: z.string().optional(),
+    url: z.string().optional(),
+    method: z.string().optional(),
+    prompt: z.string().optional(),
+  }),
+  reject: z.boolean().optional(),
+  once: z.boolean().optional(),
+  async: z.boolean().optional(),
+  on_error: z.string().optional(),
+});
+
+export type HookConfig = z.infer<typeof HookConfigSchema>;
+
+// export interface AppConfig {
+//   providers: ProviderConfig[];
+//   permission_mode?: string | undefined;
+//   mcp_servers: MCPServerConfig[];
+//   hooks: HookConfig[];
+// }
+
+const AppConfigSchema = z.object({
+  providers: z.array(ProviderConfigSchema),
+  permission_mode: z.string().optional(),
+  mcp_servers: z.array(MCPServerConfigSchema),
+  hooks: z.array(HookConfigSchema),
+});
+
+export type AppConfig = z.infer<typeof AppConfigSchema>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
-
-const ConfigSchema = z.object({
-  providers: z.array(), // ProviderConfig[]
-  permission_mode: z.string().optional(),
-  mcp_servers: z.array(), // MCPServerConfig[]
-  hooks: z.array(), // HookConfig[]
-});
 
 function loadSingleFile(path: string): AppConfig {
   const data = readFileSync(path, "utf-8");
@@ -197,12 +247,48 @@ function loadSingleFile(path: string): AppConfig {
     console.error(`Invalid yaml: ${path}`);
     return { providers: [], mcp_servers: [], hooks: [] };
   }
+  const parsed = safeParse(AppConfigSchema, raw);
+  if (parsed.success) {
+    const data = parsed.data;
+    return {
+      providers: data.providers,
+      permission_mode: data.permission_mode,
+      mcp_servers: data.mcp_servers,
+      hooks: data.hooks,
+    };
+  }
+  console.error("Config error:", parsed.error);
+  let providers: ProviderConfig[] = [];
+  let permissionMode: string | undefined;
+  let mcpServers: MCPServerConfig[] = [];
+  let hooks: HookConfig[] = [];
 
+  if ("providers" in raw) {
+    const parsed = safeParse(ProviderConfigSchema, raw.providers);
+    if (parsed.success) {
+      providers = parsed.data;
+    }
+  }
+  if ("permission_mode" in raw && typeof raw.permission_mode === "string") {
+    permissionMode = raw.permission_mode;
+  }
+  if ("mcp_servers" in raw) {
+    const parsed = safeParse(MCPServerConfigSchema, raw.mcp_servers);
+    if (parsed.success) {
+      mcpServers = parsed.data;
+    }
+  }
+  if ("hooks" in raw) {
+    const parsed = safeParse(HookConfigSchema, raw.hooks);
+    if (parsed.success) {
+      hooks = parsed.data;
+    }
+  }
   return {
-    providers: raw.providers ? (raw.providers as ProviderConfig[]) : [],
-    permission_mode: raw.permission_mode as string | undefined,
-    mcp_servers: raw.mcp_servers ? (raw.mcp_servers as MCPServerConfig[]) : [],
-    hooks: raw.hooks ? (raw.hooks as HookConfig[]) : [],
+    providers,
+    permission_mode: permissionMode,
+    mcp_servers: mcpServers,
+    hooks,
   };
 }
 
