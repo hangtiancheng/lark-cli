@@ -9,6 +9,7 @@ export interface UsageInfo {
 	cacheCreationInputTokens: number;
 }
 
+	/** Tool use delta: Input partial JSON */
 export type StreamEvent =
 	| { type: "text_delta"; text: string }
 	| { type: "thinking_delta"; text: string }

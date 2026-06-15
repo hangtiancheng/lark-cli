@@ -1,5 +1,5 @@
 /**
- * Status: Done.
+ * Status: Done
  */
 
 import { existsSync, readFileSync } from "node:fs";

@@ -1,5 +1,5 @@
 /**
- * Status: Done.
+ * Status: Done
  */
 
 export interface ToolUseBlock {
