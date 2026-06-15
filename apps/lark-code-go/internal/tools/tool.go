@@ -19,9 +19,9 @@ type Tool interface {
 
 // ErrorType 常量
 const (
-	ErrorTypeRuntime        = "runtime_error"
-	ErrorTypeTimeout        = "timeout"
-	ErrorTypeSchema         = "schema_error"
-	ErrorTypePermission     = "permission_denied"
-	ErrorTypeRateLimited    = "rate_limited"
+	ErrorTypeRuntime     = "runtime_error"
+	ErrorTypeTimeout     = "timeout"
+	ErrorTypeSchema      = "schema_error"
+	ErrorTypePermission  = "permission_denied"
+	ErrorTypeRateLimited = "rate_limited"
 )

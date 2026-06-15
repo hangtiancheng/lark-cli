@@ -15,10 +15,10 @@ import (
 
 // LoopConfig 控制 AgentLoop 的运行参数
 type LoopConfig struct {
-	MaxSteps          int
-	CompactThreshold  float64 // context_pct 达到此比例时自动压缩 (0.0-1.0)
-	ToolResultLimit   int     // tool_result 字符数限制
-	ToolResultKeep    int     // 截断后保留的字符数
+	MaxSteps         int
+	CompactThreshold float64 // context_pct 达到此比例时自动压缩 (0.0-1.0)
+	ToolResultLimit  int     // tool_result 字符数限制
+	ToolResultKeep   int     // 截断后保留的字符数
 }
 
 // DefaultLoopConfig 返回默认的循环配置

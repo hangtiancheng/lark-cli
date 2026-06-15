@@ -9,9 +9,9 @@ import (
 
 // TracingProvider 包装 Provider，记录请求和响应到 TraceWriter
 type TracingProvider struct {
-	inner           Provider
-	writer          *trace.Writer
-	includePayload  bool
+	inner          Provider
+	writer         *trace.Writer
+	includePayload bool
 }
 
 // NewTracingProvider 创建 TracingProvider
@@ -75,10 +75,10 @@ func (p *TracingProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmRespo
 // requestData 提取请求数据用于追踪
 func (p *TracingProvider) requestData(req *ChatRequest) map[string]any {
 	data := map[string]any{
-		"step":         req.Step,
-		"msg_count":    len(req.Messages),
-		"tool_count":   len(req.ToolSchemas),
-		"has_system":   req.System != "",
+		"step":       req.Step,
+		"msg_count":  len(req.Messages),
+		"tool_count": len(req.ToolSchemas),
+		"has_system": req.System != "",
 	}
 
 	if p.includePayload {
@@ -93,10 +93,10 @@ func (p *TracingProvider) requestData(req *ChatRequest) map[string]any {
 // responseData 提取响应数据用于追踪
 func (p *TracingProvider) responseData(resp *LlmResponse, elapsed time.Duration) map[string]any {
 	data := map[string]any{
-		"stop_reason":  resp.StopReason,
-		"tool_calls":   len(resp.ToolCalls),
-		"elapsed_ms":   elapsed.Milliseconds(),
-		"text_length":  len(resp.Text),
+		"stop_reason": resp.StopReason,
+		"tool_calls":  len(resp.ToolCalls),
+		"elapsed_ms":  elapsed.Milliseconds(),
+		"text_length": len(resp.Text),
 	}
 
 	if resp.Usage != nil {

@@ -254,15 +254,17 @@ describe("AgentRunner", () => {
     mkdirSync(dir, { recursive: true });
     const bus = new EventBus();
 
+    let callCount = 0;
     const provider: LLMProvider = {
-      chat: () =>
-        Promise.resolve({
+      chat: () => {
+        callCount++;
+        return Promise.resolve({
           stopReason: "tool_use",
           toolUses: [
             {
-              id: "call_1",
-              name: "read_file",
-              input: { path: "test.txt" },
+              id: `call_${callCount}`,
+              name: "list_dir",
+              input: { path: "." },
               type: "tool_use",
               caller: { type: "direct" },
             },
@@ -270,7 +272,8 @@ describe("AgentRunner", () => {
           text: "",
           usage: null,
           thinkingBlocks: [],
-        }),
+        });
+      },
     };
 
     const config = mockConfig();
@@ -285,8 +288,9 @@ describe("AgentRunner", () => {
     const outcome = await runner.runAndCapture("test");
     expect(outcome.status).toBe("failed");
     expect(outcome.reason).toContain("max_steps");
+    expect(callCount).toBe(2); // Exactly maxSteps calls
     rmSync(dir, { recursive: true, force: true });
-  });
+  }, 30000);
 
   // Feature: Verify run ID is consistent across started and finished events
   // Design: Run goal, confirm started and finished events share the same run_id

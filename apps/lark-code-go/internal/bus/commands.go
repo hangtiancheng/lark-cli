@@ -145,10 +145,10 @@ type SessionCompactResult struct {
 
 // commandTypes 注册所有命令类型名到解析函数的映射
 var commandTypes = map[string]func() any{
-	"core.ping":           func() any { return &PingCommand{} },
-	"agent.run":           func() any { return &AgentRunCommand{} },
-	"event.subscribe":     func() any { return &EventSubscribeCommand{} },
-	"session.create":      func() any { return &SessionCreateCommand{} },
+	"core.ping":            func() any { return &PingCommand{} },
+	"agent.run":            func() any { return &AgentRunCommand{} },
+	"event.subscribe":      func() any { return &EventSubscribeCommand{} },
+	"session.create":       func() any { return &SessionCreateCommand{} },
 	"session.send_message": func() any { return &SessionSendMessageCommand{} },
 	"session.get_history":  func() any { return &SessionGetHistoryCommand{} },
 	"session.close":        func() any { return &SessionCloseCommand{} },

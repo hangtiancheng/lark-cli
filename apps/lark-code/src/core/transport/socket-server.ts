@@ -13,7 +13,6 @@ import {
 } from "../bus/envelope.js";
 import type { JsonRpcSuccess } from "../bus/envelope.js";
 import type { TraceWriter } from "../trace/writer.js";
-import type { TraceRecord } from "../trace/record.js";
 
 export type CommandHandler = (
   params: Record<string, unknown>,

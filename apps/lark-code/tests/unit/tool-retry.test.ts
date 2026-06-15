@@ -169,7 +169,7 @@ describe("Tool Retry", () => {
   // Feature: Verify error_class in tool.call_failed events
   // Design: Failing tool publishes events with correct error_class
   test("publishes failed events with correct error_class", async () => {
-    let callCount = 0;
+    let callCount = 0; // TODO: Add `callCount` tests
     const tool: BaseTool = {
       name: "err_tool",
       description: "Error tool",

@@ -215,7 +215,7 @@ func NewTaskCreateTool(m *TaskManager) *TaskCreateTool {
 }
 
 func (t *TaskCreateTool) Name() string        { return "task_create" }
-func (t *TaskCreateTool) Description() string  { return "Create a new tracked task" }
+func (t *TaskCreateTool) Description() string { return "Create a new tracked task" }
 func (t *TaskCreateTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",
@@ -248,7 +248,7 @@ func NewTaskUpdateTool(m *TaskManager) *TaskUpdateTool {
 }
 
 func (t *TaskUpdateTool) Name() string        { return "task_update" }
-func (t *TaskUpdateTool) Description() string  { return "Update a task's status or dependencies" }
+func (t *TaskUpdateTool) Description() string { return "Update a task's status or dependencies" }
 func (t *TaskUpdateTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",
@@ -295,7 +295,7 @@ func NewTaskListTool(m *TaskManager) *TaskListTool {
 }
 
 func (t *TaskListTool) Name() string        { return "task_list" }
-func (t *TaskListTool) Description() string  { return "List all tracked tasks" }
+func (t *TaskListTool) Description() string { return "List all tracked tasks" }
 func (t *TaskListTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type":       "object",
@@ -318,7 +318,7 @@ func NewTaskGetTool(m *TaskManager) *TaskGetTool {
 }
 
 func (t *TaskGetTool) Name() string        { return "task_get" }
-func (t *TaskGetTool) Description() string  { return "Get details of a specific task" }
+func (t *TaskGetTool) Description() string { return "Get details of a specific task" }
 func (t *TaskGetTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",

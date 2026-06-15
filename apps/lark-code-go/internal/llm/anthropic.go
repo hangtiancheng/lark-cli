@@ -26,12 +26,12 @@ var retryBackoff = [3]time.Duration{
 
 // modelContextWindows 记录各模型的上下文窗口大小
 var modelContextWindows = map[string]int{
-	"claude-sonnet-4-6":            200_000,
-	"claude-opus-4-6":              200_000,
-	"claude-haiku-4-5-20251001":   200_000,
-	"claude-3-5-sonnet-20241022":  200_000,
-	"claude-3-5-haiku-20241022":   200_000,
-	"claude-3-opus-20240229":      200_000,
+	"claude-sonnet-4-6":          200_000,
+	"claude-opus-4-6":            200_000,
+	"claude-haiku-4-5-20251001":  200_000,
+	"claude-3-5-sonnet-20241022": 200_000,
+	"claude-3-5-haiku-20241022":  200_000,
+	"claude-3-opus-20240229":     200_000,
 }
 
 // AnthropicProvider 实现 Provider 接口，通过 Anthropic SDK 调用 Claude
@@ -66,8 +66,8 @@ func (p *AnthropicProvider) Chat(ctx context.Context, req *ChatRequest) (*LlmRes
 	var systemBlocks []anthropic.TextBlockParam
 	if req.System != "" {
 		systemBlocks = append(systemBlocks, anthropic.TextBlockParam{
-			Type: "text",
-			Text: req.System,
+			Type:         "text",
+			Text:         req.System,
 			CacheControl: anthropic.NewCacheControlEphemeralParam(),
 		})
 	}

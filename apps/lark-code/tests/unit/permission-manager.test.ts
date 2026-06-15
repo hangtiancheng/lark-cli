@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -22,8 +22,9 @@ function makeEmitter(): {
 } {
   const events: Record<string, unknown>[] = [];
   return {
-    emit: async (event: Record<string, unknown>) => {
+    emit: (event: Record<string, unknown>) => {
       events.push(event);
+      return Promise.resolve();
     },
     events,
   };
@@ -284,7 +285,7 @@ describe("PermissionManager", () => {
     const mgr = makeManager({ timeoutS: 0.05 });
     const emitter = makeEmitter();
 
-    const [allowed, decision] = await mgr.checkAndWait(
+    const [, decision] = await mgr.checkAndWait(
       "tool-use-late-1",
       "bash",
       { command: "echo test" },
@@ -328,7 +329,7 @@ describe("PermissionManager", () => {
     setTimeout(() => {
       mgr.respond("tool-use-outside-2", "allow_once");
     }, 20);
-    const [allowed, decision] = await mgr.checkAndWait(
+    const [, decision] = await mgr.checkAndWait(
       "tool-use-outside-2",
       "bash",
       { command: "cd /tmp && echo hacked" },

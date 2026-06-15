@@ -41,7 +41,8 @@ function sleep(ms: number): Promise<void> {
 // Check if an error is a transient network failure worth retrying
 function isRetryableError(exc: unknown): boolean {
   if (!(exc instanceof Error)) return false;
-  const code = (exc as NodeJS.ErrnoException).code;
+  const code =
+    "code" in exc && typeof exc.code === "string" ? exc.code : undefined;
   if (
     code === "ECONNRESET" ||
     code === "ECONNREFUSED" ||

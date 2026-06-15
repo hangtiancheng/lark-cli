@@ -22,7 +22,7 @@ func NewReadFileTool(cwd string) *ReadFileTool {
 }
 
 func (t *ReadFileTool) Name() string        { return "read_file" }
-func (t *ReadFileTool) Description() string  { return "Read the contents of a file" }
+func (t *ReadFileTool) Description() string { return "Read the contents of a file" }
 func (t *ReadFileTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",
@@ -86,8 +86,10 @@ func NewWriteFileTool(cwd string) *WriteFileTool {
 	return &WriteFileTool{cwd: cwd}
 }
 
-func (t *WriteFileTool) Name() string        { return "write_file" }
-func (t *WriteFileTool) Description() string  { return "Write content to a file, creating directories as needed" }
+func (t *WriteFileTool) Name() string { return "write_file" }
+func (t *WriteFileTool) Description() string {
+	return "Write content to a file, creating directories as needed"
+}
 func (t *WriteFileTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",

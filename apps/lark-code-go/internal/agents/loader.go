@@ -36,20 +36,20 @@ func LoadProfile(path string) (*Profile, error) {
 func LoadBuiltinProfile(name string) (*Profile, error) {
 	builtins := map[string]*Profile{
 		"planner": {
-			Name:        "planner",
-			Description: "Read-only analysis and task decomposition",
+			Name:         "planner",
+			Description:  "Read-only analysis and task decomposition",
 			SystemPrompt: "You are a planner. Analyze the task, break it down into steps, and create a detailed plan. Do not execute any changes - only read files and analyze.",
 			AllowedTools: []string{"read_file", "list_dir", "bash"},
 		},
 		"executor": {
-			Name:        "executor",
-			Description: "Follows plans and executes operations",
+			Name:         "executor",
+			Description:  "Follows plans and executes operations",
 			SystemPrompt: "You are an executor. Follow the plan provided and execute each step carefully. Report progress and any issues encountered.",
 			AllowedTools: []string{"read_file", "write_file", "bash", "list_dir"},
 		},
 		"reviewer": {
-			Name:        "reviewer",
-			Description: "Read-only audit of execution results",
+			Name:         "reviewer",
+			Description:  "Read-only audit of execution results",
 			SystemPrompt: "You are a reviewer. Audit the changes made by the executor. Check for correctness, completeness, and quality. Do not make any changes.",
 			AllowedTools: []string{"read_file", "list_dir", "bash"},
 		},

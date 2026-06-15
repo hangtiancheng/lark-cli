@@ -18,13 +18,13 @@ const tuiVersion = "0.1.0"
 
 var (
 	// Colors
-	primaryColor   = lipgloss.Color("#8B5CF6") // violet
-	successColor   = lipgloss.Color("#10B981") // green
-	errorColor     = lipgloss.Color("#EF4444") // red
-	warningColor   = lipgloss.Color("#F59E0B") // amber
-	dimColor       = lipgloss.Color("#6B7280") // gray
-	accentColor    = lipgloss.Color("#3B82F6") // blue
-	toolColor      = lipgloss.Color("#EC4899") // pink
+	primaryColor = lipgloss.Color("#8B5CF6") // violet
+	successColor = lipgloss.Color("#10B981") // green
+	errorColor   = lipgloss.Color("#EF4444") // red
+	warningColor = lipgloss.Color("#F59E0B") // amber
+	dimColor     = lipgloss.Color("#6B7280") // gray
+	accentColor  = lipgloss.Color("#3B82F6") // blue
+	toolColor    = lipgloss.Color("#EC4899") // pink
 
 	// Styles
 	titleStyle = lipgloss.NewStyle().
@@ -125,7 +125,7 @@ type errorMsg struct {
 	err string
 }
 
-type tickMsg struct{}
+// type tickMsg struct{}
 
 // -- Init --
 
@@ -169,15 +169,15 @@ func (m *model) connect() tea.Cmd {
 			return errorMsg{err: fmt.Sprintf("session.create failed: %s", err)}
 		}
 
-		var sessResult struct {
+		var sessionResult struct {
 			SessionID string `json:"session_id"`
 		}
-		if err := json.Unmarshal(result, &sessResult); err != nil {
+		if err := json.Unmarshal(result, &sessionResult); err != nil {
 			return errorMsg{err: fmt.Sprintf("parse error: %s", err)}
 		}
 
 		m.client = client
-		return connectedMsg{sessionID: sessResult.SessionID}
+		return connectedMsg{sessionID: sessionResult.SessionID}
 	}
 }
 
@@ -441,13 +441,6 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func main() {

@@ -123,7 +123,7 @@ export function EventCard({
 
     case "llm.text": {
       const text = typeof data["text"] === "string" ? data["text"] : "";
-      const rendered = marked.parse(text) as string;
+      const rendered = String(marked.parse(text));
       return (
         <Box paddingX={1}>
           <Text wrap="wrap">{rendered}</Text>

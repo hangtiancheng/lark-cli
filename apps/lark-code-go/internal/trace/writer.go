@@ -22,11 +22,11 @@ type Record struct {
 
 // Writer 异步写入追踪记录到 NDJSON 文件
 type Writer struct {
-	path   string
-	mu     sync.Mutex
-	file   *os.File
-	queue  chan Record
-	done   chan struct{}
+	path  string
+	mu    sync.Mutex
+	file  *os.File
+	queue chan Record
+	done  chan struct{}
 }
 
 // NewWriter 创建 TraceWriter

@@ -320,7 +320,7 @@ describe("AnthropicProvider", () => {
     await provider.chat([], [], bus, "run-1");
 
     // Token events from attempt 2 should be present (fix verified)
-    const tokens = events.filter((e: unknown) => e["type"] === "llm.token");
+    const tokens = events.filter((e: unknown) => e.type === "llm.token");
     expect(tokens.length).toBeGreaterThanOrEqual(1);
   });
 

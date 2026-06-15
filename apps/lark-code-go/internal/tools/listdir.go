@@ -24,7 +24,7 @@ func NewListDirTool(cwd string) *ListDirTool {
 }
 
 func (t *ListDirTool) Name() string        { return "list_dir" }
-func (t *ListDirTool) Description() string  { return "List directory contents in a tree format" }
+func (t *ListDirTool) Description() string { return "List directory contents in a tree format" }
 func (t *ListDirTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",

@@ -84,8 +84,89 @@ describe("TracingProvider", () => {
 
     await tracer.chat(testMessages, [], bus, "r1");
 
-    expect(capturedMessages).toEqual(testMessages);
+    // Verify the wrapped provider received the actual messages
+    expect(capturedMessages).toHaveLength(1);
+    expect((capturedMessages[0] as Record<string, unknown>)["role"]).toBe("user");
+    expect((capturedMessages[0] as Record<string, unknown>)["content"]).toBe("test message");
     void writer.stop();
+    rmSync(dir, { recursive: true });
+  });
+
+  // Feature: Verify TracingProvider includes payload in trace when enabled
+  // Design: Create with includeLlmPayload=true, verify trace contains the actual request
+  test("includes payload in trace when enabled", async () => {
+    const dir = path.join(tmpdir(), `test-trace-${String(Date.now())}`);
+    mkdirSync(dir, { recursive: true });
+    const tracePath = path.join(dir, "trace.jsonl");
+    const writer = new TraceWriter(tracePath);
+    writer.start();
+
+    const mockProvider: LLMProvider = {
+      chat: () =>
+        Promise.resolve({
+          stopReason: "end_turn",
+          toolUses: [],
+          text: "response",
+          usage: {
+            inputTokens: 100,
+            outputTokens: 50,
+            cacheReadInputTokens: 0,
+            cacheCreationInputTokens: 0,
+            contextPercent: 5,
+          },
+          thinkingBlocks: [],
+        }),
+    };
+
+    const tracer = new TracingProvider(mockProvider, writer, true);
+    const bus = new EventBus();
+
+    await tracer.chat([{ role: "user", content: "hello world" }], [], bus, "r1", {
+      step: 1,
+    });
+
+    void writer.stop();
+
+    const content = readFileSync(tracePath, "utf-8");
+    expect(content).toContain("hello world"); // Payload included
+    rmSync(dir, { recursive: true });
+  });
+
+  // Feature: Verify TracingProvider excludes payload when disabled
+  // Design: Create with includeLlmPayload=false, verify trace omits the request body
+  test("excludes payload when disabled", async () => {
+    const dir = path.join(tmpdir(), `test-trace-${String(Date.now())}`);
+    mkdirSync(dir, { recursive: true });
+    const tracePath = path.join(dir, "trace.jsonl");
+    const writer = new TraceWriter(tracePath);
+    writer.start();
+
+    const mockProvider: LLMProvider = {
+      chat: () =>
+        Promise.resolve({
+          stopReason: "end_turn",
+          toolUses: [],
+          text: "response",
+          usage: {
+            inputTokens: 100,
+            outputTokens: 50,
+            cacheReadInputTokens: 0,
+            cacheCreationInputTokens: 0,
+            contextPercent: 5,
+          },
+          thinkingBlocks: [],
+        }),
+    };
+
+    const tracer = new TracingProvider(mockProvider, writer, false);
+    const bus = new EventBus();
+
+    await tracer.chat([{ role: "user", content: "secret message" }], [], bus, "r1");
+
+    void writer.stop();
+
+    const content = readFileSync(tracePath, "utf-8");
+    expect(content).not.toContain("secret message"); // Payload excluded
     rmSync(dir, { recursive: true });
   });
 });

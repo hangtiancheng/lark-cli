@@ -16,10 +16,10 @@ type EventHandler func(event json.RawMessage) error
 
 // Client 是 TCP NDJSON JSON-RPC 客户端
 type Client struct {
-	host    string
-	port    int
-	conn    net.Conn
-	mu      sync.Mutex
+	host string
+	port int
+	conn net.Conn
+	mu   sync.Mutex
 
 	pending   map[string]chan *pendingResult
 	pendingMu sync.Mutex

@@ -18,7 +18,7 @@ func NewNoteSaveTool(sessionDir, runID string) *NoteSaveTool {
 }
 
 func (t *NoteSaveTool) Name() string        { return "note_save" }
-func (t *NoteSaveTool) Description() string  { return "Save a note to the current session's notes file" }
+func (t *NoteSaveTool) Description() string { return "Save a note to the current session's notes file" }
 func (t *NoteSaveTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",

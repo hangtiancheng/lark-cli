@@ -14,19 +14,19 @@ type Event interface {
 
 // CoreStartedEvent 在 daemon 启动时发布
 type CoreStartedEvent struct {
-	Type      string `json:"type"`
+	Type       string `json:"type"`
 	ListenAddr string `json:"listen_addr"`
-	Version   string `json:"version"`
+	Version    string `json:"version"`
 }
 
 func (e *CoreStartedEvent) EventType() string { return "core.started" }
 
 // RunStartedEvent 在 agent run 开始时发布
 type RunStartedEvent struct {
-	Type   string `json:"type"`
-	RunID  string `json:"run_id"`
-	Goal   string `json:"goal"`
-	TS     string `json:"ts"`
+	Type  string `json:"type"`
+	RunID string `json:"run_id"`
+	Goal  string `json:"goal"`
+	TS    string `json:"ts"`
 }
 
 func (e *RunStartedEvent) EventType() string { return "run.started" }
@@ -69,12 +69,12 @@ func (e *StepFinishedEvent) EventType() string { return "step.finished" }
 
 // ToolCallStartedEvent 在工具调用开始时发布
 type ToolCallStartedEvent struct {
-	Type       string         `json:"type"`
-	RunID      string         `json:"run_id"`
-	ToolUseID  string         `json:"tool_use_id"`
-	ToolName   string         `json:"tool_name"`
-	Params     map[string]any `json:"params"`
-	TS         string         `json:"ts"`
+	Type      string         `json:"type"`
+	RunID     string         `json:"run_id"`
+	ToolUseID string         `json:"tool_use_id"`
+	ToolName  string         `json:"tool_name"`
+	Params    map[string]any `json:"params"`
+	TS        string         `json:"ts"`
 }
 
 func (e *ToolCallStartedEvent) EventType() string { return "tool.call_started" }
@@ -121,14 +121,14 @@ func (e *LlmTokenEvent) EventType() string { return "llm.token" }
 
 // LlmUsageEvent 在 LLM 调用完成时发布 token 用量
 type LlmUsageEvent struct {
-	Type                    string  `json:"type"`
-	RunID                   string  `json:"run_id"`
-	InputTokens             int     `json:"input_tokens"`
-	OutputTokens            int     `json:"output_tokens"`
-	CacheReadInputTokens    int     `json:"cache_read_input_tokens"`
+	Type                     string  `json:"type"`
+	RunID                    string  `json:"run_id"`
+	InputTokens              int     `json:"input_tokens"`
+	OutputTokens             int     `json:"output_tokens"`
+	CacheReadInputTokens     int     `json:"cache_read_input_tokens"`
 	CacheCreationInputTokens int     `json:"cache_creation_input_tokens"`
-	ContextPct              float64 `json:"context_pct"`
-	TS                      string  `json:"ts"`
+	ContextPct               float64 `json:"context_pct"`
+	TS                       string  `json:"ts"`
 }
 
 func (e *LlmUsageEvent) EventType() string { return "llm.usage" }
@@ -301,30 +301,30 @@ func (e *SkillInvokedEvent) EventType() string { return "skill.invoked" }
 
 // eventTypes 注册所有事件类型名到构造函数的映射
 var eventTypes = map[string]func() Event{
-	"core.started":             func() Event { return &CoreStartedEvent{} },
-	"run.started":              func() Event { return &RunStartedEvent{} },
-	"run.finished":             func() Event { return &RunFinishedEvent{} },
-	"step.started":             func() Event { return &StepStartedEvent{} },
-	"step.finished":            func() Event { return &StepFinishedEvent{} },
-	"tool.call_started":        func() Event { return &ToolCallStartedEvent{} },
-	"tool.call_finished":       func() Event { return &ToolCallFinishedEvent{} },
-	"tool.call_failed":         func() Event { return &ToolCallFailedEvent{} },
-	"llm.token":                func() Event { return &LlmTokenEvent{} },
-	"llm.usage":                func() Event { return &LlmUsageEvent{} },
-	"llm.model_selected":       func() Event { return &LlmModelSelectedEvent{} },
-	"log.line":                 func() Event { return &LogLineEvent{} },
-	"session.created":          func() Event { return &SessionCreatedEvent{} },
-	"session.message_received": func() Event { return &SessionMessageReceivedEvent{} },
+	"core.started":              func() Event { return &CoreStartedEvent{} },
+	"run.started":               func() Event { return &RunStartedEvent{} },
+	"run.finished":              func() Event { return &RunFinishedEvent{} },
+	"step.started":              func() Event { return &StepStartedEvent{} },
+	"step.finished":             func() Event { return &StepFinishedEvent{} },
+	"tool.call_started":         func() Event { return &ToolCallStartedEvent{} },
+	"tool.call_finished":        func() Event { return &ToolCallFinishedEvent{} },
+	"tool.call_failed":          func() Event { return &ToolCallFailedEvent{} },
+	"llm.token":                 func() Event { return &LlmTokenEvent{} },
+	"llm.usage":                 func() Event { return &LlmUsageEvent{} },
+	"llm.model_selected":        func() Event { return &LlmModelSelectedEvent{} },
+	"log.line":                  func() Event { return &LogLineEvent{} },
+	"session.created":           func() Event { return &SessionCreatedEvent{} },
+	"session.message_received":  func() Event { return &SessionMessageReceivedEvent{} },
 	"session.waiting_for_input": func() Event { return &SessionWaitingForInputEvent{} },
-	"session.resumed":          func() Event { return &SessionResumedEvent{} },
-	"session.closed":           func() Event { return &SessionClosedEvent{} },
-	"context.compacted":        func() Event { return &ContextCompactedEvent{} },
-	"permission.requested":     func() Event { return &PermissionRequestedEvent{} },
-	"permission.granted":       func() Event { return &PermissionGrantedEvent{} },
-	"permission.denied":        func() Event { return &PermissionDeniedEvent{} },
-	"subagent.started":         func() Event { return &SubagentStartedEvent{} },
-	"subagent.finished":        func() Event { return &SubagentFinishedEvent{} },
-	"skill.invoked":            func() Event { return &SkillInvokedEvent{} },
+	"session.resumed":           func() Event { return &SessionResumedEvent{} },
+	"session.closed":            func() Event { return &SessionClosedEvent{} },
+	"context.compacted":         func() Event { return &ContextCompactedEvent{} },
+	"permission.requested":      func() Event { return &PermissionRequestedEvent{} },
+	"permission.granted":        func() Event { return &PermissionGrantedEvent{} },
+	"permission.denied":         func() Event { return &PermissionDeniedEvent{} },
+	"subagent.started":          func() Event { return &SubagentStartedEvent{} },
+	"subagent.finished":         func() Event { return &SubagentFinishedEvent{} },
+	"skill.invoked":             func() Event { return &SkillInvokedEvent{} },
 }
 
 // MarshalEvent 将事件序列化为 JSON

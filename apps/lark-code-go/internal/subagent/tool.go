@@ -9,7 +9,7 @@ import (
 
 // SpawnAgentTool 用于创建隔离子 agent
 type SpawnAgentTool struct {
-	registry *Registry
+	registry  *Registry
 	nestLevel int
 }
 
@@ -24,7 +24,7 @@ func NewSpawnAgentTool(registry *Registry, nestLevel int) *SpawnAgentTool {
 }
 
 func (t *SpawnAgentTool) Name() string        { return "spawn_agent" }
-func (t *SpawnAgentTool) Description() string  { return "Spawn a sub-agent to perform an isolated task" }
+func (t *SpawnAgentTool) Description() string { return "Spawn a sub-agent to perform an isolated task" }
 func (t *SpawnAgentTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",
@@ -82,7 +82,7 @@ func NewAgentResultTool(registry *Registry) *AgentResultTool {
 }
 
 func (t *AgentResultTool) Name() string        { return "agent_result" }
-func (t *AgentResultTool) Description() string  { return "Get the result of a background sub-agent" }
+func (t *AgentResultTool) Description() string { return "Get the result of a background sub-agent" }
 func (t *AgentResultTool) InputSchema() map[string]any {
 	return map[string]any{
 		"type": "object",
