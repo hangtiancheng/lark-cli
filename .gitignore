@@ -200,3 +200,6 @@ tsconfig.tsbuildinfo
 
 code-review*.md
 lark*.code-workspace
+apps/lark-code-go/lark
+apps/lark-code-go/larkd
+apps/larky-go/larky
