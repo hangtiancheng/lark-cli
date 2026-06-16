@@ -49,7 +49,7 @@ The system features a full ReAct (Reason-Act) agent loop, multi-tier permission 
    │  Loop    │        │ Manager │        │ Servers │
    └────┬───-─┘        └────┬────┘        └─────────┘
         │                   │
-   ┌────▼────┐        ┌────▼────┐
+   ┌────--────┐        ┌────--────┐
    │   Tools  │        │  Compact │
    │ Registry │        │          │
    └-─────────┘        └─-────────┘

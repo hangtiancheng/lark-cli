@@ -105,7 +105,7 @@ export class ConversationManager {
 			sections.push(
 				`
         # Larky.md
-        Codebase and user instructions are as follows:
+        Codebase and user instructions are as follows.
         You MUST adhere to these instructions.
         IMPORTANT: these instructions OVERRIDE any previous/default instructions, you MUST follow them exactly.\n\n
         ${instructions}
@@ -113,16 +113,15 @@ export class ConversationManager {
 			);
 		}
 		if (memories) {
-			sections.push(`##·Auto·Memory\n${memories}`);
+			sections.push(`## Auto Memory\n${memories}`);
 		}
 		if (sections.length === 0) {
 			return;
 		}
 		const today = new Date().toISOString().split("T")[0];
-		sections.push(`### Current Date\nToday's date is ${today}`);
+		sections.push(`### Current Date\nToday's date is ${today}.`);
 		const body = sections.join("\n\n");
 		const wrapped = `<system-reminder>\nAs you answer the user's questions, you can use the following context:\n${body}\n
-
       IMPORTANT: This context may not be relevant to your tasks. You should NOT respond to this context unless it is highly relevant to your tasks.\n</system-reminder>
       `;
 
