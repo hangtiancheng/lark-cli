@@ -15,6 +15,31 @@ export interface ToolContext {
   fileStateCache: FileStateCache;
 }
 
+export interface ToolSchema {
+  name: string;
+  parameters: Record<string, unknown> | null;
+  strict?: boolean | null;
+  /** For OpenAI, this must be "function"; for Anthropic, it can be "custom" or null */
+  type: "function" | "custom" | null;
+  defer_loading?: boolean;
+  description?: string | null;
+
+  /** The input schema for the tool. */
+  input_schema: {
+    type: "object";
+    properties?: unknown;
+    required?: string[] | null;
+    [k: string]: unknown;
+  };
+  allowed_callers?: (
+    | "direct"
+    | "code_execution_20250825"
+    | "code_execution_20260120"
+  )[];
+  cache_control?: { type: "ephemeral"; ttl?: "5m" | "1h" };
+  eager_input_streaming?: boolean | null;
+}
+
 export interface Tool {
   name: string;
   description: string;
@@ -22,7 +47,7 @@ export interface Tool {
   deferred?: boolean;
   system?: boolean;
 
-  schema(): Record<string, unknown>;
+  schema(): ToolSchema;
   execute(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult>;
 }
 
