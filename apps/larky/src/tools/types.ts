@@ -17,10 +17,10 @@ export interface ToolContext {
 
 export interface ToolSchema {
   name: string;
-  parameters: Record<string, unknown> | null;
+  parameters?: Record<string, unknown> | null;
   strict?: boolean | null;
   /** For OpenAI, this must be "function"; for Anthropic, it can be "custom" or null */
-  type: "function" | "custom" | null;
+  type?: "function" | "custom" | null;
   defer_loading?: boolean;
   description?: string | null;
 

@@ -3,12 +3,14 @@
     "anthropics",
     "bubbletea",
     "charmbracelet",
+    "fgrep",
     "gopkg",
     "hangtiancheng",
     "httpx",
     "larkd",
     "lipgloss",
     "modelcontextprotocol",
+    "pycache",
     "pydantic",
     "pyyaml"
   ]

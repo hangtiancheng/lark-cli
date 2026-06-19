@@ -1,6 +1,10 @@
-import type OpenAI from "openai";
-import type { Tool, ToolSchema } from "./types.js";
-import type Anthropic from "@anthropic-ai/sdk";
+import type {
+  Tool,
+  ToolCategory,
+  ToolContext,
+  ToolResult,
+  ToolSchema,
+} from "./types.js";
 
 export interface QuestionOption {
   label: string;
@@ -19,14 +23,14 @@ export interface Question {
 export type Asker = (
   questions: Question[],
 ) => Promise<
-  Record<string /** question text */, string /** user;s chosen answer */>
+  Record<string /** question text */, string /** user chosen answer */>
 >;
 
-// Structured multiple-choice question tool 
+// Structured multiple-choice question tool
 // The actual prompting is delegated to an injected asker (the TUI dialog),
 // the same pattern as onPermissionRequest
 export class AskUserQuestionTool implements Tool {
-  name = AskUserQuestionTool.name;
+  name = AskUserQuestionTool.name.replace("Tool", "");
 
   description = `
   Ask the user 1 to 4 single-choice or multiple-choice questions and wait for their answers. Each question needs 1 to 4 options; an "Other" option for custom input is added automatically.
@@ -35,12 +39,11 @@ export class AskUserQuestionTool implements Tool {
 
   system = true;
 
+  category: ToolCategory = "read";
   constructor(private ask: Asker) {}
 
-  
   schema(): ToolSchema {
     return {
-
       name: this.name,
       description: this.description,
       input_schema: {
@@ -48,8 +51,8 @@ export class AskUserQuestionTool implements Tool {
         properties: {
           questions: {
             type: "array",
-            minItems: 1,
-            maxItems: 4,
+            minItems: 1, // Minimum questions count
+            maxItems: 4, // Maximum questions count
             items: {
               type: "object",
               properties: {
@@ -63,8 +66,8 @@ export class AskUserQuestionTool implements Tool {
                 },
                 options: {
                   type: "array",
-                  minItems: 1,
-                  maxItems: 4,
+                  minItems: 2, // Minimum options count
+                  maxItems: 4, // Maximum options count
                   items: {
                     type: "object",
                     properties: {
@@ -72,19 +75,56 @@ export class AskUserQuestionTool implements Tool {
                       description: { type: "string" },
                     },
                     required: ["label"],
-                  }
+                  },
                 },
                 multiSelect: {
                   type: "boolean",
-                  description: "Set to true for multiple-choice, false for single-choice",
+                  description:
+                    "Set to true for multiple-choice, false for single-choice",
                 },
                 required: ["question", "header", "options", "multiSelect"],
-              }
-            }
+              },
+            },
           },
           required: ["questions"],
-        }
+        },
       },
+    };
+  }
+
+  async execute(
+    ctx: ToolContext,
+    args: { questions: Question[] | undefined },
+  ): Promise<ToolResult> {
+    const questions = args.questions;
+    if (
+      !Array.isArray(questions) ||
+      questions.length < 1 ||
+      questions.length > 4
+    ) {
+      return { output: "Error: must have 1-4 questions", isError: true };
+    }
+
+    for (const q of questions) {
+      if (
+        !Array.isArray(q.options) ||
+        q.options.length < 2 ||
+        q.options.length > 4
+      ) {
+        return {
+          output: `Error: question '${q.question}' must have 2-4 options`,
+          isError: true,
+        };
+      }
+    }
+
+    // Wait for user ask
+    const answer = await this.ask(questions);
+    const parts = Object.entries(answer).map(([q, a]) => `"${q}" = "${a}"`);
+
+    return {
+      output: `User has answered your questions: ${parts.join(", ")}. You can now continue with the user's answers`,
+      isError: false,
     };
   }
 }

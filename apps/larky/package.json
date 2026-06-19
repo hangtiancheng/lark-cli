@@ -22,16 +22,16 @@
 		"check": "biome check --write"
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "^0.104.1",
+		"@anthropic-ai/sdk": "^0.104.2",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"chalk": "^5.6.2",
-		"ink": "^7.0.6",
+		"ink": "^7.1.0",
 		"ink-spinner": "^5.0.0",
 		"ink-text-input": "^6.0.0",
 		"js-yaml": "^4.2.0",
 		"marked": "^18.0.5",
 		"marked-terminal": "^7.3.0",
-		"openai": "^6.42.0",
+		"openai": "^6.44.0",
 		"react": "^19.2.7",
 		"zod": "^4.4.3"
 	},
@@ -49,7 +49,7 @@
 		"oxfmt": "^0.53.0",
 		"tsx": "^4.22.4",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.61.0",
+		"typescript-eslint": "^8.61.1",
 		"vitest": "^4.1.9"
 	},
 	"packageManager": "pnpm@10.33.1"
