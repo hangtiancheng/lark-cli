@@ -5,9 +5,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { safeParse } from "@modelcontextprotocol/sdk/server/zod-compat";
 import yaml from "js-yaml";
 import { z } from "zod";
-import { safeParse } from "@modelcontextprotocol/sdk/server/zod-compat";
 
 const ENV_KEY_MAP = {
 	anthropic: "ANTHROPIC_API_KEY",

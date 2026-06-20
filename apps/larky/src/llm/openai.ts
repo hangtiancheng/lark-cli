@@ -1,10 +1,15 @@
 import OpenAI from "openai";
-import type { LLMClient, MaxTokensSetter } from "./client.js";
 import {
 	getMaxOutputTokens,
-	resolveAPIKey,
 	type ProviderConfig,
+	resolveAPIKey,
 } from "../config/config.js";
+import type {
+	ConversationManager,
+	Message,
+} from "../conversation/conversation.js";
+import { asRecord, asString } from "../utils/index.js";
+import type { LLMClient, MaxTokensSetter } from "./client.js";
 import {
 	AuthenticationError,
 	ContextTooLongError,
@@ -12,14 +17,9 @@ import {
 	NetworkError,
 	RateLimitError,
 } from "./errors.js";
-import type {
-	ConversationManager,
-	Message,
-} from "../conversation/conversation.js";
 import type { StreamEvent } from "./events.js";
-import { asRecord, asString } from "../utils/index.js";
 
-const enum OpenAIErrorCode {
+enum OpenAIErrorCode {
 	/** 413 Payload Too Large — The request entity is larger than the server is willing or able to process. */
 	PromptTooLong = 413,
 	/** 401 Unauthorized — The request lacks valid authentication credentials. */

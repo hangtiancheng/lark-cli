@@ -1,4 +1,8 @@
-import { readdir, stat, readFile } from "node:fs/promises";
+import type { Stats } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { join, relative } from "node:path";
+import { asErrorString } from "../utils/index.js";
+import { GREP_DESCRIPTION } from "./descriptions.js";
 import {
 	SKIP_DIRS,
 	strArg,
@@ -8,16 +12,23 @@ import {
 	type ToolResult,
 	type ToolSchema,
 } from "./types.js";
-import { GREP_DESCRIPTION } from "./descriptions.js";
-import { join, relative } from "node:path";
-import { asErrorString } from "../utils/index.js";
 
 function globToRegex(pattern: string): RegExp {
-	const escaped = pattern
-		.replace(/[.+^${}()|[\]\\]/g, "\\$&")
-		.replace(/\*/g, ".*")
-		.replace(/\?/g, ".");
-	return new RegExp(`^${escaped}$`, "i");
+	// Split by `**` first, then escape each segment and handle `*` / `?`
+	const doubleStarParts = pattern.split("**");
+	const regexStr = doubleStarParts
+		.map((part) => {
+			// Escape regex-special characters (except glob wildcards)
+			let escaped = part.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+			// `*` matches any character except path separator
+			escaped = escaped.replace(/\*/g, "[^/]*");
+			// `?` matches any single character except path separator
+			escaped = escaped.replace(/\?/g, "[^/]");
+			return escaped;
+		})
+		// `**` matches any characters including path separators
+		.join(".*");
+	return new RegExp(`^${regexStr}$`, "i");
 }
 
 const MAX_RESULTS = 500;
@@ -106,7 +117,7 @@ export class GrepTool implements Tool {
 				if (SKIP_DIRS.has(entry)) continue;
 
 				const fullPath = join(dir, entry);
-				let fileStat;
+				let fileStat: Stats;
 				try {
 					fileStat = await stat(fullPath);
 				} catch {

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, statSync } from "fs";
+import { asErrorString } from "../utils/index.js";
 import { READ_FILE_DESCRIPTION } from "./descriptions.js";
 import {
 	intArg,
@@ -9,7 +10,6 @@ import {
 	type ToolResult,
 	type ToolSchema,
 } from "./types.js";
-import { asErrorString } from "../utils/index.js";
 
 export class ReadFileTool implements Tool {
 	name = ReadFileTool.name.replace("Tool", "");
@@ -88,7 +88,7 @@ export class ReadFileTool implements Tool {
 
 			// Register the file as "read" in the state cache so subsequent
 			// EditFile / WriteFile calls are allowed.
-			ctx.fileStateCache.record(filePath, content, stat.mtimeMs);
+			ctx.fileStateCache?.record(filePath, content, stat.mtimeMs);
 
 			const numbered = slice.map(
 				(line, i) => `${String(offset + i + 1)}\t${line}`,

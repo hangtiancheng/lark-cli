@@ -1,15 +1,21 @@
 /**
  * Status: Done
  */
+
+import Anthropic from "@anthropic-ai/sdk";
+import { safeParseAsync, z } from "zod";
 import {
 	getContextWindow,
 	getMaxOutputTokens,
 	type ProviderConfig,
 	resolveAPIKey,
 } from "../config/config.js";
-import { safeParseAsync, z } from "zod";
+import type {
+	ConversationManager,
+	Message,
+} from "../conversation/conversation.js";
+import { asRecord, asString } from "../utils/index.js";
 import type { LLMClient, MaxTokensSetter } from "./client.js";
-import Anthropic from "@anthropic-ai/sdk";
 import {
 	AuthenticationError,
 	ContextTooLongError,
@@ -17,14 +23,9 @@ import {
 	NetworkError,
 	RateLimitError,
 } from "./errors.js";
-import type {
-	ConversationManager,
-	Message,
-} from "../conversation/conversation.js";
 import type { StreamEvent } from "./events.js";
-import { asRecord, asString } from "../utils/index.js";
 
-const enum AnthropicErrorCode {
+enum AnthropicErrorCode {
 	/** 413 Payload Too Large — The request entity is larger than the server is willing or able to process. */
 	PromptTooLong = 413,
 	/** 401 Unauthorized — The request lacks valid authentication credentials. */

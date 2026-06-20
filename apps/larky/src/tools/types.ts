@@ -11,8 +11,8 @@ export interface ToolResult {
 export interface ToolContext {
 	workDir: string;
 	abortSignal?: AbortSignal;
-	fileHistory: FileHistory;
-	fileStateCache: FileStateCache;
+	fileHistory?: FileHistory;
+	fileStateCache?: FileStateCache;
 }
 
 export interface ToolSchema {

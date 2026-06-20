@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { asErrorString } from "../utils/index.js";
 import { EDIT_FILE_DESCRIPTION } from "./descriptions.js";
 import {
 	boolArg,
@@ -9,7 +10,6 @@ import {
 	type ToolResult,
 	type ToolSchema,
 } from "./types.js";
-import { asErrorString } from "../utils/index.js";
 
 export class EditFileTool implements Tool {
 	name = EditFileTool.name.replace("Tool", "");
@@ -84,15 +84,17 @@ export class EditFileTool implements Tool {
 		}
 
 		// Gate: read-before-edit enforcement
-		const gate = ctx.fileStateCache.check(filePath);
-		if (!gate.ok) {
-			return {
-				output: gate.error,
-				isError: true,
-			};
+		if (ctx.fileStateCache) {
+			const gate = ctx.fileStateCache.check(filePath);
+			if (!gate.ok) {
+				return {
+					output: gate.error,
+					isError: true,
+				};
+			}
 		}
 
-		ctx.fileHistory.trackEdit(filePath);
+		ctx.fileHistory?.trackEdit(filePath);
 
 		let content: string;
 		try {
@@ -107,7 +109,7 @@ export class EditFileTool implements Tool {
 		const count = content.split(oldString).length - 1;
 		if (count === 0) {
 			return {
-				output: "Error: old_string not fount in file",
+				output: "Error: old_string not found in file",
 				isError: true,
 			};
 		}
@@ -125,7 +127,7 @@ export class EditFileTool implements Tool {
 
 		try {
 			await writeFile(filePath, newContent, "utf-8");
-			ctx.fileStateCache.update(filePath, newContent);
+			ctx.fileStateCache?.update(filePath, newContent);
 			const msg =
 				replaceAll && count > 1
 					? `File edited: ${filePath} (${String(count)} replacements)`

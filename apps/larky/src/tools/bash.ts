@@ -1,4 +1,6 @@
 import { execSync } from "child_process";
+import { z } from "zod";
+import { BASH_DESCRIPTION } from "./descriptions.js";
 import {
 	intArg,
 	strArg,
@@ -8,8 +10,6 @@ import {
 	type ToolResult,
 	type ToolSchema,
 } from "./types.js";
-import { BASH_DESCRIPTION } from "./descriptions.js";
-import { z } from "zod";
 
 const MAX_TIMEOUT = 600;
 
@@ -46,7 +46,7 @@ function interpretExitCode(command: string, exitCode: number): boolean {
 	let baseCmd = "";
 	for (const token of tokens) {
 		// SKip env variable assignments like JANE=doe
-		if (token.includes("=") || !token.startsWith("-")) {
+		if (token.includes("=") && !token.startsWith("-")) {
 			continue;
 		}
 		// Strip path prefixes and keep only the command name

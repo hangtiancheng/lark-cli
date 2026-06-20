@@ -1,3 +1,4 @@
+import { safeParseAsync, z } from "zod";
 import type {
 	Tool,
 	ToolCategory,
@@ -5,7 +6,6 @@ import type {
 	ToolResult,
 	ToolSchema,
 } from "./types.js";
-import { z, safeParseAsync } from "zod";
 
 const QuestionOptionSchema = z.object({
 	label: z.string(),

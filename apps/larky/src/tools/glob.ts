@@ -1,4 +1,7 @@
 import { statSync } from "fs";
+import { glob } from "fs/promises";
+import { join } from "path";
+import { asErrorString } from "../utils/index.js";
 import { GLOB_DESCRIPTION } from "./descriptions.js";
 import {
 	SKIP_DIRS,
@@ -9,9 +12,6 @@ import {
 	type ToolResult,
 	type ToolSchema,
 } from "./types.js";
-import { join } from "path";
-import { asErrorString } from "../utils/index.js";
-import { glob } from "fs/promises";
 
 export class GlobTool implements Tool {
 	name = GlobTool.name.replace("Tool", "");
@@ -65,7 +65,7 @@ export class GlobTool implements Tool {
 
 			for await (const entry of glob(pattern, {
 				cwd: basePath,
-				exclude: (name: string) => SKIP_DIRS.has(name),
+				exclude: (name: string) => name.startsWith(".") || SKIP_DIRS.has(name),
 			})) {
 				matches.push(entry);
 				if (matches.length >= 1000) break;
