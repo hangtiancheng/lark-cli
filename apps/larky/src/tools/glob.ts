@@ -1,84 +1,102 @@
 import { statSync } from "fs";
 import { GLOB_DESCRIPTION } from "./descriptions.js";
 import {
-  SKIP_DIRS,
-  strArg,
-  type Tool,
-  type ToolCategory,
-  type ToolContext,
-  type ToolResult,
-  type ToolSchema,
+	SKIP_DIRS,
+	strArg,
+	type Tool,
+	type ToolCategory,
+	type ToolContext,
+	type ToolResult,
+	type ToolSchema,
 } from "./types.js";
 import { join } from "path";
 import { asErrorString } from "../utils/index.js";
+import { glob } from "fs/promises";
 
 export class GlobTool implements Tool {
-  name = GlobTool.name.replace("Tool", "");
-  description = GLOB_DESCRIPTION;
-  category: ToolCategory = "read";
+	name = GlobTool.name.replace("Tool", "");
+	description = GLOB_DESCRIPTION;
+	category: ToolCategory = "read";
 
-  schema(): ToolSchema {
-    return {
-      name: this.name,
-      description: this.description,
-      input_schema: {
-        type: "object",
-        properties: {
-          pattern: {
-            type: "string",
-            description: "Glob pattern (e.g., '**/*.ts', '**/*.go')",
-          },
-          path: {
-            type: "string",
-            description: "Base directory to search from",
-            default: ".",
-          },
-        },
-        required: ["pattern"],
-      },
-    };
-  }
-  async execute(
-    ctx: ToolContext,
-    args: Record<string, unknown>,
-  ): Promise<ToolResult> {
-    const pattern = strArg(args, "pattern");
-    if (!pattern) {
-      return { output: "Error: pattern is required", isError: true };
-    }
+	schema(): ToolSchema {
+		const inputSchema = {
+			type: "object" as const,
+			properties: {
+				pattern: {
+					type: "string" as const,
+					description: "Glob pattern (e.g., '**/*.ts', '**/*.go')",
+				},
+				path: {
+					type: "string" as const,
+					description: "Base directory to search from",
+					default: ".",
+				},
+			},
+			required: ["pattern"],
+		};
 
-    const basePath = strArg(args, "path", ctx.workDir);
-    try {
-      const glob = new Bun.Glob(pattern);
-      const matches: string[] = [];
+		return {
+			name: this.name,
+			description: this.description,
+			input_schema: inputSchema,
+			function: {
+				name: this.name,
+				description: this.description,
+				parameters: inputSchema,
+			},
+		};
+	}
 
-      for (const entry of glob.scanSync({
-        cwd: basePath,
-        dot: false,
-      })) {
-        const parts = entry.split("/");
-        if (parts.some((p) => SKIP_DIRS.has(p))) continue;
-        matches.push(entry);
-        if (matches.length >= 1000) break;
-      }
+	async execute(
+		ctx: ToolContext,
+		args: Record<string, unknown>,
+	): Promise<ToolResult> {
+		const pattern = strArg(args, "pattern");
+		if (!pattern) {
+			return {
+				output: "Error: pattern is required",
+				isError: true,
+			};
+		}
 
-      matches.sort((a, b) => {
-        try {
-          const ma = statSync(join(basePath, a)).mtimeMs;
-          const mb = statSync(join(basePath, b)).mtimeMs;
-          return mb - ma;
-        } catch {
-          return a.localeCompare(b);
-        }
-      });
+		const basePath = strArg(args, "path", ctx.workDir);
+		try {
+			const matches: string[] = [];
 
-      if (matches.length === 0) {
-        return { output: "No files matched the pattern.", isError: false };
-      }
+			for await (const entry of glob(pattern, {
+				cwd: basePath,
+				exclude: (name: string) => SKIP_DIRS.has(name),
+			})) {
+				matches.push(entry);
+				if (matches.length >= 1000) break;
+			}
 
-      return { output: matches.join("\n"), isError: false };
-    } catch (err) {
-      return { output: `Error: ${asErrorString(err)}`, isError: true };
-    }
-  }
+			matches.sort((a, b) => {
+				try {
+					const ma = statSync(join(basePath, a)).mtimeMs;
+					const mb = statSync(join(basePath, b)).mtimeMs;
+					return mb - ma;
+				} catch {
+					return a.localeCompare(b);
+				}
+			});
+
+			if (matches.length === 0) {
+				return {
+					output: "No files matched the pattern.",
+					isError: false,
+				};
+			}
+
+			return {
+				output: matches.join("\n"),
+				isError: false,
+			};
+		} catch (err) {
+			return {
+				output: `Error: ${asErrorString(err)}`,
+				isError: true,
+			};
+		}
+	}
 }

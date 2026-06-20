@@ -19,31 +19,36 @@ export class EditFileTool implements Tool {
 	category: ToolCategory = "write";
 
 	schema(): ToolSchema {
+		const inputSchema = {
+			type: "object" as const,
+			properties: {
+				file_path: {
+					type: "string" as const,
+					description: "Absolute path to the file",
+				},
+				old_string: {
+					type: "string" as const,
+					description: "Exact string to find and replace",
+				},
+				new_string: {
+					type: "string" as const,
+					description: "Replacement string",
+				},
+				replace_all: {
+					type: "boolean" as const,
+					description: "Replace all occurrences of old_string (default false)",
+				},
+			},
+			required: ["file_path", "old_string", "new_string"],
+		};
 		return {
 			name: this.name,
 			description: this.description,
-			input_schema: {
-				type: "object",
-				properties: {
-					file_path: {
-						type: "string",
-						description: "Absolute path to the file",
-					},
-					old_string: {
-						type: "string",
-						description: "Exact string to find and replace",
-					},
-					new_string: {
-						type: "string",
-						description: "Replacement string",
-					},
-					replace_all: {
-						type: "boolean",
-						description:
-							"Replace all occurrences of old_string (default false)",
-					},
-				},
-				required: ["file_path", "old_string", "new_string"],
+			input_schema: inputSchema,
+			function: {
+				name: this.name,
+				description: this.description,
+				parameters: inputSchema,
 			},
 		};
 	}

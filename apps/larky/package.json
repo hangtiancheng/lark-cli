@@ -20,8 +20,8 @@
 		"oxfmt": "oxfmt --write .",
 		"format": "biome format --write",
 		"check": "biome check --write",
-    "git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
-    "git:push": "pnpm git:commit && git push origin main"
+		"git:commit": "git add -A && git commit -m \"feat: Introduce new features\"",
+		"git:push": "pnpm git:commit && git push origin main"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.104.2",

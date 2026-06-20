@@ -48,56 +48,68 @@ export class AskUserQuestionTool implements Tool {
 	constructor(private ask: Asker) {}
 
 	schema(): ToolSchema {
+		const inputSchema = {
+			type: "object" as const,
+			properties: {
+				questions: {
+					type: "array" as const,
+					description: "question",
+					minItems: 1, // Minimum questions count
+					maxItems: 4, // Maximum questions count
+					items: {
+						type: "object" as const,
+						properties: {
+							question: {
+								type: "string" as const,
+								description: "The question to ask",
+							},
+							header: {
+								type: "string" as const,
+								description: "Short label/category (<=12 chars)",
+							},
+							options: {
+								type: "array" as const,
+								description: "options",
+								minItems: 2, // Minimum options count
+								maxItems: 4, // Maximum options count
+								items: {
+									type: "object" as const,
+									properties: {
+										label: {
+											type: "string" as const,
+											description: "label",
+										},
+										description: {
+											type: "string" as const,
+											description: "description",
+										},
+									},
+									required: ["label"],
+								},
+							},
+							multiSelect: {
+								type: "boolean" as const,
+								description:
+									"Set to true for multiple-choice, false for single-choice",
+							},
+						},
+						required: ["question", "header", "options", "multiSelect"],
+					},
+				},
+			},
+			required: ["questions"],
+		};
+
 		return {
 			name: this.name,
 			description: this.description,
-			input_schema: {
-				type: "object",
-				properties: {
-					questions: {
-						type: "array",
-						description: "question",
-						minItems: 1, // Minimum questions count
-						maxItems: 4, // Maximum questions count
-						items: {
-							type: "object",
-							properties: {
-								question: {
-									type: "string",
-									description: "The question to ask",
-								},
-								header: {
-									type: "string",
-									description: "Short label/category (<=12 chars)",
-								},
-								options: {
-									type: "array",
-									description: "options",
-									minItems: 2, // Minimum options count
-									maxItems: 4, // Maximum options count
-									items: {
-										type: "object",
-										properties: {
-											label: { type: "string", description: "label" },
-											description: {
-												type: "string",
-												description: "description",
-											},
-										},
-										required: ["label"],
-									},
-								},
-								multiSelect: {
-									type: "boolean",
-									description:
-										"Set to true for multiple-choice, false for single-choice",
-								},
-							},
-							required: ["question", "header", "options", "multiSelect"],
-						},
-					},
-				},
-				required: ["questions"],
+			input_schema: inputSchema,
+
+			// OpenAI
+			function: {
+				name: this.name,
+				description: this.description,
+				parameters: inputSchema,
 			},
 		};
 	}

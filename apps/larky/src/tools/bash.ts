@@ -78,23 +78,32 @@ export class BashTool implements Tool {
 	category: ToolCategory = "command";
 
 	schema(): ToolSchema {
+		const inputSchema = {
+			type: "object" as const,
+			properties: {
+				command: {
+					type: "string" as const,
+					description: "Shell command to execute",
+				},
+				timeout: {
+					type: "integer" as const,
+					description: "Timeout in seconds (max 600)",
+					default: 120,
+				},
+			},
+			required: ["command"],
+		};
+
 		return {
 			name: this.name,
 			description: this.description,
-			input_schema: {
-				type: "object",
-				properties: {
-					command: {
-						type: "string",
-						description: "Shell command to execute",
-					},
-					timeout: {
-						type: "integer",
-						description: "Timeout in seconds (max 600)",
-						default: 120,
-					},
-				},
-				required: ["command"],
+			input_schema: inputSchema,
+
+			// OpenAI
+			function: {
+				name: this.name,
+				description: this.description,
+				parameters: inputSchema,
 			},
 		};
 	}
