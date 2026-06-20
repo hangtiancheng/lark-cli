@@ -3,7 +3,9 @@
     "anthropics",
     "bubbletea",
     "charmbracelet",
+    "commondir",
     "fgrep",
+    "gitdir",
     "gopkg",
     "hangtiancheng",
     "httpx",
@@ -12,6 +14,9 @@
     "modelcontextprotocol",
     "pycache",
     "pydantic",
-    "pyyaml"
+    "pyyaml",
+    "symref",
+    "worktree",
+    "worktrees"
   ]
 }

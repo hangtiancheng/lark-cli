@@ -6,8 +6,8 @@
 		"outDir": "./dist",
 
 		"allowJs": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
 		// Environment Settings
 		// See also https://aka.ms/tsconfig/module
 		"target": "esnext",
@@ -31,7 +31,7 @@
 		// "noUnusedParameters": true,
 		// "noFallthroughCasesInSwitch": true,
 		// "noPropertyAccessFromIndexSignature": true,
-    "forceConsistentCasingInFileNames": true,
+		"forceConsistentCasingInFileNames": true,
 
 		// Recommended Options
 		"strict": true,

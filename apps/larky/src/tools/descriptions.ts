@@ -69,7 +69,7 @@ Usage Notes
 - Search from "." or a specific path, never from "/".
 - Automatically skips .git, node_modules, __pycache__, and similar directories.
 - Use this instead of find or ls command via Bash.
-`
+`;
 
 export const GREP_DESCRIPTION = `
 Search file content using a regex pattern, returning file:line:content matches.
@@ -81,4 +81,4 @@ Usage Notes
 - Search from ". or a specific path, never from "/".
 - Automatically skips .git, node_modules, __pycache__, and similar directories.
 - Use this instead of grep or rg commands via Bash.
-`
+`;
