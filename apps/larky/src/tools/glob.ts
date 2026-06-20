@@ -1,0 +1,84 @@
+import { statSync } from "fs";
+import { GLOB_DESCRIPTION } from "./descriptions.js";
+import {
+  SKIP_DIRS,
+  strArg,
+  type Tool,
+  type ToolCategory,
+  type ToolContext,
+  type ToolResult,
+  type ToolSchema,
+} from "./types.js";
+import { join } from "path";
+import { asErrorString } from "../utils/index.js";
+
+export class GlobTool implements Tool {
+  name = GlobTool.name.replace("Tool", "");
+  description = GLOB_DESCRIPTION;
+  category: ToolCategory = "read";
+
+  schema(): ToolSchema {
+    return {
+      name: this.name,
+      description: this.description,
+      input_schema: {
+        type: "object",
+        properties: {
+          pattern: {
+            type: "string",
+            description: "Glob pattern (e.g., '**/*.ts', '**/*.go')",
+          },
+          path: {
+            type: "string",
+            description: "Base directory to search from",
+            default: ".",
+          },
+        },
+        required: ["pattern"],
+      },
+    };
+  }
+  async execute(
+    ctx: ToolContext,
+    args: Record<string, unknown>,
+  ): Promise<ToolResult> {
+    const pattern = strArg(args, "pattern");
+    if (!pattern) {
+      return { output: "Error: pattern is required", isError: true };
+    }
+
+    const basePath = strArg(args, "path", ctx.workDir);
+    try {
+      const glob = new Bun.Glob(pattern);
+      const matches: string[] = [];
+
+      for (const entry of glob.scanSync({
+        cwd: basePath,
+        dot: false,
+      })) {
+        const parts = entry.split("/");
+        if (parts.some((p) => SKIP_DIRS.has(p))) continue;
+        matches.push(entry);
+        if (matches.length >= 1000) break;
+      }
+
+      matches.sort((a, b) => {
+        try {
+          const ma = statSync(join(basePath, a)).mtimeMs;
+          const mb = statSync(join(basePath, b)).mtimeMs;
+          return mb - ma;
+        } catch {
+          return a.localeCompare(b);
+        }
+      });
+
+      if (matches.length === 0) {
+        return { output: "No files matched the pattern.", isError: false };
+      }
+
+      return { output: matches.join("\n"), isError: false };
+    } catch (err) {
+      return { output: `Error: ${asErrorString(err)}`, isError: true };
+    }
+  }
+}
