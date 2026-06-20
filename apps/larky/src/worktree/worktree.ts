@@ -1,14 +1,17 @@
-import { execSync } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
 import {
-	cpSync,
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	statSync,
-	symlinkSync,
-} from "fs";
+	cp,
+	access,
+	mkdir,
+	readFile,
+	stat,
+	symlink,
+} from "fs/promises";
 import { dirname, isAbsolute, join } from "path";
 import { asErrorString } from "../utils/index.js";
+
+const execAsync = promisify(exec);
 
 export interface WorktreeResult {
 	path: string;
@@ -46,23 +49,33 @@ function isSafeRefName(name: string): boolean {
 	return SAFE_REF_RE.test(name);
 }
 
+/** Helper to check if a path exists */
+async function pathExists(path: string): Promise<boolean> {
+	try {
+		await access(path);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 /**
  * Resolves the .git directory: handles scenarios where .git is a file instead of a directory
  * (e.g., in worktrees or submodules).
  * Returns an empty string to indicate it not a git repository
  */
-export function resolveGitDir(root: string): string {
+export async function resolveGitDir(root: string): Promise<string> {
 	const gitPath = join(root, ".git");
-	if (!existsSync(gitPath)) {
+	if (!(await pathExists(gitPath))) {
 		return "";
 	}
-	const stat = statSync(gitPath);
-	if (stat.isDirectory()) {
+	const stats = await stat(gitPath);
+	if (stats.isDirectory()) {
 		return gitPath;
 	}
 
 	// Worktree / submodule: .git is a file containing `gitdir: <path>`
-	const raw = readFileSync(gitPath, "utf-8").trim();
+	const raw = (await readFile(gitPath, "utf-8")).trim();
 	if (!raw.startsWith("gitdir:")) {
 		return "";
 	}
@@ -73,10 +86,10 @@ export function resolveGitDir(root: string): string {
 /**
  * Read the commondir file in the worktree gitDir to locate the shared git directory
  */
-function getCommonDir(gitDir: string): string {
+async function getCommonDir(gitDir: string): Promise<string> {
 	try {
 		const commonDir = join(gitDir, "commondir");
-		const raw = readFileSync(commonDir, "utf-8").trim();
+		const raw = (await readFile(commonDir, "utf-8")).trim();
 		return isAbsolute(raw) ? raw : join(gitDir, raw);
 	} catch (err) {
 		console.error(err);
@@ -94,10 +107,10 @@ interface GitHead {
  * Returns null if the file does not exist or has an invalid format
  */
 
-function readGitHead(gitDir: string): GitHead | null {
+async function readGitHead(gitDir: string): Promise<GitHead | null> {
 	let raw: string;
 	try {
-		raw = readFileSync(join(gitDir, "HEAD"), "utf-8").trim();
+		raw = (await readFile(join(gitDir, "HEAD"), "utf-8")).trim();
 	} catch (err) {
 		console.error(err);
 		return null;
@@ -119,7 +132,7 @@ function readGitHead(gitDir: string): GitHead | null {
 			return null;
 		}
 
-		const sha = resolveRef(gitDir, ref);
+		const sha = await resolveRef(gitDir, ref);
 		return sha ? { sha } : null;
 	}
 
@@ -134,10 +147,10 @@ function readGitHead(gitDir: string): GitHead | null {
 /**
  * Resolves a ref within a single git directory (checks loose files first, then packed-refs)
  */
-function resolveRefInDir(dir: string, ref: string): string {
+async function resolveRefInDir(dir: string, ref: string): Promise<string> {
 	// Check loose ref file first
 	try {
-		const content = readFileSync(join(dir, ref), "utf-8").trim();
+		const content = (await readFile(join(dir, ref), "utf-8")).trim();
 		if (content.startsWith("ref:")) {
 			const target = content.slice("ref:".length).trim();
 			if (!isSafeRefName(target)) {
@@ -151,7 +164,7 @@ function resolveRefInDir(dir: string, ref: string): string {
 
 	// Check packed-refs
 	try {
-		const packed = readFileSync(join(dir, "packed-refs"), "utf-8");
+		const packed = await readFile(join(dir, "packed-refs"), "utf-8");
 		for (const line of packed.split("\n")) {
 			if (!line || line.startsWith("#") || line.startsWith("^")) {
 				continue;
@@ -177,13 +190,13 @@ function resolveRefInDir(dir: string, ref: string): string {
 }
 
 /** Resolves a git ref — checks the worktree gitDir first, then falls back to commonDir */
-function resolveRef(gitDir: string, ref: string): string {
-	const sha = resolveRefInDir(gitDir, ref);
+async function resolveRef(gitDir: string, ref: string): Promise<string> {
+	const sha = await resolveRefInDir(gitDir, ref);
 	if (sha) {
 		return sha;
 	}
 
-	const commonDir = getCommonDir(gitDir);
+	const commonDir = await getCommonDir(gitDir);
 	if (commonDir && commonDir !== gitDir) {
 		return resolveRefInDir(commonDir, ref);
 	}
@@ -197,10 +210,10 @@ function resolveRef(gitDir: string, ref: string): string {
  *
  * Performance target: ≤10ms (pure file IO, no subprocesses).
  */
-export function readWorktreeHeadSha(worktreePath: string): string {
+export async function readWorktreeHeadSha(worktreePath: string): Promise<string> {
 	let raw: string;
 	try {
-		raw = readFileSync(join(worktreePath, ".git"), "utf-8").trim();
+		raw = (await readFile(join(worktreePath, ".git"), "utf-8")).trim();
 	} catch (err) {
 		console.error(err);
 		return "";
@@ -212,7 +225,7 @@ export function readWorktreeHeadSha(worktreePath: string): string {
 	const rel = raw.slice("gitdir:".length).trim();
 	const gitDir = isAbsolute(rel) ? rel : join(worktreePath, rel);
 
-	const head = readGitHead(gitDir);
+	const head = await readGitHead(gitDir);
 	if (!head) return "";
 
 	if (head.branch) {
@@ -225,80 +238,74 @@ export function readWorktreeHeadSha(worktreePath: string): string {
  * Gets the current branch name (pure filesystem read).
  * Returns an empty string if detached HEAD or not a git repository.
  */
-export function getCurrentBranch(repoRoot: string): string {
-	const gitDir = resolveGitDir(repoRoot);
+export async function getCurrentBranch(repoRoot: string): Promise<string> {
+	const gitDir = await resolveGitDir(repoRoot);
 	if (!gitDir) return "";
-	const head = readGitHead(gitDir);
+	const head = await readGitHead(gitDir);
 	if (!head) return "";
 	return head.branch ?? "";
 }
 
 // ── Worktree Management ──────────────────────────────────────────────
 
-export function createAgentWorktree(
+export async function createAgentWorktree(
 	slug: string,
 	gitRoot?: string,
-): WorktreeResult {
+): Promise<WorktreeResult> {
 	const root =
 		gitRoot ??
-		execSync("git rev-parse --show-toplevel", { encoding: "utf-8" }).trim();
+		(await execAsync("git rev-parse --show-toplevel")).stdout.trim();
 
 	const worktreeDir = join(root, ".larky", "worktrees", slug);
 	const branch = `worktree-${slug}`;
 
 	// Fast path for restoration: if worktree already exists, read HEAD via pure filesystem
-	if (existsSync(worktreeDir)) {
-		const head = readWorktreeHeadSha(worktreeDir);
+	if (await pathExists(worktreeDir)) {
+		const head = await readWorktreeHeadSha(worktreeDir);
 		if (head) {
 			return { path: worktreeDir, branch, headCommit: head, gitRoot: root };
 		}
 		// Fallback to git subprocess if filesystem read fails
-		const headFallback = execSync("git rev-parse HEAD", {
+		const { stdout: headFallback } = await execAsync("git rev-parse HEAD", {
 			cwd: worktreeDir,
-			encoding: "utf-8",
-		}).trim();
+		});
 		return {
 			path: worktreeDir,
 			branch,
-			headCommit: headFallback,
+			headCommit: headFallback.trim(),
 			gitRoot: root,
 		};
 	}
 
 	// `-B` (uppercase): successfully creates even if the residual branch already exists;
 	// lowercase `-b` would fail if the branch already exists.
-	execSync(`git worktree add -B "${branch}" "${worktreeDir}"`, {
+	await execAsync(`git worktree add -B "${branch}" "${worktreeDir}"`, {
 		cwd: root,
-		encoding: "utf-8",
-		stdio: ["pipe", "pipe", "pipe"],
 	});
 
-	performPostCreationSetup(root, worktreeDir);
+	await performPostCreationSetup(root, worktreeDir);
 
 	// Prefer filesystem read for HEAD in newly created worktrees
-	const head = readWorktreeHeadSha(worktreeDir);
+	const head = await readWorktreeHeadSha(worktreeDir);
 	if (head) {
 		return { path: worktreeDir, branch, headCommit: head, gitRoot: root };
 	}
 	// Fallback to subprocess
-	const headFallback = execSync("git rev-parse HEAD", {
+	const { stdout: headFallback } = await execAsync("git rev-parse HEAD", {
 		cwd: worktreeDir,
-		encoding: "utf-8",
-	}).trim();
+	});
 
-	return { path: worktreeDir, branch, headCommit: headFallback, gitRoot: root };
+	return { path: worktreeDir, branch, headCommit: headFallback.trim(), gitRoot: root };
 }
 
-export function removeAgentWorktree(
+export async function removeAgentWorktrees(
 	path: string,
 	branch: string,
 	gitRoot: string,
-): void {
+): Promise<void> {
 	try {
-		execSync(`git worktree remove "${path}" --force`, {
+		await execAsync(`git worktree remove "${path}" --force`, {
 			cwd: gitRoot,
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
 		});
 	} catch (err) {
 		console.error(err);
@@ -306,10 +313,8 @@ export function removeAgentWorktree(
 	}
 
 	try {
-		execSync(`git branch -D "${branch}"`, {
+		await execAsync(`git branch -D "${branch}"`, {
 			cwd: gitRoot,
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
 		});
 	} catch (err) {
 		console.error(err);
@@ -317,19 +322,18 @@ export function removeAgentWorktree(
 	}
 }
 
-export function hasWorktreeChanges(path: string, headCommit: string): boolean {
+export async function hasWorktreeChanges(path: string, headCommit: string): Promise<boolean> {
 	try {
-		const status = execSync("git status --porcelain", {
+		const { stdout: status } = await execAsync("git status --porcelain", {
 			cwd: path,
-			encoding: "utf-8",
-		}).trim();
+		});
 
-		if (status) return true;
+		if (status.trim()) return true;
 
 		// Compare HEAD SHA: prefer pure filesystem read
 		const currentHead =
-			readWorktreeHeadSha(path) ||
-			execSync("git rev-parse HEAD", { cwd: path, encoding: "utf-8" }).trim();
+			(await readWorktreeHeadSha(path)) ||
+			(await execAsync("git rev-parse HEAD", { cwd: path })).stdout.trim();
 
 		return currentHead !== headCommit;
 	} catch (err) {
@@ -351,20 +355,20 @@ export function buildWorktreeNotice(parentCwd: string, wtPath: string): string {
  * main repo into a newly created worktree. Failures are logged but never
  * propagated — they must not break worktree creation.
  */
-function performPostCreationSetup(repoRoot: string, wtPath: string): void {
-	copyLarkySettings(repoRoot, wtPath);
-	configureHooksPath(repoRoot, wtPath);
-	symlinkNodeModules(repoRoot, wtPath);
-	copyWorktreeIncludeFiles(repoRoot, wtPath);
+async function performPostCreationSetup(repoRoot: string, wtPath: string): Promise<void> {
+	await copyLarkySettings(repoRoot, wtPath);
+	await configureHooksPath(repoRoot, wtPath);
+	await symlinkNodeModules(repoRoot, wtPath);
+	await copyWorktreeIncludeFiles(repoRoot, wtPath);
 }
 
 /** Copy .larky/ settings directory from the main repo to the worktree. */
-function copyLarkySettings(repoRoot: string, wtPath: string): void {
+async function copyLarkySettings(repoRoot: string, wtPath: string): Promise<void> {
 	try {
 		const src = join(repoRoot, ".larky");
-		if (!existsSync(src)) return;
+		if (!(await pathExists(src))) return;
 		const dst = join(wtPath, ".larky");
-		cpSync(src, dst, { recursive: true });
+		await cp(src, dst, { recursive: true });
 	} catch (err) {
 		console.error(
 			`Warning: failed to copy .larky/ to worktree: ${asErrorString(err)}`,
@@ -376,7 +380,7 @@ function copyLarkySettings(repoRoot: string, wtPath: string): void {
  * Set core.hooksPath in the worktree so git hooks from the main repo are
  * shared. Prioritizes .husky/ over .git/hooks/.
  */
-function configureHooksPath(repoRoot: string, worktreePath: string): void {
+async function configureHooksPath(repoRoot: string, worktreePath: string): Promise<void> {
 	try {
 		const candidates = [
 			join(repoRoot, ".husky"),
@@ -385,7 +389,7 @@ function configureHooksPath(repoRoot: string, worktreePath: string): void {
 		let hooksPath: string | undefined;
 		for (const c of candidates) {
 			try {
-				const info = statSync(c);
+				const info = await stat(c);
 				if (info.isDirectory()) {
 					hooksPath = c;
 					break;
@@ -397,10 +401,8 @@ function configureHooksPath(repoRoot: string, worktreePath: string): void {
 		}
 		if (!hooksPath) return;
 
-		execSync(`git config core.hooksPath "${hooksPath}"`, {
+		await execAsync(`git config core.hooksPath "${hooksPath}"`, {
 			cwd: worktreePath,
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
 		});
 	} catch (err) {
 		console.error(
@@ -413,13 +415,13 @@ function configureHooksPath(repoRoot: string, worktreePath: string): void {
  * If node_modules exists in the source repo, create a symlink in the worktree
  * pointing to it so dependencies don't need to be re-installed.
  */
-function symlinkNodeModules(repoRoot: string, worktreePath: string): void {
+async function symlinkNodeModules(repoRoot: string, worktreePath: string): Promise<void> {
 	try {
 		const src = join(repoRoot, "node_modules");
-		if (!existsSync(src)) return;
+		if (!(await pathExists(src))) return;
 		const dst = join(worktreePath, "node_modules");
-		if (existsSync(dst)) return; // already present
-		symlinkSync(src, dst);
+		if (await pathExists(dst)) return; // already present
+		await symlink(src, dst);
 	} catch (err) {
 		console.error(
 			`Warning: failed to symlink node_modules in worktree: ${asErrorString(err)}`,
@@ -432,15 +434,15 @@ function symlinkNodeModules(repoRoot: string, worktreePath: string): void {
  * blank lines and #-comments skipped) and copy each listed file/directory into
  * the worktree.
  */
-function copyWorktreeIncludeFiles(
+async function copyWorktreeIncludeFiles(
 	repoRoot: string,
 	worktreePath: string,
-): void {
+): Promise<void> {
 	try {
 		const includeFile = join(repoRoot, ".worktreeinclude");
-		if (!existsSync(includeFile)) return;
+		if (!(await pathExists(includeFile))) return;
 
-		const content = readFileSync(includeFile, "utf-8");
+		const content = await readFile(includeFile, "utf-8");
 		const paths = content
 			.split("\n")
 			.map((l) => l.trim())
@@ -452,16 +454,16 @@ function copyWorktreeIncludeFiles(
 
 			try {
 				const src = join(repoRoot, relPath);
-				if (!existsSync(src)) continue;
+				if (!(await pathExists(src))) continue;
 
 				const dst = join(worktreePath, relPath);
-				mkdirSync(dirname(dst), { recursive: true });
+				await mkdir(dirname(dst), { recursive: true });
 
-				const info = statSync(src);
+				const info = await stat(src);
 				if (info.isDirectory()) {
-					cpSync(src, dst, { recursive: true });
+					await cp(src, dst, { recursive: true });
 				} else {
-					cpSync(src, dst);
+					await cp(src, dst);
 				}
 			} catch (err) {
 				console.error(err);
