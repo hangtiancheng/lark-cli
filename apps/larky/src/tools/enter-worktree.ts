@@ -1,5 +1,7 @@
+import { asErrorString } from "../utils/index.js";
+import { createAgentWorktree } from "../worktree/worktree.js";
 import {
-  strArg,
+	strArg,
 	type Tool,
 	type ToolCategory,
 	type ToolContext,
@@ -28,37 +30,43 @@ export class EnterWorktreeTool implements Tool {
 						type: "string",
 						description: "Short identifier of the worktree",
 					},
-        },
-        required: ['slug']
+				},
+				required: ["slug"],
 			},
 		};
 	}
-	async execute(
+	execute(
 		ctx: ToolContext,
 		args: Record<string, unknown>,
 	): Promise<ToolResult> {
-    const slug = strArg(args, "slug");
-    if (!slug) {
-      return {
-        output: 'Error: slug is required',
-        isError: true,
-      }
-    }
+		const slug = strArg(args, "slug");
+		if (!slug) {
+			return Promise.resolve({
+				output: "Error: slug is required",
+				isError: true,
+			});
+		}
 
-    if (!/^[a-zA-Z0-9_-]+$/.test(slug)) {
-      return {
-        output: 'Error: slug must contain only alphanumeric, hyphen, underscore',
-        isError: true,
-      }
-    }
+		if (!/^[a-zA-Z0-9_-]+$/.test(slug)) {
+			return Promise.resolve({
+				output:
+					"Error: slug must contain only alphanumeric, hyphen, underscore",
+				isError: true,
+			});
+		}
 
-    try {
-      const result = createAgentWorktree(slug);
-      return {
-        output: `Worktree created at ${result.path}`
-      }
-    } catch (err) {
-
-    }
+		try {
+			const result = createAgentWorktree(slug);
+			return Promise.resolve({
+				output: `Worktree created at ${result.path}\nBranch: ${result.branch}\nHead: ${result.headCommit}`,
+				isError: false,
+			});
+		} catch (err) {
+			console.error(err);
+			return Promise.resolve({
+				output: `Error creating worktree: ${asErrorString(err)}`,
+				isError: true,
+			});
+		}
 	}
 }
