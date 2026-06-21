@@ -6,21 +6,34 @@
     "bubbletea",
     "charmbracelet",
     "commondir",
+    "DNAPI",
     "esbuild",
     "fgrep",
     "gitdir",
     "gopkg",
+    "gypfile",
     "hangtiancheng",
     "httpx",
     "larkd",
+    "libuv",
     "lipgloss",
     "modelcontextprotocol",
+    "napi",
     "pycache",
     "pydantic",
     "pyyaml",
+    "stdc",
+    "STDCPPFS",
     "symref",
     "worktree",
     "worktreeinclude",
     "worktrees"
-  ]
+  ],
+  "files.associations": {
+    "*.page-template": "vue",
+    "*.layout-template": "vue",
+    "*.vue": "vue",
+    "*.gyp": "json"
+  },
+  "cmake.sourceDirectory": "./glob-addon"
 }

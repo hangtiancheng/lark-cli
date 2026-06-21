@@ -1,0 +1,28 @@
+{
+  "name": "@lark.js/glob-addon",
+  "version": "0.1.0",
+  "description": "High-performance glob matching for Node.js",
+  "main": "dist/glob.js",
+  "types": "dist/glob.d.ts",
+  "scripts": {
+    "build": "node-gyp rebuild && tsc",
+    "test": "node --test",
+    "cmake": "cmake -S ./ -B ./build && cmake --build ./build"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "typescript": "^5.9.3"
+  },
+  "gypfile": true,
+  "packageManager": "pnpm@10.33.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/glob.d.ts",
+      "import": "./dist/glob.js"
+    }
+  }
+}

@@ -116,7 +116,7 @@ export class HookEngine {
       event: "pre_tool_use",
       toolName,
       args,
-      filePath: String(args.file_path ?? args.path ?? ""),
+      filePath: strArg(args, "file_path", strArg(args, "path", "")),
     };
 
     const results = await this.fire("pre_tool_use", context);

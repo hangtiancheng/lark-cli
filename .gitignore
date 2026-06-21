@@ -204,3 +204,8 @@ lark*.code-workspace
 apps/lark-code-go/lark
 apps/lark-code-go/larkd
 apps/larky-go/larky
+
+target
+**/target
+
+glob-addon/glob-addon.*.node
