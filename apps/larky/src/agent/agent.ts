@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { LLMClient, MaxTokensSetter } from "../llm/client.js";
-import type { ConversationManager, ToolUseBlock, ToolResultBlock } from "../conversation/conversation.js";
+import type {
+  ConversationManager,
+  ToolUseBlock,
+  ToolResultBlock,
+} from "../conversation/conversation.js";
 import type { ToolRegistry } from "../tools/registry.js";
 import type { PermissionChecker, Decision } from "../permissions/checker.js";
 import type { HookEngine, EventName } from "../hooks/hooks.js";
@@ -8,7 +12,11 @@ import type { FileHistory } from "../file-history/file-history.js";
 import type { FileStateCache } from "../tools/file-state-cache.js";
 import type { AgentEvent } from "./events.js";
 import { StreamingExecutor } from "./streaming-executor.js";
-import { manageContext, forceCompact, AutoCompactTrackingState } from "../compact/compact.js";
+import {
+  manageContext,
+  forceCompact,
+  AutoCompactTrackingState,
+} from "../compact/compact.js";
 import { getSessionFilePath } from "../session/session.js";
 import type { UsageAnchor } from "../compact/compact.js";
 import { RecoveryState } from "../compact/recovery.js";
