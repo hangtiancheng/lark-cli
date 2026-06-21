@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { LLMClient, MaxTokensSetter } from "../llm/client.js";
 import type { ConversationManager, ToolUseBlock, ToolResultBlock } from "../conversation/conversation.js";
 import type { ToolRegistry } from "../tools/registry.js";

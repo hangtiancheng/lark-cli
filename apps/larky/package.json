@@ -25,6 +25,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.104.2",
+		"@lark.js/glob-wasm": "workspace:*",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"chalk": "^5.6.2",
 		"ink": "^7.1.0",

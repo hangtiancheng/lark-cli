@@ -1,5 +1,5 @@
 import { statSync } from "fs";
-import { glob } from "fs/promises";
+import { Glob } from "@lark.js/glob-wasm";
 import { join } from "path";
 import { asErrorString } from "../utils/index.js";
 import { GLOB_DESCRIPTION } from "./descriptions.js";
@@ -62,8 +62,9 @@ export class GlobTool implements Tool {
 		const basePath = strArg(args, "path", ctx.workDir);
 		try {
 			const matches: string[] = [];
+			const g = new Glob(pattern);
 
-			for await (const entry of glob(pattern, {
+			for await (const entry of g.scan({
 				cwd: basePath,
 				exclude: (name: string) => name.startsWith(".") || SKIP_DIRS.has(name),
 			})) {

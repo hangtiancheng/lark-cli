@@ -1,6 +1,7 @@
 import type { Stats } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { Glob } from "@lark.js/glob-wasm";
 import { asErrorString } from "../utils/index.js";
 import { GREP_DESCRIPTION } from "./descriptions.js";
 import {
@@ -12,24 +13,6 @@ import {
 	type ToolResult,
 	type ToolSchema,
 } from "./types.js";
-
-function globToRegex(pattern: string): RegExp {
-	// Split by `**` first, then escape each segment and handle `*` / `?`
-	const doubleStarParts = pattern.split("**");
-	const regexStr = doubleStarParts
-		.map((part) => {
-			// Escape regex-special characters (except glob wildcards)
-			let escaped = part.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-			// `*` matches any character except path separator
-			escaped = escaped.replace(/\*/g, "[^/]*");
-			// `?` matches any single character except path separator
-			escaped = escaped.replace(/\?/g, "[^/]");
-			return escaped;
-		})
-		// `**` matches any characters including path separators
-		.join(".*");
-	return new RegExp(`^${regexStr}$`, "i");
-}
 
 const MAX_RESULTS = 500;
 
@@ -99,7 +82,7 @@ export class GrepTool implements Tool {
 			};
 		}
 
-		const includeRegex = include ? globToRegex(include) : null;
+		const includeGlob = include ? new Glob(include) : null;
 		const results: string[] = [];
 
 		const walk = async (dir: string): Promise<void> => {
@@ -127,7 +110,7 @@ export class GrepTool implements Tool {
 				if (fileStat.isDirectory()) {
 					await walk(fullPath);
 				} else if (fileStat.isFile()) {
-					if (includeRegex && !includeRegex.test(entry)) continue;
+					if (includeGlob && !(await includeGlob.match(entry))) continue;
 					await searchFile(fullPath);
 				}
 			}

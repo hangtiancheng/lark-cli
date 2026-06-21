@@ -1,5 +1,7 @@
 packages:
   - apps/*
+  - glob-addon
+  - glob-wasm
 
 allowBuilds:
   better-sqlite3: true

@@ -199,6 +199,7 @@ tsconfig.tsbuildinfo
 **/tsconfig.tsbuildinfo
 
 code-review*.md
+plan*.md
 lark*.code-workspace
 apps/lark-code-go/lark
 apps/lark-code-go/larkd

@@ -1,0 +1,35 @@
+{
+  "name": "@lark.js/glob-wasm",
+  "version": "1.0.0",
+  "description": "Bun.Glob polyfill for Node.js, powered by WebAssembly",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test",
+    "asbuild:debug": "asc assembly/index.ts --target debug",
+    "asbuild:release": "asc assembly/index.ts --target release",
+    "asbuild": "pnpm run asbuild:debug && pnpm run asbuild:release",
+    "start": "npx serve ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.1",
+  "devDependencies": {
+    "assemblyscript": "^0.28.19",
+    "@types/node": "^24.13.2",
+    "typescript": "^5.9.3"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    },
+    "./wasm": {
+      "types": "./build/release.d.ts",
+      "import": "./build/release.js"
+    }
+  }
+}
