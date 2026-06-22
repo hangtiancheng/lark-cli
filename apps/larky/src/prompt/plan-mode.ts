@@ -36,22 +36,14 @@ Goal: Write your final plan to the plan file (the only file you can edit).
 At the very end of your turn, once you have asked the user questions and are happy with your final plan file - you should always call ExitPlanMode.`;
 
 // Plan Mode sparse reminder: only key rules are displayed during intermediate iterations
-const planModeSparseReminder =
-  "Plan mode still active (see full instructions earlier in conversation). " +
-  "Read-only except plan file (%PLAN_PATH%). Follow 5-phase workflow. " +
-  "End turns with AskUserQuestion (for clarifications) or ExitPlanMode (for plan approval). " +
-  "Never ask about plan approval via text or AskUserQuestion.";
+const planModeSparseReminder = `Plan mode still active (see full instructions earlier in conversation). Read-only except plan file (%PLAN_PATH%). Follow 5-phase workflow. End turns with AskUserQuestion (for clarifications) or ExitPlanMode (for plan approval). Never ask about plan approval via text or AskUserQuestion.`;
 
 // Prompt for exiting Plan Mode
-const planModeExitTemplate =
-  "## Exited Plan Mode\n\n" +
-  "You have exited plan mode. You can now make edits, run tools, and take actions.%EXTRA%";
+const planModeExitTemplate = `## Exited Plan Mode
+You have exited plan mode. You can now make edits, run tools, and take actions.%EXTRA%`;
 
 // Prompt for re-entering Plan Mode: reminds the model that a plan file already exists and can be continued
-const planModeReentryTemplate =
-  "You have re-entered plan mode. Your previous plan file is at %PLAN_PATH%. " +
-  "Review it and continue from where you left off. You can update, refine, or " +
-  "restart the plan as needed. Follow the same 5-phase workflow as before.";
+const planModeReentryTemplate = `You have re-entered plan mode. Your previous plan file is at %PLAN_PATH%. Review it and continue from where you left off. You can update, refine, or restart the plan as needed. Follow the same 5-phase workflow as before.`;
 
 // How many iterations before repeating the full reminder
 const reminderInterval = 5;

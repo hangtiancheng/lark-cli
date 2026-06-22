@@ -57,3 +57,95 @@ message_start 整个响应开始, 携带 input_tokens 输入 token 数
 message_delta 消息增量 (output_tokens 输出 token 数, stop_reason 停止原因)
 message_end 整个响应结束
 ```
+
+## 请求的 system, messages, tools
+
+- system 参数存放用户信息和环境信息, 包括: 你是谁、操作系统是什么、工作目录是什么
+- messages 参数存放对话历史、上下文窗口
+- tools 参数存放工具描述
+
+```json
+{
+  "model": "claude-sonnet-4-6",
+  "max_tokens": 4096,
+  "system": "You are Larky, a terminal AI programming assistant.\n\n# Environment\nOperating System: MacOS\nWorking Directory: /path/to/cwd\nCurrent Time: 2026-06-22",
+  "messages": [
+    { "role": "user", "content": "Explain the contents of ./app.ts." },
+    {
+      "role": "assistant",
+      "content": "Sure, let me read the contents of ./app.ts.\nfunction main() {\n  console.log(\"javascript newbie\")\n}"
+    },
+    { "role": "user", "content": "What functions are in this file?" }
+  ],
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Read the text content of a file. Path must be relative to the current working directory. Files larger than 512 KB are truncated.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative path to the file (relative to current working directory)."
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  ]
+}
+```
+
+## token
+
+token 是 LLM 的计费单位, 每个英文单词大约 1-2 个 token, 每个汉字大约 1-2 个 token, 具体取决于模型使用的 tokenizer
+
+Claude API 的计费分为
+
+- input_tokens: 发送给模型的内容, 包括 system_prompt, messages 和 tools 描述
+- output_tokens: 模型生成的内容, 输出 token 比输入 token 贵的多
+
+### 历史越长、输入越贵
+
+每轮请求, 都需要发送完整的对话历史; 如果和模型聊了 20 轮, 第 21 轮请求会包含前 20 轮的所有消息; input_tokens 会随着对话轮次线形增长, 所以需要上下文压缩
+
+## Extend Thinking 推理
+
+Claude 支持 Extended Thinking, 让模型回复前先进行内部推理, 开启后响应的 content 数组中会多一个 `type: thinking` 的内容块, 排在 text 内容块的前面; thinking 的 token 计算到 output_tokens 中;
+
+包含工具调用的一轮对话, 对话历史中的 thinking 内容块必须携带, 和后面的 tool_result 一起发送给 LLM API, 否则会报错; 对于纯聊天、没有工具调用的场景, 则对话历史中的 thinking 内容块可以不携带, LLM API 会自动忽略
+
+## 如何封装
+
+只需要 4 个字段就能覆盖主流厂商: Anthropic、OpenAI、...
+
+- protocol: LLM API 协议, 例如 anthropic、openai、openai-compat、...
+- model: 模型, 例如 claude-haiku-4-6、claude-sonnet-4-6、claude-opus-4-6、...
+- base_url: 端点地址
+- api_key: 令牌
+
+封装层负责翻译
+
+## 多轮对话如何实现
+
+每一轮 LLM API 请求, 都包含完整的对话历史, 需要在客户端维护完整的消息列表, 每次用户发送请求、模型响应, 都需要记录, token 消耗会随着对话轮次线形增长
+
+### 消息模型
+
+API 层
+
+- role: user, assistant, system
+- content: 消息内容 (thinking 推理、text 文本、tool_use 工具调用或其他格式)
+
+内部层
+
+- ID: `msg_<hash>` 可以根据消息 ID 定位到正在接收的 assistant 消息, 并追加 SSE 文本
+- status: streaming, complete, error 封装层翻译时可以过滤 error 状态的消息
+- timestamp
+- usage: `{ inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens }`
+- role: user, assistant, system, tool (Only for OpenAI)
+- content: 消息内容 (thinking 推理、text 文本、tool_use 工具调用或其他格式)
+
+### 对话管理器
+
+考虑到流式接收
