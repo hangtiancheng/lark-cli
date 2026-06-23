@@ -17,45 +17,38 @@ export interface ToolContext {
 
 export interface ToolSchema {
 	name: string;
-	parameters?: Record<string, unknown> | null;
-	strict?: boolean | null;
+	parameters?: Record<string, unknown>;
+	strict?: boolean;
 	/** For OpenAI, this must be "function"; for Anthropic, it can be "custom" or null */
-	type?: "function" | "custom" | null;
-	defer_loading?: boolean | null;
-	description?: string | null;
-
-	/** Only for OpenAI */
-	function: {
-		name: string;
-		description: string;
-		parameters: ToolSchema["input_schema"];
-	};
+	type?: "function" | "custom";
+	defer_loading?: boolean;
+	description: string;
 
 	/** The input schema for the tool. */
 	input_schema: {
 		type: "object";
-		properties?: Record<
+		properties: Record<
 			string,
 			{
 				type: "object" | "array" | "string" | "integer" | "boolean";
 				items?: {
 					type: "object" | "array" | "string" | "integer" | "boolean";
 					properties: ToolSchema["input_schema"]["properties"];
-					required?: string[] | null;
-				} | null;
-				minItems?: number | null;
-				maxItems?: number | null;
+					required?: string[];
+				};
+				minItems?: number;
+				maxItems?: number;
 				description: string;
 				default?: unknown;
 			}
-		> | null;
-		required?: string[] | null;
+		>;
+		required?: string[];
 	};
 	allowed_callers?:
 		| ("direct" | "code_execution_20250825" | "code_execution_20260120")[]
-		| null;
-	cache_control?: { type: "ephemeral"; ttl?: "5m" | "1h" } | null;
-	eager_input_streaming?: boolean | null;
+	;
+	cache_control?: { type: "ephemeral"; ttl?: "5m" | "1h" };
+	eager_input_streaming?: boolean;
 }
 
 export interface Tool {

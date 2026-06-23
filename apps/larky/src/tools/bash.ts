@@ -98,13 +98,6 @@ export class BashTool implements Tool {
 			name: this.name,
 			description: this.description,
 			input_schema: inputSchema,
-
-			// OpenAI
-			function: {
-				name: this.name,
-				description: this.description,
-				parameters: inputSchema,
-			},
 		};
 	}
 

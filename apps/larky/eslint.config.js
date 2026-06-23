@@ -59,6 +59,7 @@ export default defineConfig(
 			"@typescript-eslint/no-unsafe-member-access": "error",
 			"@typescript-eslint/no-unsafe-return": "error",
 			"unicorn/filename-case": ["error", { case: "kebabCase" }],
+			"no-console": "warn",
 		},
 	},
 	{

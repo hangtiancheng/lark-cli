@@ -1,3 +1,4 @@
+import type { ToolSchema } from "@/tools/types.js";
 import type { ProviderConfig } from "../config/config.js";
 import type { ConversationManager } from "../conversation/conversation.js";
 import type { StreamEvent } from "./events.js";
@@ -48,7 +49,7 @@ import type { StreamEvent } from "./events.js";
 export interface LLMClient {
 	stream(
 		conversationManager: ConversationManager,
-		toolSchemas: Record<string, unknown>[],
+		toolSchemas: ToolSchema[],
 		abortSignal?: AbortSignal,
 	): AsyncGenerator<StreamEvent>;
 }
@@ -57,6 +58,7 @@ export interface MaxTokensSetter {
 	setMaxOutputTokens(maxTokens: number): void;
 }
 
+// Use dynamic import. 按需加载
 export async function createClient(
 	config: ProviderConfig,
 	systemPrompt: string,

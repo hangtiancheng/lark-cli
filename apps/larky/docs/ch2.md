@@ -173,3 +173,12 @@ API 层
 ## 先占位, 再填充
 
 用户发送请求后, 对话管理器先创建一条空的 assistant 消息作为占位符, 将状态标记为 streaming 正在流式输出; 一边接收 SSE chunk, 一边向该 assistant 消息中追加 SSE chunk; 等到流式输出接收, 将状态标记为 complete 完成, 记录 token 用量
+
+## 代码
+
+- [anthropic.ts](apps/larky/src/llm/anthropic.ts)
+- [client.ts](apps/larky/src/llm/client.ts)
+- [errors.ts](apps/larky/src/llm/errors.ts)
+- [events.ts](apps/larky/src/llm/events.ts)
+- [model-resolver.ts](apps/larky/src/llm/model-resolver.ts)
+- [conversation.ts](apps/larky/src/conversation/conversation.ts)
