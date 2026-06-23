@@ -42,7 +42,7 @@ curl https://api.anthropic.com/v1/messages \
 }
 ```
 
-- 请求的 messages: 每条 message 有 role 和 content 两个字段, role (API 请求场景下) 只有两个值: user 和 assistant; messages 数组中, 最好保持 user 和 assistant 两个角色交替出现; 如果连续传递两条 user 消息, API 不会报错, 会自动合并为一条 user 消息
+- 请求的 messages: 每条 message 有 role 和 content 两个字段, role (API 请求场景下) 只有两个值: user 和 assistant; messages 数组中, 最好保持 user 和 assistant 两个 role 交替出现; 如果连续传递两条 user 消息, API 不会报错, 会自动合并为一条 user 消息
 - LLM 返回一个工具调用 (tool_use) 请求, 这是 assistant 消息; 用户调用工具拿到结果, 该工具调用结果需要作为 user 消息发送; 如果错误的将工具调用结果作为 assistant 消息发送, 则会导致连续两条 assistant 消息, API 会直接报错
 - 响应的 content 字段是一个数组: LLM 的响应可能包含多种内容, 每种内容是一个独立的 content block, 类型可能是 text、tool_use 等
 - 流式响应基于 SSE (Server-Sent Events), 本质是 HTTP 长连接
@@ -139,7 +139,7 @@ API 层
 
 内部层
 
-- ID: `msg_<hash>` 可以根据消息 ID 定位到正在接收的 assistant 消息, 并追加 SSE 文本
+- ID: `msg_<hash>` 可以根据消息 ID 定位到正在接收的 assistant 消息, 并追加 SSE chunk
 - status: streaming, complete, error 封装层翻译时可以过滤 error 状态的消息
 - timestamp
 - usage: `{ inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens }`
@@ -148,4 +148,22 @@ API 层
 
 ### 对话管理器
 
-考虑到流式接收
+考虑到流式接收, CLI 正在向 assistant 消息 (SSE chunk 数组) 中追加 SSE chunk, 同时 TUI 正在读 assistant 消息 (SSE chunk 数组) 以渲染 TUI, 两处同时操作同一个列表, 可能导致数据竞争
+
+- Node.js 单线程异步, 避免数据竞争
+- Go 加锁
+
+追加 SSE chunk 时, 拿到 assistant 消息的唯一 ID, 根据 ID 追加 SSE chunk; 更新 TUI 时, 根据 ID 拿到一份 assistant 消息的快照
+
+## 格式转换: 内部消息到 LLM API 消息
+
+- [Anthropic](apps/larky/src/llm/anthropic.ts)
+- [OpenAI](apps/larky/src/llm/openai.ts)
+
+1. 过滤: system 消息 (例如欢迎语)、error 状态的 assistant 消息需要过滤
+2. 合并: 虽然 Claude API 可以自动合并相邻的相同 role 的消息, 但是在客户端合并是更好的做法, 消息结构更清晰, 减少 token 消耗
+3. 过滤掉 system 消息后, 第一条消息的 role 必须是 user, 并且 message 数组中 user 和 assistant 两个 role 交替出现
+
+## 先占位, 再填充
+
+用户发送请求后, 对话管理器先创建一条空的 assistant 消息作为占位符, 将状态标记为 streaming 正在流式输出; 一边接收 SSE chunk, 一边向该 assistant 消息中追加 SSE chunk; 等到流式输出接收, 将状态标记为 complete 完成, 记录 token 用量
