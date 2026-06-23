@@ -72,12 +72,12 @@ export class OpenAIClient implements LLMClient, MaxTokensSetter {
 
     const tools: OpenAI.Responses.FunctionTool[] = toolSchemas.map((s) => {
       const schema = s.input_schema;
-			return {
-				type: "function" as const,
-				name: s.name,
-				description: s.description,
-				parameters: schema,
-				strict: null,
+      return {
+        type: "function" as const,
+        name: s.name,
+        description: s.description,
+        parameters: schema,
+        strict: null,
       };
     });
 
@@ -111,6 +111,13 @@ export class OpenAIClient implements LLMClient, MaxTokensSetter {
             text: event.delta,
           };
         } // end if (event.type === "response.output_text.delta")
+        else if (event.type === "response.function_call_arguments.delta") {
+          jsonAccumulate += event.delta;
+          yield {
+            type: "tool_call_delta",
+            text: event.delta,
+          };
+        } // end if (event.type === "response.function_call_arguments.delta")
         else if (event.type === "response.output_item.added") {
           if (event.item.type === "function_call") {
             currentToolName = event.item.name;
@@ -179,8 +186,8 @@ export class OpenAIClient implements LLMClient, MaxTokensSetter {
           // Otherwise default to "end_turn".
           let stopReason = "end_turn";
           const resp = event.response;
-					if (resp.status === "incomplete") {
-						// 'max_output_tokens' | 'content_filter'
+          if (resp.status === "incomplete") {
+            // 'max_output_tokens' | 'content_filter'
             const details = resp.incomplete_details;
             if (details?.reason === "max_output_tokens") {
               stopReason = "max_tokens";
@@ -227,9 +234,8 @@ type OpenAIMessageParam =
       output: string;
     };
 
-
 // Convert Larky's conversation into Responses API input items:
-// assistant tool calls become function_call items and 
+// assistant tool calls become function_call items and
 // tool results become function_call_output items,
 // so multi-turn tool use works over the Responses endpoint.
 export function buildOpenAIInput(messages: Message[]): OpenAIMessageParam[] {
@@ -243,7 +249,7 @@ export function buildOpenAIInput(messages: Message[]): OpenAIMessageParam[] {
         });
       } // end if (m.content)
 
-			for (const tu of m.toolUses) {
+      for (const tu of m.toolUses) {
         result.push({
           type: "function_call",
           name: tu.toolName,
@@ -280,7 +286,7 @@ function containsContextLengthError(msg: string): boolean {
   );
 }
 
-// Convert Larky's conversation into Chat Completions messages, 
+// Convert Larky's conversation into Chat Completions messages,
 // preserving assistant tool_calls and tool-result (role: "tool") turns so multi-turn tool use works over the openai-compat (Chat Completions) endpoint.
 export function buildChatCompletionMessage(
   messages: Message[],
@@ -353,14 +359,7 @@ export class OpenAICompatClient implements LLMClient, MaxTokensSetter {
 
   async *stream(
     conversation: ConversationManager,
-    toolSchemas: {
-      input_schema: {
-        properties?: unknown;
-        required?: string[];
-      } | null;
-      name: string;
-      description: string;
-    }[],
+    toolSchemas: ToolSchema[],
     abortSignal?: AbortSignal,
   ): AsyncGenerator<StreamEvent> {
     const messages: OpenAI.ChatCompletionMessageParam[] = [
@@ -402,7 +401,7 @@ export class OpenAICompatClient implements LLMClient, MaxTokensSetter {
         ...(abortSignal ? { signal: abortSignal } : {}),
       });
 
-      const toolUses = new Map<
+      const toolCalls = new Map<
         number,
         {
           id: string;
@@ -414,16 +413,18 @@ export class OpenAICompatClient implements LLMClient, MaxTokensSetter {
       /** enum: "length" | "tool_calls" */
       let finishReason: string | null = null;
       for await (const chunk of stream) {
+        if (chunk.choices.length === 0) {
+          continue;
+        }
         const delta = chunk.choices[0].delta;
-        // if (!delta) continue;
         if (delta.content) {
           yield { type: "text_delta", text: delta.content };
         } // end if (delta.content)
 
         if (delta.tool_calls) {
           for (const tc of delta.tool_calls) {
-            if (!toolUses.has(tc.index)) {
-              toolUses.set(tc.index, {
+            if (!toolCalls.has(tc.index)) {
+              toolCalls.set(tc.index, {
                 id: tc.id ?? "",
                 name: tc.function?.name ?? "",
                 args: "",
@@ -436,9 +437,9 @@ export class OpenAICompatClient implements LLMClient, MaxTokensSetter {
                   toolId: tc.id ?? "",
                 };
               }
-            } // end if (!toolUses.has(tc.index))
+            } // end if (!toolCalls.has(tc.index))
 
-            const existing = toolUses.get(tc.index);
+            const existing = toolCalls.get(tc.index);
             if (existing) {
               if (tc.id) {
                 existing.id = tc.id;
@@ -461,13 +462,15 @@ export class OpenAICompatClient implements LLMClient, MaxTokensSetter {
 
         if (chunk.choices[0].finish_reason) {
           finishReason = chunk.choices[0].finish_reason;
-          for (const tu of toolUses.values()) {
+          for (const tu of toolCalls.values()) {
             let args: Record<string, unknown> = {};
             const jsonArgs = tu.args;
             if (jsonArgs) {
               try {
                 const parsed: unknown = JSON.parse(jsonArgs);
-                args = isRecord(parsed) ? asRecord(parsed) : { dangerouslyJson: jsonArgs };
+                args = isRecord(parsed)
+                  ? asRecord(parsed)
+                  : { dangerouslyJson: jsonArgs };
               } catch (err) {
                 console.error(err);
                 args = {
@@ -510,7 +513,7 @@ export class OpenAICompatClient implements LLMClient, MaxTokensSetter {
       let stopReason: string;
       if (finishReason === "length") {
         stopReason = "max_tokens";
-      } else if (finishReason === "tool_calls" || toolUses.size > 0) {
+      } else if (finishReason === "tool_calls" || toolCalls.size > 0) {
         stopReason = "tool_use";
       } else {
         stopReason = "end_turn";

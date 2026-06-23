@@ -40,5 +40,5 @@
     "*.vue": "vue",
     "*.gyp": "json"
   },
-  "cmake.sourceDirectory": "/Users/hangtiancheng/github/lark-code/glob-addon"
+  "cmake.sourceDirectory": "/Users/user/github/lark-cli/glob-addon"
 }
