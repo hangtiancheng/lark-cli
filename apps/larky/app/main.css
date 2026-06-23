@@ -1,0 +1,37 @@
+@import "tailwindcss";
+@import "../node_modules/@lark.js/docs/dist/client.css";
+@import "../node_modules/@lark.js/docs/dist/docs.css";
+
+/* Scan lark-docs theme templates for Tailwind class names */
+@source "../node_modules/@lark.js/docs/dist/theme.js";
+
+/* daisyUI v5 with custom light-green theme + dark (prefers-color-scheme) */
+@plugin "daisyui" {
+  themes:
+    light --default,
+    dark --prefersdark;
+}
+
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans:
+    Iosevka, Maple Mono, Menlo, Cascadia Code, Sarasa Gothic SC, PingFang SC,
+    Microsoft YaHei;
+  --font-mono:
+    Iosevka, Maple Mono, Menlo, Cascadia Code, Sarasa Gothic SC, PingFang SC,
+    Microsoft YaHei;
+}
+
+/* daisyUI v5: override CSS custom properties for a very light green palette */
+:root {
+  --color-primary: #86b89a;
+  --color-primary-content: #1a2e22;
+  --color-secondary: #7ab3a0;
+  --color-accent: #a3d4b5;
+  --color-neutral: #3d4a42;
+  --color-base-100: #fafcfa;
+  --color-base-200: #edf3ee;
+  --color-base-300: #dce5dd;
+  --color-base-content: #2a332c;
+}
