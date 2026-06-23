@@ -28,7 +28,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.104.2",
-		"@lark.js/docs": "^0.0.2",
+		"@lark.js/docs": "file:../../../lark/packages/lark-docs",
 		"@lark.js/glob-addon": "workspace:*",
 		"@lark.js/glob-wasm": "workspace:*",
 		"@lark.js/mvc": "0.0.13",

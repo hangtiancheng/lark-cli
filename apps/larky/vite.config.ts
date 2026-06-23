@@ -27,7 +27,7 @@ export default defineConfig((({ mode, command }) => {
      * 'serve': during dev (`vite` command)
      * 'build': when building for production (`vite build` command)
      */
-    base: isDev ? "/" : "/lark/",
+    base: isDev ? "/" : "/lark-cli/",
     root: resolve(PKG_DIR, "app"),
     plugins: [
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

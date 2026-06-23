@@ -5,11 +5,9 @@ export default defineConfig({
   docs: "docs",
   baseUrl: "/lark-cli/",
   routeMode: "history",
-  title: "Lark Homepage",
-  description: "@lark.js/lark -- Documentation site generator (Homepage)",
-  nav: [
-    { text: "Lark CLI", link: "/lark-cli/ch1/" },
-  ],
+  title: "Lark CLI",
+  description: "Lark CLI (Larky) Documentation",
+  nav: [{ text: "Introduction", link: "/lark-cli/ch1/" }],
   sidebar: {
     "/lark-cli/ch1/": "auto",
     "/lark-cli/ch2/": "auto",
@@ -17,19 +15,6 @@ export default defineConfig({
   },
   highlight: {
     theme: "github-light",
-    languages: [
-      "javascript",
-      "typescript",
-      "html",
-      "css",
-      "markdown",
-      "json",
-      "yaml",
-      "bash",
-      "sql",
-      "python",
-      "go",
-    ],
   },
   search: { provider: "local" },
 });

@@ -212,8 +212,8 @@ importers:
         specifier: ^0.104.2
         version: 0.104.2(zod@4.4.3)
       '@lark.js/docs':
-        specifier: ^0.0.2
-        version: 0.0.2(@lark.js/mvc@0.0.13(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))(@tailwindcss/typography@0.5.20(tailwindcss@4.3.1))(daisyui@5.5.23)(tailwindcss@4.3.1)
+        specifier: file:../../../lark/packages/lark-docs
+        version: file:../lark/packages/lark-docs(@lark.js/mvc@0.0.13(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))(@tailwindcss/typography@0.5.20(tailwindcss@4.3.1))(daisyui@5.5.23)(tailwindcss@4.3.1)
       '@lark.js/glob-addon':
         specifier: workspace:*
         version: link:../../glob-addon
@@ -934,8 +934,8 @@ packages:
     peerDependencies:
       '@langchain/core': ^1.0.0
 
-  '@lark.js/docs@0.0.2':
-    resolution: {integrity: sha512-yxOAbFeJP0pds5J+QKUTCQ/6NKlXrGlSWogp++CXj4icGeS+eBRlaKuqJfh/os4ZJ+f8SO2xfEu9QZ9wuTmgxg==}
+  '@lark.js/docs@file:../lark/packages/lark-docs':
+    resolution: {directory: ../lark/packages/lark-docs, type: directory}
     peerDependencies:
       '@lark.js/mvc': '>=0.0.12'
       '@tailwindcss/typography': ^0.5.0
@@ -4378,7 +4378,7 @@ snapshots:
       '@langchain/core': 1.2.0(openai@6.44.0(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       js-tiktoken: 1.0.21
 
-  '@lark.js/docs@0.0.2(@lark.js/mvc@0.0.13(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))(@tailwindcss/typography@0.5.20(tailwindcss@4.3.1))(daisyui@5.5.23)(tailwindcss@4.3.1)':
+  '@lark.js/docs@file:../lark/packages/lark-docs(@lark.js/mvc@0.0.13(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))(@tailwindcss/typography@0.5.20(tailwindcss@4.3.1))(daisyui@5.5.23)(tailwindcss@4.3.1)':
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/js': 4.6.3

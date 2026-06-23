@@ -2,16 +2,48 @@ import type { ProviderConfig } from "../config/config.js";
 import type { ConversationManager } from "../conversation/conversation.js";
 import type { StreamEvent } from "./events.js";
 
-export interface ToolSchema {
-	input_schema:
-		| {
-				properties?: unknown;
-				required?: string[];
-		  }
-		| undefined;
-	name: string;
-	description: string;
-}
+// export interface ToolSchema {
+// 	name: string;
+// 	parameters?: Record<string, unknown> | null;
+// 	strict?: boolean | null;
+// 	/** For OpenAI, this must be "function"; for Anthropic, it can be "custom" or null */
+// 	type?: "function" | "custom" | null;
+// 	defer_loading?: boolean | null;
+// 	description?: string | null;
+
+// 	/** Only for OpenAI */
+// 	function: {
+// 		name: string;
+// 		description: string;
+// 		parameters: ToolSchema["input_schema"];
+// 	};
+
+// 	/** The input schema for the tool. */
+// 	input_schema: {
+// 		type: "object";
+// 		properties?: Record<
+// 			string,
+// 			{
+// 				type: "object" | "array" | "string" | "integer" | "boolean";
+// 				items?: {
+// 					type: "object" | "array" | "string" | "integer" | "boolean";
+// 					properties: ToolSchema["input_schema"]["properties"];
+// 					required?: string[] | null;
+// 				} | null;
+// 				minItems?: number | null;
+// 				maxItems?: number | null;
+// 				description: string;
+// 				default?: unknown;
+// 			}
+// 		> | null;
+// 		required?: string[] | null;
+// 	};
+// 	allowed_callers?:
+// 		| ("direct" | "code_execution_20250825" | "code_execution_20260120")[]
+// 		| null;
+// 	cache_control?: { type: "ephemeral"; ttl?: "5m" | "1h" } | null;
+// 	eager_input_streaming?: boolean | null;
+// }
 
 export interface LLMClient {
 	stream(
