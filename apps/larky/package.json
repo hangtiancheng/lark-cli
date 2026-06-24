@@ -31,7 +31,7 @@
 		"@lark.js/docs": "file:../../../lark/packages/lark-docs",
 		"@lark.js/glob-addon": "workspace:*",
 		"@lark.js/glob-wasm": "workspace:*",
-		"@lark.js/mvc": "0.0.13",
+		"@lark.js/mvc": "0.0.15",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"@tailwindcss/vite": "^4.3.1",
 		"chalk": "^5.6.2",

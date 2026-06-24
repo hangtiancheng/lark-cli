@@ -15,7 +15,7 @@ export const ReadFileParamsSchema = z.object({
 
 export class ReadFileTool implements BaseTool {
   readonly name = "read_file";
-  readonly description = `Read the text content of a file. Path must be relative to the current working directory. Files larger than 512 KB are truncated.`;
+  readonly description = `Read the text content of a file, path must be relative to current working directory, files larger than 512 KB are truncated.`;
   readonly inputSchema = {
     type: "object" as const,
     properties: {

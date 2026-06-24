@@ -26,7 +26,7 @@ const commandErrorThresholds = new Map<string, number>([
 	["rg", 2], // MacOS ripgrep shares the same exit code semantics as grep,
 	["diff", 2], // exit 1 = files differ, not an error
 	["test", 2], // exit 1 = condition is false, not an error
-	["find", 2], // exit 1 = partial success, not an error
+	["find", 1],
 ]);
 
 /**

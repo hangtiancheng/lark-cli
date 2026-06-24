@@ -30,6 +30,7 @@
     "stdc",
     "STDCPPFS",
     "symref",
+    "toolu",
     "worktree",
     "worktreeinclude",
     "worktrees"
@@ -40,5 +41,4 @@
     "*.vue": "vue",
     "*.gyp": "json"
   },
-  "cmake.sourceDirectory": "/Users/user/github/lark-cli/glob-addon"
 }
