@@ -1,15 +1,8 @@
 import OpenAI from "openai";
-import {
-  getMaxOutputTokens,
-  type ProviderConfig,
-  resolveAPIKey,
-} from "../config/config.js";
-import type {
-  ConversationManager,
-  Message,
-} from "../conversation/conversation.js";
-import { asRecord, asString, isRecord } from "../utils/index.js";
-import type { LLMClient, MaxTokensSetter } from "./client.js";
+import { getMaxOutputTokens, type ProviderConfig, resolveAPIKey } from "../config/config.js";
+import type { ConversationManager, Message } from "../conversation/conversation.js";
+import { asRecord, asString, DANGEROUSLY_JSON, isRecord } from "../utils/index.js";
+import type { LLMClient } from "./client.js";
 import {
   AuthenticationError,
   ContextTooLongError,
@@ -31,7 +24,7 @@ enum OpenAIErrorCode {
   BadRequest = 400,
 }
 
-export class OpenAIClient implements LLMClient, MaxTokensSetter {
+export class OpenAIClient implements LLMClient {
   private client: OpenAI;
   private model: string;
   private systemPrompt: string;
@@ -137,13 +130,11 @@ export class OpenAIClient implements LLMClient, MaxTokensSetter {
             if (jsonAccumulate) {
               try {
                 const parsed: unknown = JSON.parse(jsonAccumulate);
-                args = isRecord(parsed)
-                  ? asRecord(parsed)
-                  : { dangerouslyJson: jsonAccumulate };
+                args = isRecord(parsed) ? asRecord(parsed) : { [DANGEROUSLY_JSON]: jsonAccumulate };
               } catch (e) {
                 console.error(e);
                 args = {
-                  dangerouslyJson: jsonAccumulate,
+                  [DANGEROUSLY_JSON]: jsonAccumulate,
                 };
               }
             }
@@ -173,10 +164,7 @@ export class OpenAIClient implements LLMClient, MaxTokensSetter {
 
             // input_tokens already includes the cached prefix;
             // subtract so the usage anchor (input + cache_read) doesn't double-count it.
-            inputTokens = Math.max(
-              0,
-              usage.input_tokens - cacheReadInputTokens,
-            );
+            inputTokens = Math.max(0, usage.input_tokens - cacheReadInputTokens);
           } // end if (usage)
 
           // Parse the actual stop reason from the Responses API.
@@ -334,7 +322,7 @@ export function buildChatCompletionMessage(
   return params;
 }
 
-export class OpenAICompatClient implements LLMClient, MaxTokensSetter {
+export class OpenAICompatClient implements LLMClient {
   private client: OpenAI;
   private model: string;
   private systemPrompt: string;
@@ -468,13 +456,11 @@ export class OpenAICompatClient implements LLMClient, MaxTokensSetter {
             if (jsonArgs) {
               try {
                 const parsed: unknown = JSON.parse(jsonArgs);
-                args = isRecord(parsed)
-                  ? asRecord(parsed)
-                  : { dangerouslyJson: jsonArgs };
+                args = isRecord(parsed) ? asRecord(parsed) : { [DANGEROUSLY_JSON]: jsonArgs };
               } catch (err) {
                 console.error(err);
                 args = {
-                  dangerouslyJson: jsonArgs,
+                  [DANGEROUSLY_JSON]: jsonArgs,
                 };
               }
               yield {
@@ -493,15 +479,11 @@ export class OpenAICompatClient implements LLMClient, MaxTokensSetter {
           // Responses API exposes the cached prefix via
           // input_tokens_details.cached_tokens, absent -> 0.
           // There is no cache_creation concept here, so it stays 0.
-          cacheReadInputTokens =
-            chunk.usage.prompt_tokens_details?.cached_tokens ?? 0;
+          cacheReadInputTokens = chunk.usage.prompt_tokens_details?.cached_tokens ?? 0;
 
           // input_tokens already includes the cached prefix;
           // subtract so the usage anchor (input + cache_read) doesn't double-count it.
-          inputTokens = Math.max(
-            0,
-            chunk.usage.prompt_tokens - cacheReadInputTokens,
-          );
+          inputTokens = Math.max(0, chunk.usage.prompt_tokens - cacheReadInputTokens);
         }
       }
 
@@ -539,8 +521,7 @@ function classifyOpenAIError(err: unknown) {
   if (err instanceof OpenAI.APIError) {
     if (
       err.status === OpenAIErrorCode.PromptTooLong ||
-      (err.status === OpenAIErrorCode.BadRequest &&
-        containsContextLengthError(err.message))
+      (err.status === OpenAIErrorCode.BadRequest && containsContextLengthError(err.message))
     ) {
       return new ContextTooLongError(`Context Too Long: ${err.message}`);
     }
@@ -553,14 +534,10 @@ function classifyOpenAIError(err: unknown) {
       return new RateLimitError(`Rate limit error, please wait.`);
     }
 
-    return new LLMError(
-      `OpenAI API error (${asString(err.status)}): ${err.message}`,
-    );
+    return new LLMError(`OpenAI API error (${asString(err.status)}): ${err.message}`);
   }
 
-  return new NetworkError(
-    `Network error: ${err instanceof Error ? err.message : asString(err)}`,
-  );
+  return new NetworkError(`Network error: ${err instanceof Error ? err.message : asString(err)}`);
 }
 
 // Convert Larky's conversation into Chat Completions messages,

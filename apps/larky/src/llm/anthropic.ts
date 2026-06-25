@@ -10,12 +10,9 @@ import {
   type ProviderConfig,
   resolveAPIKey,
 } from "../config/config.js";
-import type {
-  ConversationManager,
-  Message,
-} from "../conversation/conversation.js";
-import { asErrorString, asRecord, asString, isRecord } from "../utils/index.js";
-import type { LLMClient, MaxTokensSetter } from "./client.js";
+import type { ConversationManager, Message } from "../conversation/conversation.js";
+import { asErrorString, asRecord, asString, DANGEROUSLY_JSON, isRecord } from "../utils/index.js";
+import type { LLMClient } from "./client.js";
 import {
   AuthenticationError,
   ContextTooLongError,
@@ -50,9 +47,7 @@ const ModelContextWindowResSchema = z.object({
 
 // type ModelContextWindowRes = z.infer<typeof ModelContextWindowResSchema>;
 
-export async function fetchModelContextWindow(
-  config: ProviderConfig,
-): Promise<number> {
+export async function fetchModelContextWindow(config: ProviderConfig): Promise<number> {
   if (config.protocol !== "anthropic") {
     return 0;
   }
@@ -78,10 +73,7 @@ export async function fetchModelContextWindow(
       return 0;
     }
     const body: unknown = await res.json();
-    const { success, error, data } = await safeParseAsync(
-      ModelContextWindowResSchema,
-      body,
-    );
+    const { success, error, data } = await safeParseAsync(ModelContextWindowResSchema, body);
     if (!success) {
       console.error(error.message);
       return 0;
@@ -103,9 +95,7 @@ function supportsAdaptiveThinking(): boolean {
   return true;
 }
 
-export function buildAnthropicMessages(
-  messages: Message[],
-): Anthropic.MessageParam[] {
+export function buildAnthropicMessages(messages: Message[]): Anthropic.MessageParam[] {
   const result: Anthropic.MessageParam[] = [];
 
   for (const m of messages) {
@@ -220,7 +210,7 @@ export function buildAnthropicMessages(
   return result;
 }
 
-export class AnthropicClient implements LLMClient, MaxTokensSetter {
+export class AnthropicClient implements LLMClient {
   private client: Anthropic;
   private model: string;
   /**
@@ -331,7 +321,7 @@ export class AnthropicClient implements LLMClient, MaxTokensSetter {
     let thinkingAccumulate = "";
     let thinkingSignature = "";
     let inThinking = false;
-    let messageStartTime = 0;
+    let startTime = 0;
 
     try {
       const response = this.client.messages.stream(params, {
@@ -413,11 +403,11 @@ export class AnthropicClient implements LLMClient, MaxTokensSetter {
                   const parsed: unknown = JSON.parse(jsonAccumulate);
                   args = isRecord(parsed)
                     ? asRecord(parsed)
-                    : { dangerouslyJson: jsonAccumulate };
+                    : { [DANGEROUSLY_JSON]: jsonAccumulate };
                 } catch (err) {
                   console.error(err);
                   args = {
-                    dangerouslyJson: jsonAccumulate,
+                    [DANGEROUSLY_JSON]: jsonAccumulate,
                   };
                 }
               } // end if (jsonAccumulate)
@@ -448,20 +438,18 @@ export class AnthropicClient implements LLMClient, MaxTokensSetter {
           } // end case "message_delta"
 
           case "message_start": {
-            messageStartTime = performance.now();
+            startTime = performance.now();
             inputTokens = event.message.usage.input_tokens;
             outputTokens = event.message.usage.output_tokens;
-            cacheReadInputTokens =
-              event.message.usage.cache_read_input_tokens ?? 0;
-            cacheCreationInputTokens =
-              event.message.usage.cache_creation_input_tokens ?? 0;
+            cacheReadInputTokens = event.message.usage.cache_read_input_tokens ?? 0;
+            cacheCreationInputTokens = event.message.usage.cache_creation_input_tokens ?? 0;
             break;
           } // end "message_start"
 
           case "message_stop": {
-            const messageStopTime = performance.now();
-            const elapsedTime = messageStopTime - messageStartTime;
-            console.log(`Message elapsed time: ${String(elapsedTime)}ms`);
+            const stopTime = performance.now();
+            const elapsed = stopTime - startTime;
+            console.log(`Message elapsed: ${String(elapsed)}ms`);
             break;
           }
         }
@@ -507,8 +495,7 @@ function markLastUserTailForCache(messages: Anthropic.Messages.MessageParam[]) {
         },
       ];
     }
-    const last: Anthropic.Messages.ContentBlockParam =
-      content[content.length - 1];
+    const last: Anthropic.Messages.ContentBlockParam = content[content.length - 1];
 
     // Sets the property of target, equivalent to target[propertyKey] = value when receiver === target.
     Reflect.set(last, "cache_control", {
@@ -543,15 +530,10 @@ function classifyAnthropicError(err: unknown) {
         message += ", please wait.";
       }
 
-      return new RateLimitError(
-        message,
-        retryAfter ? asString(retryAfter) : undefined,
-      );
+      return new RateLimitError(message, retryAfter ? asString(retryAfter) : undefined);
     } // end if (err.status === 429)
 
-    return new LLMError(
-      `Anthropic API error (${asString(err.status)}): ${err.message}`,
-    );
+    return new LLMError(`Anthropic API error (${asString(err.status)}): ${err.message}`);
   } // end if (err instanceof Anthropic.APIError)
 
   return new NetworkError(`Network error: ${asErrorString(err)}`);

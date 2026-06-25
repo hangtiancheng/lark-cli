@@ -6,11 +6,7 @@ import z, { parse } from "zod";
 import { strArg } from "../tools/types.js";
 
 export type DecisionEffect = "allow" | "deny" | "ask";
-export type PermissionMode =
-  | "default"
-  | "acceptEdits"
-  | "plan"
-  | "bypassPermissions";
+export type PermissionMode = "default" | "acceptEdits" | "plan" | "bypassPermissions";
 
 export interface Decision {
   effect: DecisionEffect;
@@ -94,12 +90,11 @@ const CONTENT_FIELDS: Record<string, string> = {
   Grep: "pattern",
 };
 
-export function extractContent(
-  toolName: string,
-  args: Record<string, unknown>,
-): string {
+export function extractContent(toolName: string, args: Record<string, unknown>): string {
   const field = CONTENT_FIELDS[toolName];
-  if (!field) return "";
+  if (!field) {
+    return "";
+  }
   const v = args[field];
   return typeof v === "string" ? v : "";
 }
@@ -118,7 +113,9 @@ export class PathSandbox {
   check(filePath: string): Decision | null {
     const absolute = resolve(filePath);
     for (const root of this.allowedRoots) {
-      if (absolute.startsWith(root)) return null;
+      if (absolute.startsWith(root)) {
+        return null;
+      }
     }
     return {
       effect: "deny",
@@ -169,9 +166,13 @@ function loadRulesFile(path: string): Rule[] {
   }
   const rules: Rule[] = [];
   for (const entry of yamlData) {
-    if (entry.effect !== "allow" && entry.effect !== "deny") continue;
+    if (entry.effect !== "allow" && entry.effect !== "deny") {
+      continue;
+    }
     const m = RULE_RE.exec((entry.rule ?? "").trim());
-    if (!m) continue;
+    if (!m) {
+      continue;
+    }
     rules.push({ tool: m[1], pattern: m[2], effect: entry.effect });
   }
   return rules;
@@ -196,8 +197,12 @@ export class RuleEngine {
       const rules = loadRulesFile(path);
       for (let i = rules.length - 1; i >= 0; i--) {
         const r = rules[i];
-        if (r.tool !== toolName && r.tool !== "*") continue;
-        if (globMatch(r.pattern, content)) return r.effect;
+        if (r.tool !== toolName && r.tool !== "*") {
+          continue;
+        }
+        if (globMatch(r.pattern, content)) {
+          return r.effect;
+        }
       }
     }
     return null;
@@ -220,7 +225,9 @@ export class RuleEngine {
 // Detect dangerous commands and return the matched reason (empty string means safe)
 function detectDangerous(command: string): string {
   for (const p of DANGEROUS_PATTERNS) {
-    if (p.re.test(command)) return p.reason;
+    if (p.re.test(command)) {
+      return p.reason;
+    }
   }
   return "";
 }
@@ -241,16 +248,11 @@ function isSafeCommand(command: string): boolean {
   }
   return SAFE_PREFIXES.some(
     (prefix) =>
-      trimmed === prefix ||
-      trimmed.startsWith(prefix + " ") ||
-      trimmed.startsWith(prefix + "\t"),
+      trimmed === prefix || trimmed.startsWith(prefix + " ") || trimmed.startsWith(prefix + "\t"),
   );
 }
 
-function modeDecide(
-  mode: PermissionMode,
-  category: "read" | "write" | "command",
-): DecisionEffect {
+function modeDecide(mode: PermissionMode, category: "read" | "write" | "command"): DecisionEffect {
   switch (mode) {
     case "bypassPermissions":
       return "allow";
@@ -290,10 +292,7 @@ export class PermissionChecker {
     // Both WriteFile and EditFile targeting the plan file are allowed so the
     // model can create and update its plan. Mirrors Go's category-level check
     // against CategoryWrite (which covers both tools).
-    if (
-      this.mode === "plan" &&
-      (toolName === "WriteFile" || toolName === "EditFile")
-    ) {
+    if (this.mode === "plan" && (toolName === "WriteFile" || toolName === "EditFile")) {
       const path = strArg(args, "file_path", "");
       if (path.includes(".larky/plans/")) {
         return {
@@ -321,7 +320,9 @@ export class PermissionChecker {
     const filePath = strArg(args, "file_path", strArg(args, "path", ""));
     if ((category === "read" || category === "write") && filePath) {
       const sandboxDecision = this.sandbox.check(filePath);
-      if (sandboxDecision) return sandboxDecision;
+      if (sandboxDecision) {
+        return sandboxDecision;
+      }
     }
 
     // Layer 4b: Session-level temporary allow — check the in-memory sessionAllowed set
@@ -354,8 +355,7 @@ export class PermissionChecker {
   // command/path family rather than the whole tool. Mirrors Go.
   allowAlways(toolName: string, args: Record<string, unknown>): void {
     const content = extractContent(toolName, args);
-    const pattern =
-      content.length > 60 ? content.slice(0, 60) + "*" : content + "*";
+    const pattern = content.length > 60 ? content.slice(0, 60) + "*" : content + "*";
     this.ruleEngine.appendLocalRule({
       tool: toolName,
       pattern,
@@ -370,12 +370,16 @@ export class PermissionChecker {
    */
   describeToolAction(toolName: string, args: Record<string, unknown>): string {
     const content = extractContent(toolName, args);
-    if (content) return content;
+    if (content) {
+      return content;
+    }
     // Fallback: concatenate key: value for all parameters, truncating overly long values
     const parts: string[] = [];
     for (const [k, v] of Object.entries(args)) {
       let s = String(v);
-      if (s.length > 80) s = s.slice(0, 80) + "...";
+      if (s.length > 80) {
+        s = s.slice(0, 80) + "...";
+      }
       parts.push(`${k}: ${s}`);
     }
     return parts.join(", ");

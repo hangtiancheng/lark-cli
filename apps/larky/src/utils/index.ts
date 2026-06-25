@@ -1,3 +1,5 @@
+export const DANGEROUSLY_JSON = "dangerouslyJson";
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -41,10 +43,7 @@ export function toTry<T extends (...args: any) => any>(fn: T, ctx?: ThisParamete
   if (typeof fn !== "function") {
     return fn;
   }
-  return function (
-    this: ThisParameterType<T>,
-    ...args: Parameters<T>
-  ): ReturnType<T> | undefined {
+  return function (this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> | undefined {
     let ret: ReturnType<T>;
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -57,4 +56,11 @@ export function toTry<T extends (...args: any) => any>(fn: T, ctx?: ThisParamete
   };
 }
 
-export const safeJSONParse = toTry(JSON.parse, JSON)
+export const safeJSONParse = toTry(JSON.parse, JSON);
+
+export function asError(err: unknown) {
+  if (err instanceof Error) {
+    return err;
+  }
+  return new Error(String(err));
+}

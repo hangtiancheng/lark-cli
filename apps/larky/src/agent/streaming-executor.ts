@@ -25,11 +25,7 @@ export class StreamingExecutor {
     this.ctx = ctx;
   }
 
-  submit(
-    toolId: string,
-    toolName: string,
-    args: Record<string, unknown>,
-  ): void {
+  submit(toolId: string, toolName: string, args: Record<string, unknown>): void {
     this.pending.push({ toolId, toolName, arguments: args });
   }
 

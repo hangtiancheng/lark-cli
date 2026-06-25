@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 const ADJECTIVES = [
   "brave",
@@ -46,9 +46,21 @@ function generateSlug(): string {
 
 let currentPlanPath: string | null = null;
 
+function isPlanUnderWorkDir(planPath: string, workDir: string): boolean {
+  const plansDir = resolve(workDir, ".larky", "plans");
+  const resolved = resolve(planPath);
+  return resolved.startsWith(plansDir + "/");
+}
+
 export function getOrCreatePlanPath(workDir: string): string {
   if (currentPlanPath && existsSync(currentPlanPath)) {
-    return currentPlanPath;
+    if (!isPlanUnderWorkDir(currentPlanPath, workDir)) {
+      console.warn(
+        `Warn: current plan path "${currentPlanPath}" is not under work dir "${workDir}/.larky/plans".`,
+      );
+    } else {
+      return currentPlanPath;
+    }
   }
 
   const dir = join(workDir, ".larky", "plans");
@@ -65,12 +77,23 @@ export function savePlan(workDir: string, content: string): void {
 }
 
 export function loadPlan(): string | null {
-  if (!currentPlanPath || !existsSync(currentPlanPath)) return null;
+  if (!currentPlanPath || !existsSync(currentPlanPath)) {
+    return null;
+  }
   return readFileSync(currentPlanPath, "utf-8");
 }
 
-export function planExists(): boolean {
-  return currentPlanPath !== null && existsSync(currentPlanPath);
+export function planExists(workDir: string): boolean {
+  if (!currentPlanPath || !existsSync(currentPlanPath)) {
+    return false;
+  }
+  if (!isPlanUnderWorkDir(currentPlanPath, workDir)) {
+    console.warn(
+      `Warn: current plan path "${currentPlanPath}" is not under work dir "${workDir}/.larky/plans"`,
+    );
+    return false;
+  }
+  return true;
 }
 
 export function resetPlanPath(): void {

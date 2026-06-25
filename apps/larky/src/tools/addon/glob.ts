@@ -14,7 +14,10 @@ import {
 } from "../types.js";
 
 export class GlobTool implements Tool {
-  name = GlobTool.name.replace("Tool", "");
+  // Use a hardcoded string instead of GlobTool.name.replace("Tool", "")
+  // because class names are not stable after minification — bundlers like
+  // Terser/esbuild may rename or mangle them, producing incorrect tool names at runtime.
+  name = "Glob";
   description = GLOB_DESCRIPTION;
   category: ToolCategory = "read";
 
@@ -42,10 +45,7 @@ export class GlobTool implements Tool {
     };
   }
 
-  execute(
-    ctx: ToolContext,
-    args: Record<string, unknown>,
-  ): Promise<ToolResult> {
+  execute(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
     const pattern = strArg(args, "pattern");
     if (!pattern) {
       return Promise.resolve({

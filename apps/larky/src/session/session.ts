@@ -50,9 +50,7 @@ const CompactBoundaryPayloadSchema = z.object({
 });
 
 // Structured payload serialized into a compact_boundary record's `content`.
-export type CompactBoundaryPayload = z.infer<
-  typeof CompactBoundaryPayloadSchema
->;
+export type CompactBoundaryPayload = z.infer<typeof CompactBoundaryPayloadSchema>;
 
 export interface SessionInfo {
   id: string;
@@ -76,16 +74,12 @@ export function newSessionId(): string {
   return `${ts}-${rand}`;
 }
 
-export function saveMessage(
-  workDir: string,
-  sessionId: string,
-  msg: SessionMessage,
-): void {
+export function saveMessage(workDir: string, sessionId: string, msg: SessionMessage): void {
   const dir = sessionsDir(workDir);
   mkdirSync(dir, { recursive: true });
   const filePath = join(dir, `${sessionId}.jsonl`);
   const line = JSON.stringify(msg) + "\n";
-  writeFileSync(filePath, line, { flag: "a", encoding: "utf-8" });
+  writeFileSync(filePath, line, { flag: /* append */ "a", encoding: "utf-8" });
 }
 
 // Append a compaction boundary to the session. The summary and the verbatim
@@ -106,16 +100,17 @@ export function saveCompactBoundary(
   });
 }
 
-export function loadSession(
-  workDir: string,
-  sessionId: string,
-): SessionMessage[] {
+export function loadSession(workDir: string, sessionId: string): SessionMessage[] {
   const filePath = join(sessionsDir(workDir), `${sessionId}.jsonl`);
-  if (!existsSync(filePath)) return [];
+  if (!existsSync(filePath)) {
+    return [];
+  }
 
   const out: SessionMessage[] = [];
   for (const line of readFileSync(filePath, "utf-8").split("\n")) {
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
     try {
       const message: unknown = JSON.parse(line);
       const { success, data, error } = safeParse(SessionMessageSchema, message);
@@ -176,7 +171,7 @@ export function rebuildFromSession(saved: SessionMessage[]): RestoredMessage[] {
       // The summary stands in for everything before the boundary, replayed as a
       // single user message (mirrors how doCompact rebuilds the live transcript).
       let resumeSummary =
-        "This session is a continuation of our previous conversation, which has been compressed due to context space limitations. Here is a summary of the earlier discussion:\n\n" +
+        "This session is the previous conversation, which has been compressed due to context limitations. Here is a summary of the earlier messages:\n\n" +
         payload.summary;
       if (payload.keep.length > 0) {
         resumeSummary += "\n\nRecent messages have been preserved verbatim.";
@@ -184,35 +179,43 @@ export function rebuildFromSession(saved: SessionMessage[]): RestoredMessage[] {
       out.push({ role: "user", content: resumeSummary });
       for (const k of payload.keep) {
         if (k.role === "user" || k.role === "assistant") {
-          if (k.content) out.push({ role: k.role, content: k.content });
+          if (k.content) {
+            out.push({ role: k.role, content: k.content });
+          }
         }
       }
     }
     // Replay ordinary messages appended after the boundary (continuation turns).
     for (let i = lastBoundary + 1; i < saved.length; i++) {
       const m = saved[i];
-      if (m.type === COMPACT_BOUNDARY) continue; // defensive; last() already found
-      if (m.role === "user" && m.content)
+      if (m.type === COMPACT_BOUNDARY) {
+        continue;
+      } // defensive; last() already found
+      if (m.role === "user" && m.content) {
         out.push({ role: "user", content: m.content });
-      else if (m.role === "assistant" && m.content)
+      } else if (m.role === "assistant" && m.content) {
         out.push({ role: "assistant", content: m.content });
+      }
     }
     return out;
   }
 
   // No boundary → full replay (backward compatible).
   for (const m of saved) {
-    if (m.role === "user" && m.content)
+    if (m.role === "user" && m.content) {
       out.push({ role: "user", content: m.content });
-    else if (m.role === "assistant" && m.content)
+    } else if (m.role === "assistant" && m.content) {
       out.push({ role: "assistant", content: m.content });
+    }
   }
   return out;
 }
 
 export function listSessions(workDir: string): SessionInfo[] {
   const dir = sessionsDir(workDir);
-  if (!existsSync(dir)) return [];
+  if (!existsSync(dir)) {
+    return [];
+  }
 
   const files = readdirSync(dir).filter((f) => f.endsWith(".jsonl"));
   const sessions: SessionInfo[] = [];
@@ -226,7 +229,9 @@ export function listSessions(workDir: string): SessionInfo[] {
     let messageCount = 0;
     try {
       for (const line of readFileSync(filePath, "utf-8").split("\n")) {
-        if (!line.trim()) continue;
+        if (!line.trim()) {
+          continue;
+        }
         let m: SessionMessage;
         try {
           const raw: unknown = JSON.parse(line);
@@ -264,7 +269,9 @@ export function listSessions(workDir: string): SessionInfo[] {
  */
 export function cleanExpiredSessions(workDir: string): number {
   const dir = sessionsDir(workDir);
-  if (!existsSync(dir)) return 0;
+  if (!existsSync(dir)) {
+    return 0;
+  }
 
   const now = Date.now();
   const expiryMs = SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000;

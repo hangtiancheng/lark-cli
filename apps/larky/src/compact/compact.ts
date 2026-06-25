@@ -55,9 +55,7 @@ export function computeCompactThreshold(
   manual = false,
 ): number {
   const effective = contextWindow - Math.min(maxOutput, SUMMARY_OUTPUT_RESERVE);
-  const margin = manual
-    ? MANUAL_COMPACT_SAFETY_MARGIN
-    : AUTO_COMPACT_SAFETY_MARGIN;
+  const margin = manual ? MANUAL_COMPACT_SAFETY_MARGIN : AUTO_COMPACT_SAFETY_MARGIN;
   return effective - margin;
 }
 
@@ -157,18 +155,17 @@ export function computeKeepStartIndex(messages: Message[]): number {
 // the assistant tool_use message that produced its tool_use_id(s). Keeps the
 // pair intact; idempotent when the boundary is already clean.
 function backUpPastToolUse(messages: Message[], keepStart: number): number {
-  if (keepStart <= 0 || keepStart >= messages.length) return keepStart;
-  if (!hasToolResult(messages[keepStart])) return keepStart;
+  if (keepStart <= 0 || keepStart >= messages.length) {
+    return keepStart;
+  }
+  if (!hasToolResult(messages[keepStart])) {
+    return keepStart;
+  }
 
-  const ids = new Set(
-    (messages[keepStart].toolResults ?? []).map((tr) => tr.toolUseId),
-  );
+  const ids = new Set((messages[keepStart].toolResults ?? []).map((tr) => tr.toolUseId));
   for (let i = keepStart - 1; i >= 0; i--) {
     const m = messages[i];
-    if (
-      m.role === "assistant" &&
-      m.toolUses?.some((tu) => ids.has(tu.toolUseId))
-    ) {
+    if (m.role === "assistant" && m.toolUses?.some((tu) => ids.has(tu.toolUseId))) {
       return i;
     }
   }
@@ -220,10 +217,7 @@ export async function manageContext(
 
   // Past the hard-block line we must compact even if the circuit breaker tripped.
   const forced = tokens >= hardBlock;
-  if (
-    !forced &&
-    trackingState.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES
-  ) {
+  if (!forced && trackingState.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
     return {
       compacted: false,
       message: `Auto-compact circuit breaker: ${String(MAX_CONSECUTIVE_FAILURES)} consecutive failures`,
@@ -256,13 +250,7 @@ export async function forceCompact(
   toolSchemaNames: string[],
   sessionFilePath = "",
 ): Promise<CompactResult> {
-  return doCompact(
-    conversation,
-    client,
-    recoveryState,
-    toolSchemaNames,
-    sessionFilePath,
-  );
+  return doCompact(conversation, client, recoveryState, toolSchemaNames, sessionFilePath);
 }
 
 async function doCompact(

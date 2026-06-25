@@ -13,11 +13,7 @@ function spillDir(workDir: string): string {
   return join(workDir, ".larky", "tool_results");
 }
 
-function writeSpill(
-  workDir: string,
-  toolUseId: string,
-  content: string,
-): string {
+function writeSpill(workDir: string, toolUseId: string, content: string): string {
   const dir = spillDir(workDir);
   mkdirSync(dir, { recursive: true });
   const path = join(dir, toolUseId);
@@ -39,7 +35,9 @@ function buildSpillPreview(content: string, spillPath: string): string {
   let msg = "<persisted-output>\n";
   msg += `Output too large (${String(sizeKB)}KB). Full content saved to:\n${spillPath}\n\n`;
   msg += `Preview (first 2KB):\n${preview}`;
-  if (hasMore) msg += "\n...";
+  if (hasMore) {
+    msg += "\n...";
+  }
   msg += "\n</persisted-output>";
   return msg;
 }
@@ -77,11 +75,11 @@ export function applyBudget(
       // Pass 2: Message aggregate exceeds limit → spill the largest result
       let totalLen = newResults.reduce((sum, r) => sum + r.content.length, 0);
       if (totalLen > MESSAGE_AGGREGATE_LIMIT) {
-        const sorted = [...newResults].sort(
-          (a, b) => b.content.length - a.content.length,
-        );
+        const sorted = [...newResults].sort((a, b) => b.content.length - a.content.length);
         for (const r of sorted) {
-          if (totalLen <= MESSAGE_AGGREGATE_LIMIT) break;
+          if (totalLen <= MESSAGE_AGGREGATE_LIMIT) {
+            break;
+          }
           if (r.content.length > OLD_RESULT_SNIP_CHARS) {
             const before = r.content;
             const spillPath = writeSpill(workDir, r.toolUseId, before);
@@ -139,11 +137,7 @@ function snipStale(messages: Message[]): Message[] {
       turnsSeen++;
     }
     // Already within the recent window, or no tool results: keep directly
-    if (
-      turnsSeen > oldBoundary ||
-      !m.toolResults ||
-      m.toolResults.length === 0
-    ) {
+    if (turnsSeen > oldBoundary || !m.toolResults || m.toolResults.length === 0) {
       out[i] = m;
       continue;
     }
@@ -151,10 +145,7 @@ function snipStale(messages: Message[]): Message[] {
     let changed = false;
     const newResults: ToolResultBlock[] = [];
     for (const tr of m.toolResults) {
-      if (
-        isAlreadyReplaced(tr.content) ||
-        tr.content.length <= OLD_RESULT_SNIP_CHARS
-      ) {
+      if (isAlreadyReplaced(tr.content) || tr.content.length <= OLD_RESULT_SNIP_CHARS) {
         newResults.push(tr);
       } else {
         changed = true;

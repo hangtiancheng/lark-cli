@@ -19,7 +19,7 @@ export interface HookContext {
   toolName?: string;
   args?: Record<string, unknown>;
   filePath?: string;
-  message?: string;
+  message?: string | undefined;
 }
 
 export interface HookResult {
@@ -40,9 +40,11 @@ export class HookEngine {
   }
 
   // Queue a message produced by a hook so the agent loop can surface it as a
-  // system reminder on the next turn. Mirrors Go's hook notification queue.
+  // system reminder on the next turn.
   recordNotification(message: string): void {
-    if (message.trim()) this.notifications.push(message);
+    if (message.trim()) {
+      this.notifications.push(message);
+    }
   }
 
   drainNotifications(): string[] {
@@ -55,11 +57,15 @@ export class HookEngine {
     const results: HookResult[] = [];
 
     for (const hook of this.hooks) {
-      if (hook.event !== event) continue;
+      if (hook.event !== event) {
+        continue;
+      }
 
       if (hook.once) {
         const key = hook.id ?? `${hook.event}-${hook.action.type}`;
-        if (this.firedOnce.has(key)) continue;
+        if (this.firedOnce.has(key)) {
+          continue;
+        }
         this.firedOnce.add(key);
       }
 
@@ -128,10 +134,7 @@ export class HookEngine {
     return { rejected: false, reason: "" };
   }
 
-  private async executeAction(
-    hook: HookConfig,
-    context: HookContext,
-  ): Promise<HookResult> {
+  private async executeAction(hook: HookConfig, context: HookContext): Promise<HookResult> {
     switch (hook.action.type) {
       case "command": {
         const command = hook.action.command ?? "";
@@ -222,8 +225,11 @@ function evaluateCondition(condition: string, ctx: HookContext): boolean {
   for (let i = 1; i < parts.length; i += 2) {
     const op = parts[i];
     const next = evaluateSingleCondition(parts[i + 1], ctx);
-    if (op === "&&") result = result && next;
-    else if (op === "||") result = result || next;
+    if (op === "&&") {
+      result = result && next;
+    } else if (op === "||") {
+      result = result || next;
+    }
   }
 
   return result;
@@ -260,10 +266,7 @@ function evaluateSingleCondition(expr: string, ctx: HookContext): boolean {
   const globMatch = /^(\w+)\s*=\*\s*"([^"]*)"$/.exec(trimmed);
   if (globMatch) {
     const value = getContextValue(globMatch[1], ctx);
-    const pattern = globMatch[2]
-      .replace(/\*\*/g, ".*")
-      .replace(/\*/g, "[^/]*")
-      .replace(/\?/g, ".");
+    const pattern = globMatch[2].replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*").replace(/\?/g, ".");
     try {
       return new RegExp(`^${pattern}$`).test(value);
     } catch {
@@ -307,9 +310,7 @@ export function validate(hooks: HookConfig[]): Error | null {
 
   for (let i = 0; i < hooks.length; i++) {
     const h = hooks[i];
-    const label = h.id
-      ? `hook[${String(i)}] (id="${h.id}")`
-      : `hook[${String(i)}]`;
+    const label = h.id ? `hook[${String(i)}] (id="${h.id}")` : `hook[${String(i)}]`;
 
     // Required field: event
     if (!h.event) {
@@ -328,23 +329,17 @@ export function validate(hooks: HookConfig[]): Error | null {
       switch (h.action.type) {
         case "command":
           if (!h.action.command?.trim()) {
-            errors.push(
-              `${label}: action.command must be non-empty for type "command"`,
-            );
+            errors.push(`${label}: action.command must be non-empty for type "command"`);
           }
           break;
         case "prompt":
           if (!h.action.prompt?.trim()) {
-            errors.push(
-              `${label}: action.prompt must be non-empty for type "prompt"`,
-            );
+            errors.push(`${label}: action.prompt must be non-empty for type "prompt"`);
           }
           break;
         case "http":
           if (!h.action.url?.trim()) {
-            errors.push(
-              `${label}: action.url must be non-empty for type "http"`,
-            );
+            errors.push(`${label}: action.url must be non-empty for type "http"`);
           }
           break;
         case "agent":

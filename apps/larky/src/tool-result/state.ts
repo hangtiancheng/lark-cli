@@ -19,8 +19,12 @@ export class ContentReplacementState {
 
   clone(): ContentReplacementState {
     const c = new ContentReplacementState();
-    for (const id of this.seenIds) c.seenIds.add(id);
-    for (const [k, v] of this.replacements) c.replacements.set(k, v);
+    for (const id of this.seenIds) {
+      c.seenIds.add(id);
+    }
+    for (const [k, v] of this.replacements) {
+      c.replacements.set(k, v);
+    }
     return c;
   }
 

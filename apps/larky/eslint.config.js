@@ -9,60 +9,52 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-	globalIgnores(["./dist", "./node_modules"]),
-	{
-		files: ["**/*.{ts,tsx}"],
-		extends: [
-			eslint.configs.recommended,
-			tseslint.configs.strictTypeChecked,
-			tseslint.configs.stylisticTypeChecked,
-			reactRefresh.configs.vite,
-		],
-		languageOptions: {
-			ecmaVersion: 2022,
-			globals: globals.node,
-			parserOptions: {
-				projectService: true,
-				tsconfigRootDir: import.meta.dirname,
-			},
-		},
-		plugins: {
-			unicorn,
-			"react-hooks": reactHooks,
-		},
-		rules: {
-			...reactHooks.configs.recommended.rules,
-			"@typescript-eslint/consistent-type-imports": [
-				"error",
-				{ prefer: "type-imports" },
-			],
-			"@typescript-eslint/no-floating-promises": [
-				"error",
-				{ ignoreVoid: true },
-			],
-			"@typescript-eslint/no-unused-vars": [
-				"error",
-				{ argsIgnorePattern: "^_" },
-			],
-			"@typescript-eslint/no-unnecessary-condition": "error",
-			"@typescript-eslint/ban-ts-comment": "error",
-			"@typescript-eslint/consistent-type-assertions": [
-				"error",
-				// Runtime boundaries must use zod validation instead of type assertions.
-				{ assertionStyle: "never" },
-			],
-			"@typescript-eslint/no-explicit-any": "error",
-			"@typescript-eslint/no-non-null-assertion": "error",
-			"@typescript-eslint/no-unsafe-argument": "error",
-			"@typescript-eslint/no-unsafe-assignment": "error",
-			"@typescript-eslint/no-unsafe-call": "error",
-			"@typescript-eslint/no-unsafe-member-access": "error",
-			"@typescript-eslint/no-unsafe-return": "error",
-			"unicorn/filename-case": ["error", { case: "kebabCase" }],
-			"no-console": "warn",
-		},
-	},
-	{
-		ignores: ["dist/", "node_modules/"],
-	},
+  globalIgnores(["./dist", "./node_modules"]),
+  {
+    files: ["**/*.{ts,tsx}"],
+    extends: [
+      eslint.configs.recommended,
+      tseslint.configs.strictTypeChecked,
+      tseslint.configs.stylisticTypeChecked,
+      reactRefresh.configs.vite,
+    ],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: globals.node,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    plugins: {
+      unicorn,
+      "react-hooks": reactHooks,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
+      "@typescript-eslint/no-floating-promises": ["error", { ignoreVoid: true }],
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unnecessary-condition": "error",
+      "@typescript-eslint/ban-ts-comment": "error",
+      "@typescript-eslint/consistent-type-assertions": [
+        "error",
+        // Runtime boundaries must use zod validation instead of type assertions.
+        { assertionStyle: "never" },
+      ],
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-non-null-assertion": "error",
+      "@typescript-eslint/no-unsafe-argument": "error",
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
+      "unicorn/filename-case": ["error", { case: "kebabCase" }],
+      "no-console": "warn",
+      curly: ["error", "all"],
+    },
+  },
+  {
+    ignores: ["dist/", "node_modules/"],
+  },
 );

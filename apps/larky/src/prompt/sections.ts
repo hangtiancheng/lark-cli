@@ -4,7 +4,6 @@ export interface Section {
   content: string;
 }
 
-
 export function identitySection(): Section {
   return {
     name: "Identity",

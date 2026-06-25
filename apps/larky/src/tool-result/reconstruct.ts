@@ -1,4 +1,3 @@
-
 import type { Message } from "../conversation/conversation.js";
 import { ConversationManager } from "../conversation/conversation.js";
 

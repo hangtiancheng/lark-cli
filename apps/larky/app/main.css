@@ -16,11 +16,9 @@
 
 @theme {
   --font-sans:
-    Iosevka, Maple Mono, Menlo, Cascadia Code, Sarasa Gothic SC, PingFang SC,
-    Microsoft YaHei;
+    Iosevka, Maple Mono, Menlo, Cascadia Code, Sarasa Gothic SC, PingFang SC, Microsoft YaHei;
   --font-mono:
-    Iosevka, Maple Mono, Menlo, Cascadia Code, Sarasa Gothic SC, PingFang SC,
-    Microsoft YaHei;
+    Iosevka, Maple Mono, Menlo, Cascadia Code, Sarasa Gothic SC, PingFang SC, Microsoft YaHei;
 }
 
 /* daisyUI v5: override CSS custom properties for a very light green palette */

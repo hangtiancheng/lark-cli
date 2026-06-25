@@ -46,40 +46,37 @@ import type { StreamEvent } from "./events.js";
 // 	eager_input_streaming?: boolean | null;
 // }
 
-export interface LLMClient {
-	stream(
-		conversationManager: ConversationManager,
-		toolSchemas: ToolSchema[],
-		abortSignal?: AbortSignal,
-	): AsyncGenerator<StreamEvent>;
+export interface LLMClient extends Partial<MaxTokensSetter> {
+  stream(
+    conversationManager: ConversationManager,
+    toolSchemas: ToolSchema[],
+    abortSignal?: AbortSignal,
+  ): AsyncGenerator<StreamEvent>;
 }
 
 export interface MaxTokensSetter {
-	setMaxOutputTokens(maxTokens: number): void;
+  setMaxOutputTokens(maxTokens: number): void;
 }
 
 // Use dynamic import. 按需加载
-export async function createClient(
-	config: ProviderConfig,
-	systemPrompt: string,
-) {
-	switch (config.protocol) {
-		case "anthropic": {
-			const { AnthropicClient } = await import("./anthropic.js");
-			return new AnthropicClient(config, systemPrompt);
-		}
+export async function createClient(config: ProviderConfig, systemPrompt: string) {
+  switch (config.protocol) {
+    case "anthropic": {
+      const { AnthropicClient } = await import("./anthropic.js");
+      return new AnthropicClient(config, systemPrompt);
+    }
 
-		case "openai": {
-			const { OpenAIClient } = await import("./openai.js");
-			return new OpenAIClient(config, systemPrompt);
-		}
+    case "openai": {
+      const { OpenAIClient } = await import("./openai.js");
+      return new OpenAIClient(config, systemPrompt);
+    }
 
-		case "openai-compat": {
-			const { OpenAICompatClient } = await import("./openai.js");
-			return new OpenAICompatClient(config, systemPrompt);
-		}
+    case "openai-compat": {
+      const { OpenAICompatClient } = await import("./openai.js");
+      return new OpenAICompatClient(config, systemPrompt);
+    }
 
-		default:
-			throw new Error(`Unknown protocol: ${String(config.protocol)}`);
-	}
+    default:
+      throw new Error(`Unknown protocol: ${String(config.protocol)}`);
+  }
 }
