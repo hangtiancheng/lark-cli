@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "../node_modules/@lark.js/docs/dist/client.css";
-@import "../node_modules/@lark.js/docs/dist/docs.css";
 
 /* Scan lark-docs theme templates for Tailwind class names */
 @source "../node_modules/@lark.js/docs/dist/theme.js";

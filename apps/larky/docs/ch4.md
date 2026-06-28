@@ -112,3 +112,11 @@ function partitionToolCalls(toolUses, registry) {
   return batches;
 }
 ```
+
+## System Prompt 与环境信息
+
+Agent Loop 每轮都需要发送 System Prompt 给 LLM API, System Prompt 包含用户信息、环境信息 (操作系统、工作目录) 和模式指令 (planMode) 
+
+## Plan Mode 只想不做
+
+通过 prompt 约束 LLM 行为, plan mode 的权限矩阵和 default mode 相同: read=allow, write=ask, command=ask, 特殊的是 plan.md 的 write=allow, 不需要用户确认
