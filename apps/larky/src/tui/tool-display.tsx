@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 import { COLORS, ICONS } from "./styles.js";
-import { strArg } from "@/tools/types.js";
+import { strArg } from "@/utils/index.js";
 
 export interface ToolBlockInfo {
   toolName: string;

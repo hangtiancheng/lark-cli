@@ -1,13 +1,13 @@
 import { asErrorString } from "../utils/index.js";
 import { createAgentWorktree } from "../worktree/worktree.js";
 import {
-  strArg,
   type Tool,
   type ToolCategory,
   type ToolContext,
   type ToolResult,
   type ToolSchema,
 } from "./types.js";
+import { strArg } from "../utils/index.js";
 
 export class EnterWorktreeTool implements Tool {
   // Use a hardcoded string instead of EnterWorktreeTool.name.replace("Tool", "")

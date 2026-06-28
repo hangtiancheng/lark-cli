@@ -3,7 +3,7 @@ import { join, resolve, dirname } from "node:path";
 import { homedir } from "node:os";
 import yaml from "js-yaml";
 import z, { parse } from "zod";
-import { strArg } from "../tools/types.js";
+import { strArg } from "../utils/index.js";
 
 export type DecisionEffect = "allow" | "deny" | "ask";
 export type PermissionMode = "default" | "acceptEdits" | "plan" | "bypassPermissions";

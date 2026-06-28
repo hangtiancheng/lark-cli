@@ -64,3 +64,36 @@ export function asError(err: unknown) {
   }
   return new Error(String(err));
 }
+
+
+export function intArg(args: Record<string, unknown>, key: string, fallback: number): number {
+  const v = args[key];
+  if (typeof v === "number") {
+    return Math.floor(v);
+  }
+
+  if (typeof v === "string") {
+    const n = Number.parseInt(v, 10);
+    return Number.isNaN(n) ? fallback : n;
+  }
+
+  return fallback;
+}
+
+export function strArg(args: Record<string, unknown>, key: string, fallback?: string): string {
+  const v = args[key];
+  if (typeof v === "string") {
+    return v;
+  }
+
+  return fallback ?? String(v);
+}
+
+export function boolArg(args: Record<string, unknown>, key: string, fallback?: boolean): boolean {
+  const v = args[key];
+  if (typeof v === "boolean") {
+    return v;
+  }
+
+  return fallback ?? Boolean(v);
+}

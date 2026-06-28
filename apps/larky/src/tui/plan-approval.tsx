@@ -59,7 +59,7 @@ export function PlanApprovalDialog(props: PlanApprovalDialogProps) {
   return (
     <Box flexDirection="column" marginTop={1}>
       <Text bold color="magenta">
-        MewCode has written up a plan and is ready to execute. Would you like to proceed?
+        Larky has written up a plan and is ready to execute. Would you like to proceed?
       </Text>
       <Box flexDirection="column" marginTop={1}>
         {PLAN_APPROVAL_OPTIONS.map((label, i) => (

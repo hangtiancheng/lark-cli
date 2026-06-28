@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import type { HookConfig } from "../config/config.js";
 import { asErrorString } from "../utils/index.js";
-import { strArg } from "../tools/types.js";
+import { strArg } from "../utils/index.js";
 
 export type EventName =
   | "session_start"

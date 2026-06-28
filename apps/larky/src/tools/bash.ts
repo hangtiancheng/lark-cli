@@ -2,14 +2,13 @@ import { execSync } from "child_process";
 import { safeParseAsync, z } from "zod";
 import { BASH_DESCRIPTION } from "./descriptions.js";
 import {
-  intArg,
-  strArg,
   type Tool,
   type ToolCategory,
   type ToolContext,
   type ToolResult,
   type ToolSchema,
 } from "./types.js";
+import { intArg, strArg } from "../utils/index.js";
 
 const MAX_TIMEOUT = 600;
 
@@ -104,7 +103,10 @@ export class BashTool implements Tool {
     };
   }
 
-  async execute(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+  async execute(
+    ctx: ToolContext,
+    args: Record<string, unknown>,
+  ): Promise<ToolResult> {
     // TODO: Migrate manual parse to zod.
     const command = strArg(args, "command");
     if (!command) {

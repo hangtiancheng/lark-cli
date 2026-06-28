@@ -6,13 +6,13 @@ import { asErrorString } from "../../utils/index.js";
 import { GREP_DESCRIPTION } from "../descriptions.js";
 import {
   SKIP_DIRS,
-  strArg,
   type Tool,
   type ToolCategory,
   type ToolContext,
   type ToolResult,
   type ToolSchema,
 } from "../types.js";
+import { strArg } from "../../utils/index.js";
 
 const MAX_RESULTS = 500;
 

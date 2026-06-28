@@ -3,13 +3,13 @@ import { dirname } from "path";
 import { asErrorString } from "../utils/index.js";
 import { WRITE_FILE_DESCRIPTION } from "./descriptions.js";
 import {
-  strArg,
   type Tool,
   type ToolCategory,
   type ToolContext,
   type ToolResult,
   type ToolSchema,
 } from "./types.js";
+import { strArg } from "../utils/index.js";
 
 export class WriteFileTool implements Tool {
   // Use a hardcoded string instead of WriteFileTool.name.replace("Tool", "")

@@ -1,4 +1,4 @@
-import { strArg } from "@/tools/types.js";
+import { strArg } from "@/utils/index.js";
 
 // Tool activity description
 export interface ToolActivity {

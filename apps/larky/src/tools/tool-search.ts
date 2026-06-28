@@ -1,13 +1,12 @@
 import type { ToolRegistry } from "./registry.js";
 import {
-  intArg,
-  strArg,
   type Tool,
   type ToolCategory,
   type ToolContext,
   type ToolResult,
   type ToolSchema,
 } from "./types.js";
+import { intArg, strArg } from "../utils/index.js";
 
 export class ToolSearchTool implements Tool {
   name = "ToolSearch";

@@ -36,7 +36,9 @@
     "STDCPPFS",
     "symref",
     "toolu",
+    "vdom",
     "Vibing",
+    "vnode",
     "worktree",
     "worktreeinclude",
     "worktrees"

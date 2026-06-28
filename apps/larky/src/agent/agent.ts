@@ -22,8 +22,8 @@ import { applyBudget } from "../tool-result/budget.js";
 import { buildManager } from "../tool-result/reconstruct.js";
 import { ContentReplacementState } from "../tool-result/state.js";
 import { readFile } from "node:fs/promises";
-import { strArg, type ToolSchema } from "@/tools/types.js";
-import { asError } from "@/utils/index.js";
+import { type ToolSchema } from "@/tools/types.js";
+import { strArg, asError } from "@/utils/index.js";
 import type Anthropic from "@anthropic-ai/sdk";
 
 // When the model stops on max_tokens, escalate its output ceiling once to this

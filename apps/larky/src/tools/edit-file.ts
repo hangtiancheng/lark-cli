@@ -2,14 +2,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import { asErrorString } from "../utils/index.js";
 import { EDIT_FILE_DESCRIPTION } from "./descriptions.js";
 import {
-  boolArg,
-  strArg,
   type Tool,
   type ToolCategory,
   type ToolContext,
   type ToolResult,
   type ToolSchema,
 } from "./types.js";
+import { boolArg, strArg } from "../utils/index.js";
 
 export class EditFileTool implements Tool {
   // Use a hardcoded string instead of EditFileTool.name.replace("Tool", "")

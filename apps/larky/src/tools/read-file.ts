@@ -2,14 +2,13 @@ import { existsSync, readFileSync, statSync } from "fs";
 import { asErrorString } from "../utils/index.js";
 import { READ_FILE_DESCRIPTION } from "./descriptions.js";
 import {
-  intArg,
-  strArg,
   type Tool,
   type ToolCategory,
   type ToolContext,
   type ToolResult,
   type ToolSchema,
 } from "./types.js";
+import { intArg, strArg } from "../utils/index.js";
 
 export class ReadFileTool implements Tool {
   // Use a hardcoded string instead of ReadFileTool.name.replace("Tool", "")
