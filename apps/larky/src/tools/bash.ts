@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { z } from "zod";
+import { safeParseAsync, z } from "zod";
 import { BASH_DESCRIPTION } from "./descriptions.js";
 import {
   intArg,
@@ -104,7 +104,10 @@ export class BashTool implements Tool {
     };
   }
 
-  async execute(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
+  async execute(
+    ctx: ToolContext,
+    args: Record<string, unknown>,
+  ): Promise<ToolResult> {
     // TODO: Migrate manual parse to zod.
     const command = strArg(args, "command");
     if (!command) {
@@ -134,7 +137,11 @@ export class BashTool implements Tool {
         isError: false,
       };
     } catch (err) {
-      const { success, data: errData, error: parseErr } = await BashErrorSchema.safeParseAsync(err);
+      const {
+        success,
+        data: errData,
+        error: parseErr,
+      } = await safeParseAsync(BashErrorSchema, err);
       if (!success) {
         return {
           output: `Error: execute error ${err instanceof Error ? err.message : String(err)}, parse error ${parseErr.message}`,

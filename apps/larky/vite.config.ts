@@ -30,7 +30,6 @@ export default defineConfig((({ mode, command }) => {
       larkDocsPlugin({ config: docsConfig }) as PluginOption,
       larkMvcPlugin7({
         debug: true,
-        useSwc: true,
       }) as PluginOption,
       tailwindcss() as PluginOption,
     ],

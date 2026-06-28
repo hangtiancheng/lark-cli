@@ -11,6 +11,11 @@
     "prepare": "husky"
   },
   "keywords": [],
+  "pnpm": {
+    "overrides": {
+      "@lark.js/mvc": "file:../lark/packages/lark-mvc"
+    }
+  },
   "devDependencies": {
     "husky": "^9.1.7"
   },
