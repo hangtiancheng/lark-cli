@@ -1,7 +1,7 @@
 ---
 title: "LLM API、对话管理"
 description: "LLM API、对话管理"
-sidebar_position: 1
+sidebar_position: 2
 ---
 
 # LLM API、对话管理
@@ -104,20 +104,20 @@ message_end 整个响应结束
 
 ## token
 
-token 是 LLM 的计费单位, 每个英文单词大约 1-2 个 token, 每个汉字大约 1-2 个 token, 具体取决于模型使用的 tokenizer
+token 是 LLM 的计费单位, 每个英文单词大约 1-2 个 token, 每个汉字大约 1-2 个 token, 具体取决于 LLM 使用的 tokenizer
 
 Claude API 的计费分为
 
-- input_tokens: 发送给模型的内容, 包括 system_prompt, messages 和 tools 描述
-- output_tokens: 模型生成的内容, 输出 token 比输入 token 贵的多
+- input_tokens: 发送给 LLM 的内容, 包括 system_prompt, messages 和 tools 描述
+- output_tokens: LLM 生成的内容, 输出 token 比输入 token 贵的多
 
 ### 历史越长、输入越贵
 
-每轮请求, 都需要发送完整的对话历史; 如果和模型聊了 20 轮, 第 21 轮请求会包含前 20 轮的所有消息; input_tokens 会随着对话轮次线形增长, 所以需要上下文压缩
+每轮请求, 都需要发送完整的对话历史; 如果和 LLM 聊了 20 轮, 第 21 轮请求会包含前 20 轮的所有消息; input_tokens 会随着对话轮次线形增长, 所以需要上下文压缩
 
 ## Extend Thinking 推理
 
-Claude 支持 Extended Thinking, 让模型回复前先进行内部推理, 开启后响应的 content 数组中会多一个 `type: thinking` 的内容块, 排在 text 内容块的前面; thinking 的 token 计算到 output_tokens 中;
+Claude 支持 Extended Thinking, 让 LLM 回复前先进行内部推理, 开启后响应的 content 数组中会多一个 `type: thinking` 的内容块, 排在 text 内容块的前面; thinking 的 token 计算到 output_tokens 中;
 
 包含工具调用的一轮对话, 对话历史中的 thinking 内容块必须携带, 和后面的 tool_result 一起发送给 LLM API, 否则会报错; 对于纯聊天、没有工具调用的场景, 则对话历史中的 thinking 内容块可以不携带, LLM API 会自动忽略
 
@@ -126,7 +126,7 @@ Claude 支持 Extended Thinking, 让模型回复前先进行内部推理, 开启
 只需要 4 个字段就能覆盖主流厂商: Anthropic、OpenAI、...
 
 - protocol: LLM API 协议, 例如 anthropic、openai、openai-compat、...
-- model: 模型, 例如 claude-haiku-4-6、claude-sonnet-4-6、claude-opus-4-6、...
+- model: LLM 模型, 例如 claude-haiku-4-6、claude-sonnet-4-6、claude-opus-4-6、...
 - base_url: 端点地址
 - api_key: 令牌
 
@@ -134,7 +134,7 @@ Claude 支持 Extended Thinking, 让模型回复前先进行内部推理, 开启
 
 ## 多轮对话如何实现
 
-每一轮 LLM API 请求, 都包含完整的对话历史, 需要在客户端维护完整的消息列表, 每次用户发送请求、模型响应, 都需要记录, token 消耗会随着对话轮次线形增长
+每一轮 LLM API 请求, 都包含完整的对话历史, 需要在客户端维护完整的消息列表, 每次用户 (CLI) 发送请求、LLM 响应, 都需要记录, token 消耗会随着对话轮次线形增长
 
 ### 消息模型
 

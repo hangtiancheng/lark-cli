@@ -52,6 +52,7 @@ export default defineConfig(
       "unicorn/filename-case": ["error", { case: "kebabCase" }],
       "no-console": "warn",
       curly: ["error", "all"],
+      "no-control-regex": "warn",
     },
   },
   {

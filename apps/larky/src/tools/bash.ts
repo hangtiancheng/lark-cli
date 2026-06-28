@@ -103,10 +103,7 @@ export class BashTool implements Tool {
     };
   }
 
-  async execute(
-    ctx: ToolContext,
-    args: Record<string, unknown>,
-  ): Promise<ToolResult> {
+  async execute(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
     // TODO: Migrate manual parse to zod.
     const command = strArg(args, "command");
     if (!command) {

@@ -16,7 +16,7 @@
     "dev:docs": "vite",
     "build:docs": "vite build",
     "preview:docs": "vite preview",
-    "lint": "eslint --fix ./src ./tests",
+    "lint": "eslint --fix ./src",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

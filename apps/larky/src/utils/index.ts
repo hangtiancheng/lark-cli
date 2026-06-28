@@ -65,7 +65,6 @@ export function asError(err: unknown) {
   return new Error(String(err));
 }
 
-
 export function intArg(args: Record<string, unknown>, key: string, fallback: number): number {
   const v = args[key];
   if (typeof v === "number") {

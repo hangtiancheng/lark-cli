@@ -503,7 +503,6 @@ export class Agent {
     // Partition tool calls into read-safe (parallel) and write/dangerous
     // (sequential) groups. Read-safe tools (Glob, Grep, ReadFile, etc.)
     // can safely overlap; write tools and commands execute one at a time.
-    // Mirrors Go partitionToolCalls batching strategy.
     const readSafe: ToolUseBlock[] = [];
     const writeDangerous: ToolUseBlock[] = [];
     for (const tu of toolUses) {

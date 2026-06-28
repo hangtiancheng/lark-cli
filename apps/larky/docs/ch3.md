@@ -1,8 +1,14 @@
+---
+title: "Function Calling (Tool Use)"
+description: "Function Calling (Tool Use)"
+sidebar_position: 3
+---
+
 # Function Calling (Tool Use)
 
-## 告诉模型有哪些工具
+## 告诉 LLM 有哪些工具
 
-调用 LLM API 时, 可以通过 tools 参数告诉模型有哪些工具, 包括名称 name, 描述 description, 参数格式 tool schema
+调用 LLM API 时, 可以通过 tools 参数告诉 LLM 有哪些工具, 包括名称 name, 描述 description, 参数格式 tool schema
 
 ```json
 {
@@ -25,9 +31,9 @@
 }
 ```
 
-## 模型决定调用工具
+## LLM 决定调用工具
 
-模型决定调用工具时, LLM API 的响应中包含一个结构化的工具调用请求
+LLM 决定调用工具时, LLM API 的响应中包含一个结构化的工具调用请求
 
 ```json
 {
@@ -69,13 +75,13 @@
 }
 ```
 
-## 模型继续
+## LLM 继续
 
 LLM 收到工具调用结果, 继续...
 
-模型负责决策, 请求调用工具; CLI 负责执行工具调用, 将工具调用结果返回给 LLM API
+LLM 负责决策, 请求调用工具; CLI 负责执行工具调用, 将工具调用结果返回给 LLM API
 
-- 模型决定是否调用某个工具时, 主要参考工具描述 (description), 工具描述的质量直接决定模型的工具调用行为, 包括: 什么时候调用工具、调用哪个工具、如何传递参数
+- LLM 决定是否调用某个工具时, 主要参考工具描述 (description), 工具描述的质量直接决定 LLM 的工具调用行为, 包括: 什么时候调用工具、调用哪个工具、如何传递参数
 - 好的工具描述应该包括: 工具的核心功能、什么时候应该调用、什么时候不应该调用、输入参数的 schema、输出的工具调用结果的 schema、与其他工具的配合 (工作流建议, 例如对于大文件, 先 Grep 定位再 ReadFile 读文件)
 
 ## 工具接口设计
@@ -87,7 +93,7 @@ LLM 收到工具调用结果, 继续...
 ```ts
 export interface ToolResult {
   output: string;
-  // 工具执行失败对于模型是有价值的反馈, 引导模型调整策略
+  // 工具执行失败对于 LLM 是有价值的反馈, 引导 LLM 调整策略
   isError: boolean;
 }
 ```
@@ -97,8 +103,8 @@ export interface ToolResult {
 - properties: file_path, offset, limit
 - metadata: 只读、非破坏性、分类 file
 - 行号: 读文件需要带行号前缀, 方便定位代码位置 `"1\tfunction main() {\n2\t  console.log(\"javascript newbie\")\n3\t}"`
-- 大文件: 支持 offset 和 limit 参数, 指定从第 offset 行开始读、读 limit 行, 使得模型可以分段读文件
-- 二进制文件: 通过读文件的前 512 字节, 如果包含 NUL 字符 (\x00), 则判定为二进制文件并拒绝读取, 提示模型使用 bash 工具处理
+- 大文件: 支持 offset 和 limit 参数, 指定从第 offset 行开始读、读 limit 行, 使得 LLM 可以分段读文件
+- 二进制文件: 通过读文件的前 512 字节, 如果包含 NUL 字符 (\x00), 则判定为二进制文件并拒绝读取, 提示 LLM 使用 bash 工具处理
 
 ### WriteFile
 
@@ -112,8 +118,8 @@ export interface ToolResult {
 - metadata: 非只读、非破坏性、分类 file
 - 如果 replace_all === false, 则 old_string 必须唯一匹配
   - 如果匹配多个, 报错提示: 该 old_string 匹配 N 个, 请提供更多的上下文使得 old_string 唯一匹配
-  - 如果没有找到, 说明模型记忆的文件内容可能过时
-- 替换成功后, 返回修改位置附近几行的内容 (带行号前缀), 返回给模型确认修改是否正确
+  - 如果没有找到, 说明 LLM 记忆的文件内容可能过时
+- 替换成功后, 返回修改位置附近几行的内容 (带行号前缀), 返回给 LLM 确认修改是否正确
 - new_string 为空, 表示删除 old_string
 
 ### Bash
@@ -167,4 +173,4 @@ content_block_stop
 
 - tool_use 工具调用请求的 role 是 assistant, tool_result 工具调用结果的 role 是 user
 - 一条 assistant 消息可能同时包含 text 内容块和 tool_use 内容块, 必须在同一条 assistant 消息中, 不能拆成两条 assistant 消息
-- 如果一条 assistant 消息包含多个 tool_use 内容块, 即模型请求同时调用多个工具, 则多个 tool_result 内容块必须在同一条 user 消息中, 通过 id 配对
+- 如果一条 assistant 消息包含多个 tool_use 内容块, 即 LLM 请求同时调用多个工具, 则多个 tool_result 内容块必须在同一条 user 消息中, 通过 id 配对
