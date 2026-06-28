@@ -20,7 +20,7 @@ interface QuestionState {
   answer: string | undefined;
 }
 
-const initialQuestionState: QuestionState = {
+const INITIAL_QUESTION_STATE: QuestionState = {
   cursor: 0,
   selected: new Set<number>(),
   otherText: "",
@@ -37,7 +37,7 @@ function AskUserDialog(props: Props) {
 
   const [questionStates, setQuestionStates] = useState<QuestionState[]>(() =>
     Array.from({ length: questions.length }, () => ({
-      ...initialQuestionState,
+      ...INITIAL_QUESTION_STATE,
     })),
   );
 
@@ -49,19 +49,19 @@ function AskUserDialog(props: Props) {
   //   () => curTabIdx === questions.length,
   //   [curTabIdx, questions.length],
   // );
-  const isSubmitTab = curTabIdx === questions.length
+  const isSubmitTab = curTabIdx === questions.length;
 
   // const curQuestion = useMemo(
   //   () => (isSubmitTab ? undefined : questions[curTabIdx]),
   //   [isSubmitTab, questions, curTabIdx],
   // );
-  const curQuestion = isSubmitTab ? undefined : questions[curTabIdx]
+  const curQuestion = isSubmitTab ? undefined : questions[curTabIdx];
 
   // const curQuestionState = useMemo(
   //   () => (isSubmitTab ? undefined : questionStates[curTabIdx]),
   //   [isSubmitTab, questionStates, curTabIdx],
   // );
-  const curQuestionState = isSubmitTab ? undefined : questionStates[curTabIdx]
+  const curQuestionState = isSubmitTab ? undefined : questionStates[curTabIdx];
 
   // Whether all questions have an answer (enables Submit).
   const allAnswered = questionStates.every((s) => s.answer !== undefined);
@@ -199,9 +199,7 @@ function AskUserDialog(props: Props) {
           .join(", ");
         commitAnswer(answer);
       } else {
-        commitAnswer(
-          curQuestion.options[curQuestionState.cursor]?.label ?? "(unknown)",
-        );
+        commitAnswer(curQuestion.options[curQuestionState.cursor]?.label ?? "(unknown)");
       }
     }
   });
@@ -241,8 +239,7 @@ function AskUserDialog(props: Props) {
               {label}
               {"]"}
             </Text>
-          )}
-          {" "}
+          )}{" "}
         </Text>,
       );
     }
@@ -281,15 +278,10 @@ function AskUserDialog(props: Props) {
       <>
         <Text>
           {COLORS.tool(`  [${curQuestion.header}]`)}
-          <Text
-            dimColor
-          >{`  (Q${String(curTabIdx + 1)}/${String(questions.length)})`}</Text>
-        </Text>
-        {" "}
+          <Text dimColor>{`  (Q${String(curTabIdx + 1)}/${String(questions.length)})`}</Text>
+        </Text>{" "}
         <Text bold>{`  ${curQuestion.question}`}</Text>
-        {curQuestion.multiSelect && (
-          <Text dimColor> (space to toggle, enter to confirm)</Text>
-        )}
+        {curQuestion.multiSelect && <Text dimColor> (space to toggle, enter to confirm)</Text>}
         {curQuestionState.answer !== undefined && (
           <Text>
             {"  "}
@@ -298,28 +290,15 @@ function AskUserDialog(props: Props) {
             </Text>
             <Text dimColor> (press Enter to change)</Text>
           </Text>
-        )}
-        {" "}
+        )}{" "}
         {rows.map((label, i) => {
           const isOther = i === rows.length - 1;
-          const checked =
-            curQuestion.multiSelect &&
-            !isOther &&
-            curQuestionState.selected.has(i);
-          const mark =
-            curQuestion.multiSelect && !isOther
-              ? checked
-                ? "[x] "
-                : "[ ] "
-              : "";
-          const desc = !isOther
-            ? curQuestion.options[i]?.description
-            : undefined;
+          const checked = curQuestion.multiSelect && !isOther && curQuestionState.selected.has(i);
+          const mark = curQuestion.multiSelect && !isOther ? (checked ? "[x] " : "[ ] ") : "";
+          const desc = !isOther ? curQuestion.options[i]?.description : undefined;
           return (
             <Text key={label}>
-              {i === curQuestionState.cursor
-                ? COLORS.tool(` ${ICONS.prompt} `)
-                : "   "}
+              {i === curQuestionState.cursor ? COLORS.tool(` ${ICONS.prompt} `) : "   "}
               <Text
                 color={i === curQuestionState.cursor ? "cyan" : ""}
                 dimColor={i !== curQuestionState.cursor}
@@ -347,10 +326,7 @@ function AskUserDialog(props: Props) {
   const renderSubmitPanel = () => {
     return (
       <>
-        <Text bold>
-          {allAnswered ? "  Review your answers:" : "  Answer all questions first"}
-        </Text>
-        {" "}
+        <Text bold>{allAnswered ? "  Review your answers:" : "  Answer all questions first"}</Text>{" "}
         {questions.map((qn, i) => {
           const questionState = questionStates[i];
           return (
@@ -373,16 +349,13 @@ function AskUserDialog(props: Props) {
               </Text>
             </Text>
           );
-        })}
-        {" "}
+        })}{" "}
         {allAnswered ? (
           <Text color="cyan" bold>
             {"  Press Enter to submit, or ←/→ to review questions"}
           </Text>
         ) : (
-          <Text dimColor>
-            {"  Use ←/→ or Tab to navigate to unanswered questions"}
-          </Text>
+          <Text dimColor>{"  Use ←/→ or Tab to navigate to unanswered questions"}</Text>
         )}
       </>
     );
@@ -390,11 +363,8 @@ function AskUserDialog(props: Props) {
 
   return (
     <Box flexDirection="column" paddingLeft={1} paddingTop={1}>
-      {isSubmitTab ? renderSubmitPanel() : renderQuestion()}
-      {" "}
-      {renderTabBar()}
-      <Text dimColor>  ←/→ or Tab: switch questions Esc: cancel</Text>
-      {" "}
+      {isSubmitTab ? renderSubmitPanel() : renderQuestion()} {renderTabBar()}
+      <Text dimColor> ←/→ or Tab: switch questions Esc: cancel</Text>{" "}
     </Box>
   );
 }

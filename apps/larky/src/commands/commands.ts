@@ -51,9 +51,7 @@ export class CommandRegistry {
     // Check if each alias conflicts with existing command names or aliases
     for (const alias of cmd.aliases) {
       if (this.commands.has(alias)) {
-        throw new Error(
-          `Alias '${alias}' for '${cmd.name}' collides with existing command name`,
-        );
+        throw new Error(`Alias '${alias}' for '${cmd.name}' collides with existing command name`);
       }
       if (this.aliasMap.has(alias)) {
         throw new Error(
@@ -86,10 +84,7 @@ export class CommandRegistry {
   }
 
   find(name: string): Command | undefined {
-    return (
-      this.commands.get(name) ??
-      this.commands.get(this.aliasMap.get(name) ?? "")
-    );
+    return this.commands.get(name) ?? this.commands.get(this.aliasMap.get(name) ?? "");
   }
 
   complete(prefix: string): Command[] {
@@ -102,9 +97,7 @@ export class CommandRegistry {
   }
 
   listCommands(): Command[] {
-    return [...this.commands.values()].sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
+    return [...this.commands.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
 }
 
@@ -154,9 +147,7 @@ export function createDefaultRegistry(): CommandRegistry {
       let output = "Available commands:\n\n";
       output += cmds
         .map((c) => {
-          const aliases = c.aliases.length > 0
-            ? `, /${c.aliases.join(", /")}`
-            : "";
+          const aliases = c.aliases.length > 0 ? `, /${c.aliases.join(", /")}` : "";
           return `  /${c.name}${aliases}\n    ${c.description}`;
         })
         .join("\n");

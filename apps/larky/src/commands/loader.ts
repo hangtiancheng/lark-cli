@@ -10,10 +10,7 @@ import { z, parse } from "zod";
 // command name: sub/dir/foo.md → "sub:dir:foo". Mirrors Go LoadUserCommands.
 export function loadUserCommands(workDir: string): Command[] {
   const byName = new Map<string, Command>();
-  const bases = [
-    join(homedir(), ".larky", "commands"),
-    join(workDir, ".larky", "commands"),
-  ];
+  const bases = [join(homedir(), ".larky", "commands"), join(workDir, ".larky", "commands")];
   for (const base of bases) {
     if (!existsSync(base)) {
       continue;
@@ -108,10 +105,7 @@ function parseCommandFile(base: string, full: string): Command | null {
     aliases: Array.isArray(aliases) ? aliases : [],
     type: "prompt",
     description:
-      description ||
-      (argumentHint
-        ? `custom command (args: ${argumentHint})`
-        : "custom command"),
+      description || (argumentHint ? `custom command (args: ${argumentHint})` : "custom command"),
     handler: (ctx) => renderBody(body, ctx.args),
   };
 }

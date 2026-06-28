@@ -1,12 +1,12 @@
 import { isRecord } from "@/utils/index.js";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
-import { safeParse, z } from 'zod';
+import { safeParse, z } from "zod";
 
 const UsageEntrySchema = z.object({
   usageCount: z.coerce.number(),
   lastUsedAt: z.coerce.number(),
-})
+});
 
 type UsageEntry = z.infer<typeof UsageEntrySchema>;
 
@@ -34,7 +34,9 @@ export class CommandUsageTracker {
 
   getScore(name: string): number {
     const entry = this.usage.get(name);
-    if (!entry){ return 0;}
+    if (!entry) {
+      return 0;
+    }
     const daysSince = (Date.now() - entry.lastUsedAt) / (1000 * 60 * 60 * 24);
     const recency = Math.pow(0.5, daysSince / 7);
     return entry.usageCount * Math.max(recency, 0.1);
@@ -69,10 +71,7 @@ export class CommandUsageTracker {
   private save(): void {
     try {
       mkdirSync(dirname(this.filePath), { recursive: true });
-      writeFileSync(
-        this.filePath,
-        JSON.stringify(Object.fromEntries(this.usage), null, 2),
-      );
+      writeFileSync(this.filePath, JSON.stringify(Object.fromEntries(this.usage), null, 2));
     } catch {
       // ignore write errors
     }

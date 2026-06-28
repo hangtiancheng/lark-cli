@@ -13,13 +13,13 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-interface Props {
+interface SpinnerProps {
   label?: string;
   inputTokens?: number;
   outputTokens?: number;
 }
 
-function Spinner(props: Props) {
+function Spinner(props: SpinnerProps) {
   const { label, inputTokens = 0, outputTokens = 0 } = props;
   const [elapsed, setElapsed] = useState(0);
   const verbRef = useRef(label ?? randomVerb());
@@ -48,8 +48,7 @@ function Spinner(props: Props) {
     <Text>
       <Text color="magenta">
         <InkSpinner type="dots" />
-      </Text>
-      {" "}
+      </Text>{" "}
       <Text dimColor>
         {verbRef.current}
         {detail}

@@ -24,14 +24,7 @@ export interface ToolSummaryItem {
 }
 
 export interface ChatMessage {
-  role:
-    | "user"
-    | "assistant"
-    | "system"
-    | "thinking"
-    | "tool_use"
-    | "tool_result"
-    | "turn_summary";
+  role: "user" | "assistant" | "system" | "thinking" | "tool_use" | "tool_result" | "turn_summary";
   content: string;
   toolName?: string;
   argsSummary?: string;
@@ -101,14 +94,7 @@ function buildTurnSummaryText(
   }
 
   if (tools.length > 0) {
-    type Key =
-      | "read"
-      | "wrote"
-      | "edited"
-      | "ran"
-      | "globbed"
-      | "searched"
-      | "used";
+    type Key = "read" | "wrote" | "edited" | "ran" | "globbed" | "searched" | "used";
     type Count = Record<Key, number>;
     type Label = Record<keyof Count, (n: number) => string>;
 
@@ -202,9 +188,7 @@ function TurnSummaryBlock(props: TurnSummaryBlockProps) {
         </Box>
       ) : null}
       {toolSummary.map((t, i) => {
-        const icon = t.isError
-          ? COLORS.error(ICONS.error)
-          : COLORS.success(ICONS.success);
+        const icon = t.isError ? COLORS.error(ICONS.error) : COLORS.success(ICONS.success);
         const timeStr = t.elapsed ? ` (${t.elapsed.toFixed(1)}s)` : "";
         return (
           <Box key={i} flexDirection="column" marginBottom={0}>
@@ -216,9 +200,7 @@ function TurnSummaryBlock(props: TurnSummaryBlockProps) {
             {t.output ? (
               <Box paddingLeft={2}>
                 <Text dimColor>
-                  {t.output.length > 500
-                    ? t.output.slice(0, 500) + "..."
-                    : t.output}
+                  {t.output.length > 500 ? t.output.slice(0, 500) + "..." : t.output}
                 </Text>
               </Box>
             ) : null}
@@ -262,9 +244,7 @@ function MessageBlock(props: MessageBlockProps) {
         <Box marginBottom={0}>
           <Text dimColor>
             {COLORS.thinking(`${ICONS.thinking} `)}
-            {message.content.length > 200
-              ? message.content.slice(0, 200) + "..."
-              : message.content}
+            {message.content.length > 200 ? message.content.slice(0, 200) + "..." : message.content}
           </Text>
         </Box>
       );
@@ -274,30 +254,20 @@ function MessageBlock(props: MessageBlockProps) {
       return (
         <Box marginBottom={0}>
           <Text>
-            <Text color="magenta">●</Text>{" "}
-            {COLORS.tool(message.toolName ?? "tool")}
-            {message.argsSummary ? (
-              <Text dimColor> {message.argsSummary}</Text>
-            ) : null}
+            <Text color="magenta">●</Text> {COLORS.tool(message.toolName ?? "tool")}
+            {message.argsSummary ? <Text dimColor> {message.argsSummary}</Text> : null}
           </Text>
         </Box>
       );
     }
     case "tool_result": {
-      const icon = message.isError
-        ? COLORS.error(ICONS.error)
-        : COLORS.success(ICONS.success);
-      const timeStr =
-        message.elapsed !== undefined
-          ? ` (${message.elapsed.toFixed(1)}s)`
-          : "";
+      const icon = message.isError ? COLORS.error(ICONS.error) : COLORS.success(ICONS.success);
+      const timeStr = message.elapsed !== undefined ? ` (${message.elapsed.toFixed(1)}s)` : "";
       return (
         <Box flexDirection="column" marginBottom={0}>
           <Text>
             {icon} {COLORS.tool(message.toolName ?? "tool")}
-            {message.argsSummary ? (
-              <Text dimColor> {message.argsSummary}</Text>
-            ) : null}
+            {message.argsSummary ? <Text dimColor> {message.argsSummary}</Text> : null}
             <Text dimColor>{timeStr}</Text>
           </Text>
           {message.content && (

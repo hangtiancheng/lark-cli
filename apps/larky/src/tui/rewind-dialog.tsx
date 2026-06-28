@@ -87,9 +87,7 @@ function RewindDialog(props: Props) {
             <Box key={idx}>
               <Text>
                 {isSelected ? COLORS.primary(`${ICONS.prompt} `) : "  "}
-                {isSelected
-                  ? COLORS.white(`[${String(idx + 1)}]`)
-                  : `[${String(idx + 1)}]`}{" "}
+                {isSelected ? COLORS.white(`[${String(idx + 1)}]`) : `[${String(idx + 1)}]`}{" "}
                 {snap.userText || "(empty)"}
                 <Text dimColor>
                   {" "}

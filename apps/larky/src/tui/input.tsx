@@ -47,19 +47,14 @@ function scanWorkdirFiles(root: string, max = 2000): string[] {
   return out;
 }
 
-const modeDisplay: Record<PermissionMode, { name: string; color: string }> = {
+const MODEL_DISPLAY: Record<PermissionMode, { name: string; color: string }> = {
   default: { name: "default", color: "gray" },
   acceptEdits: { name: "Accept Edits", color: "green" },
   plan: { name: "Plan", color: "yellow" },
   bypassPermissions: { name: "YOLO", color: "red" },
 };
 
-const modeCycle: PermissionMode[] = [
-  "default",
-  "acceptEdits",
-  "plan",
-  "bypassPermissions",
-];
+const MODEL_CYCLE: PermissionMode[] = ["default", "acceptEdits", "plan", "bypassPermissions"];
 
 interface InputBoxProps {
   onSubmit: (text: string) => void;
@@ -177,10 +172,7 @@ export function InputBox(props: InputBoxProps) {
   }, [lines, commands, isMultiline, usageTracker]);
 
   const showDropdown =
-    filteredCmds.length > 0 &&
-    lines[0].startsWith("/") &&
-    !isMultiline &&
-    !dropdownDismissed;
+    filteredCmds.length > 0 && lines[0].startsWith("/") && !isMultiline && !dropdownDismissed;
 
   // @-file-mention autocomplete: active when the current line ends with an
   // @<partial> token (and we're not typing a slash command).
@@ -213,14 +205,11 @@ export function InputBox(props: InputBoxProps) {
       return files.slice(0, 8);
     }
     const pre = files.filter((f) => f.toLowerCase().startsWith(q));
-    const sub = files.filter(
-      (f) => !f.toLowerCase().startsWith(q) && f.toLowerCase().includes(q),
-    );
+    const sub = files.filter((f) => !f.toLowerCase().startsWith(q) && f.toLowerCase().includes(q));
     return [...pre, ...sub].slice(0, 8);
   }, [atQuery, workDir]);
 
-  const showAtDropdown =
-    !showDropdown && atQuery !== null && filteredFiles.length > 0;
+  const showAtDropdown = !showDropdown && atQuery !== null && filteredFiles.length > 0;
 
   const completeAt = (path: string) => {
     setLines((prev) => {
@@ -257,8 +246,7 @@ export function InputBox(props: InputBoxProps) {
       return;
     }
 
-    const hasReturn =
-      key.return || input.includes("\r") || input.includes("\n");
+    const hasReturn = key.return || input.includes("\r") || input.includes("\n");
     const cleanInput = input.replace(/[\r\n]/g, "");
 
     // Shift+Enter or Ctrl+J → newline
@@ -277,11 +265,7 @@ export function InputBox(props: InputBoxProps) {
         completeAt(filteredFiles[dropdownIndex]);
         return;
       }
-      if (
-        showDropdown &&
-        filteredCmds.length > 0 &&
-        dropdownIndex < filteredCmds.length
-      ) {
+      if (showDropdown && filteredCmds.length > 0 && dropdownIndex < filteredCmds.length) {
         const selected = filteredCmds[dropdownIndex];
         setLines(["/" + selected.name + " "]);
         setCursorLine(0);
@@ -289,9 +273,7 @@ export function InputBox(props: InputBoxProps) {
         return;
       }
 
-      const finalLine = cleanInput
-        ? lines[cursorLine] + cleanInput
-        : lines[cursorLine];
+      const finalLine = cleanInput ? lines[cursorLine] + cleanInput : lines[cursorLine];
       const updated = [...lines];
       updated[cursorLine] = finalLine;
       const finalValue = updated.join("\n").trim();
@@ -307,8 +289,8 @@ export function InputBox(props: InputBoxProps) {
     }
 
     if ((input === "\x1b[Z" || (key.tab && key.shift)) && onModeChange) {
-      const idx = modeCycle.indexOf(permMode);
-      const next = modeCycle[(idx + 1) % modeCycle.length];
+      const idx = MODEL_CYCLE.indexOf(permMode);
+      const next = MODEL_CYCLE[(idx + 1) % MODEL_CYCLE.length];
       onModeChange(next);
       return;
     }
@@ -359,8 +341,7 @@ export function InputBox(props: InputBoxProps) {
         return;
       }
       if (!isMultiline && history.length > 0) {
-        const nextIdx =
-          historyIndex < history.length - 1 ? historyIndex + 1 : historyIndex;
+        const nextIdx = historyIndex < history.length - 1 ? historyIndex + 1 : historyIndex;
         setHistoryIndex(nextIdx);
         const entry = history[history.length - 1 - nextIdx] ?? "";
         setLines(entry.split("\n"));
@@ -410,10 +391,7 @@ export function InputBox(props: InputBoxProps) {
     }
   });
 
-  const borderColor =
-    inputState in BORDER_COLORS
-      ? BORDER_COLORS[inputState]
-      : BORDER_COLORS.idle;
+  const borderColor = inputState in BORDER_COLORS ? BORDER_COLORS[inputState] : BORDER_COLORS.idle;
 
   const ghostText = useMemo(() => {
     if (isMultiline || !lines[0].startsWith("/") || lines[0].length <= 1) {
@@ -459,14 +437,11 @@ export function InputBox(props: InputBoxProps) {
         <Box flexDirection="column">
           {recentCount > 0 && <Text dimColor>{"RECENTLY USED"}</Text>}
           {filteredCmds.slice(0, 8).map((cmd, i) => {
-            const icon =
-              cmd.type in CMD_COLORS ? CMD_COLORS[cmd.type] : CMD_COLORS.prompt;
+            const icon = cmd.type in CMD_COLORS ? CMD_COLORS[cmd.type] : CMD_COLORS.prompt;
             const selected = i === dropdownIndex;
             return (
               <Fragment key={cmd.name}>
-                {recentCount > 0 && i === recentCount && (
-                  <Text dimColor>{"ALL COMMANDS"}</Text>
-                )}
+                {recentCount > 0 && i === recentCount && <Text dimColor>{"ALL COMMANDS"}</Text>}
                 {selected ? (
                   <Text color="#b4befe">
                     {icon} /{cmd.name} {cmd.description}
@@ -498,13 +473,8 @@ export function InputBox(props: InputBoxProps) {
       <Box paddingLeft={1}>
         {permMode !== "default" ? (
           <Text>
-            <Text
-              color={
-                permMode in modeDisplay ? modeDisplay[permMode].color : "gray"
-              }
-            >
-              {permMode in modeDisplay ? modeDisplay[permMode].name : permMode}{" "}
-              on
+            <Text color={permMode in MODEL_DISPLAY ? MODEL_DISPLAY[permMode].color : "gray"}>
+              {permMode in MODEL_DISPLAY ? MODEL_DISPLAY[permMode].name : permMode} on
             </Text>
             <Text dimColor> (shift+tab to cycle)</Text>
           </Text>

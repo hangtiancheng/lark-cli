@@ -33,11 +33,8 @@ function ToolBlock(props: ToolBlockProps) {
     );
   }
 
-  const icon = tool.isError
-    ? COLORS.error(ICONS.error)
-    : COLORS.success(ICONS.success);
-  const timeStr =
-    tool.elapsed !== undefined ? `(${tool.elapsed.toFixed(1)}s)` : "";
+  const icon = tool.isError ? COLORS.error(ICONS.error) : COLORS.success(ICONS.success);
+  const timeStr = tool.elapsed !== undefined ? `(${tool.elapsed.toFixed(1)}s)` : "";
 
   return (
     <Box flexDirection="column">
@@ -49,9 +46,7 @@ function ToolBlock(props: ToolBlockProps) {
       {tool.output && (
         <Box paddingLeft={2} marginBottom={0}>
           <Text dimColor>
-            {tool.output.length > 500
-              ? tool.output.slice(0, 500) + "…"
-              : tool.output}
+            {tool.output.length > 500 ? tool.output.slice(0, 500) + "…" : tool.output}
           </Text>
         </Box>
       )}
