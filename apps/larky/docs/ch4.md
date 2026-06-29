@@ -115,7 +115,7 @@ function partitionToolCalls(toolUses, registry) {
 
 ## System Prompt 与环境信息
 
-Agent Loop 每轮都需要发送 System Prompt 给 LLM API, System Prompt 包含用户信息、环境信息 (操作系统、工作目录) 和模式指令 (planMode) 
+Agent Loop 每轮都需要发送 System Prompt 给 LLM API, System Prompt 包含用户信息、环境信息 (操作系统、工作目录) 和模式指令 (planMode)
 
 ## Plan Mode 只想不做
 

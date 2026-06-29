@@ -70,10 +70,7 @@ export interface BuildOptions {
   memorySection?: string;
 }
 
-export function buildSystemPrompt(
-  env: EnvironmentContext,
-  opts: BuildOptions = {},
-): string {
+export function buildSystemPrompt(env: EnvironmentContext, opts: BuildOptions = {}): string {
   const b = new PromptBuilder();
   b.add(identitySection());
   b.add(systemSection());

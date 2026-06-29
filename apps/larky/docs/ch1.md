@@ -22,7 +22,7 @@ Agent 是 LLM 在循环中根据环境反馈自主使用工具的系统
 2. 引擎层: 对话、循环、提示词
 3. 工具层: 工具、mcp、hook
 4. 记忆层: 上下文、会话、自动记忆
-5. 安全层: 权限、沙箱、HITL (Human-in-the-Loop)
+5. 安全层: 沙箱、权限、HITL (Human-in-the-Loop)
 
 ## AI Coding
 

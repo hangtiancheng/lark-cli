@@ -27,21 +27,7 @@ export interface ToolSchema {
   /** The input schema for the tool. */
   input_schema: {
     type: "object";
-    properties: Record<
-      string,
-      {
-        type: "object" | "array" | "string" | "integer" | "boolean";
-        items?: {
-          type: "object" | "array" | "string" | "integer" | "boolean";
-          properties: ToolSchema["input_schema"]["properties"];
-          required?: string[];
-        };
-        minItems?: number;
-        maxItems?: number;
-        description: string;
-        default?: unknown;
-      }
-    >;
+    properties: Record<string, object>;
     required?: string[];
   };
   allowed_callers?: ("direct" | "code_execution_20250825" | "code_execution_20260120")[];
