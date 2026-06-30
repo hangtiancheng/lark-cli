@@ -11,7 +11,7 @@ export const ALL_AGENT_DISALLOWED_TOOLS = new Set([
   "Workflow",
 ]);
 
-// Additional tools disallowed for custom Agents (loaded from .mewcode/agents/);
+// Additional tools disallowed for custom Agents (loaded from .larky/agents/);
 // Currently identical to the global list, but maintained separately for future extensibility
 export const CUSTOM_AGENT_DISALLOWED_TOOLS = new Set([
   "TaskOutput",

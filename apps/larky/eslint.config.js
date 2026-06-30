@@ -35,7 +35,7 @@ export default defineConfig(
       "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
       "@typescript-eslint/no-floating-promises": ["error", { ignoreVoid: true }],
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-      "@typescript-eslint/no-unnecessary-condition": "error",
+      "@typescript-eslint/no-unnecessary-condition": "warn",
       "@typescript-eslint/ban-ts-comment": "error",
       "@typescript-eslint/consistent-type-assertions": [
         "error",

@@ -54,7 +54,7 @@ function ToolBlock(props: ToolBlockProps) {
   );
 }
 
-function ToolDisplay(props: ToolDisplayProps) {
+export function ToolDisplay(props: ToolDisplayProps) {
   const { tools } = props;
   if (tools.length === 0) {
     return null;
@@ -68,7 +68,7 @@ function ToolDisplay(props: ToolDisplayProps) {
   );
 }
 
-export default ToolDisplay;
+// export default ToolDisplay;
 
 function formatArgs(args: Record<string, unknown>): string {
   if (args.command) {

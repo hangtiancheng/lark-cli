@@ -94,6 +94,52 @@ export class SkillCatalog {
       // Skip invalid skill
     }
   }
+
+  list(): SkillMeta[] {
+    return [...this.entries.values()].map((e) => e.skill.meta);
+  }
+
+  /**
+   * Gets a skill with hot reload support: automatically re-reads the file if it has been modified on disk.
+   * Aligns with the Go version's GetFull: re-reads the body on every call (hot reload),
+   * and retains the cached body if reading fails.
+   */
+  get(name: string): Skill | undefined {
+    const entry = this.entries.get(name);
+    if (!entry) {
+      return undefined;
+    }
+
+    // Attempt hot reload: check if the file has been modified
+    if (entry.filePath && entry.loadedMtimeMs > 0) {
+      try {
+        const currentMtime = statSync(entry.filePath).mtimeMs;
+        if (currentMtime > entry.loadedMtimeMs) {
+          // File has been modified, re-read it
+          const raw = readFileSync(entry.filePath, "utf-8");
+          const parsed = parseSkillFile(raw);
+          if (parsed) {
+            entry.skill = {
+              meta: parsed.meta,
+              body: parsed.body,
+              sourceDir: entry.skill.sourceDir,
+              isDirectory: entry.skill.isDirectory,
+            };
+            entry.loadedMtimeMs = currentMtime;
+          }
+          // Retain the cached version if parsing fails (consistent with Go behavior)
+        }
+      } catch {
+        // Retain the cached version if reading fails
+      }
+    }
+
+    return entry.skill;
+  }
+
+  has(name: string): boolean {
+    return this.entries.has(name);
+  }
 }
 
 const YamlFrontmatterSchema = z.looseObject({
