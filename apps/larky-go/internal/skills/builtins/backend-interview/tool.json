@@ -1,0 +1,16 @@
+[
+  {
+    "name": "parse_resume",
+    "description": "Extract structured backend interview signal from a resume file. Returns JSON with tech_stack, projects, years_of_experience.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to the resume file (txt / md / pdf-as-text)."
+        }
+      },
+      "required": ["file_path"]
+    }
+  }
+]

@@ -23,7 +23,6 @@ type ThinkingBlock struct {
 }
 
 type Message struct {
-	// "user" | "assistant" | "system"
 	Role           string
 	Content        string
 	ThinkingBlocks []ThinkingBlock
@@ -31,15 +30,9 @@ type Message struct {
 	ToolResults    []ToolResultBlock
 }
 
-var (
-	UserRole      = "user"
-	AssistantRole = "assistant"
-	SystemRole    = "system"
-)
-
 type Manager struct {
-	history                []Message
-	longTermMemoryInjected bool
+	history     []Message
+	ltmInjected bool
 }
 
 func NewManager() *Manager {
@@ -47,34 +40,36 @@ func NewManager() *Manager {
 }
 
 func (m *Manager) AddUserMessage(content string) {
-	m.history = append(m.history, Message{
-		Role:    UserRole,
-		Content: content,
-	})
+	m.history = append(m.history, Message{Role: "user", Content: content})
 }
 
 func (m *Manager) AddAssistantMessage(content string) {
-	m.history = append(m.history, Message{
-		Role:    AssistantRole,
-		Content: content,
-	})
+	m.history = append(m.history, Message{Role: "assistant", Content: content})
 }
 
-func (m *Manager) AddToolUseMessage(text, toolUseId, toolName string, arguments map[string]any) {
+func (m *Manager) AddToolUseMessage(text, toolUseID, toolName string, arguments map[string]any) {
 	m.history = append(m.history, Message{
-		Role:    AssistantRole,
+		Role:    "assistant",
 		Content: text,
 		ToolUses: []ToolUseBlock{{
+			ToolUseID: toolUseID,
 			ToolName:  toolName,
-			ToolUseID: toolUseId,
 			Arguments: arguments,
 		}},
 	})
 }
 
+func (m *Manager) AddAssistantMessageWithTools(text string, toolUses []ToolUseBlock) {
+	m.history = append(m.history, Message{
+		Role:     "assistant",
+		Content:  text,
+		ToolUses: toolUses,
+	})
+}
+
 func (m *Manager) AddAssistantFull(text string, thinking []ThinkingBlock, toolUses []ToolUseBlock) {
 	m.history = append(m.history, Message{
-		Role:           AssistantRole,
+		Role:           "assistant",
 		Content:        text,
 		ThinkingBlocks: thinking,
 		ToolUses:       toolUses,
@@ -83,7 +78,7 @@ func (m *Manager) AddAssistantFull(text string, thinking []ThinkingBlock, toolUs
 
 func (m *Manager) AddToolResultMessage(toolUseID, content string, isError bool) {
 	m.history = append(m.history, Message{
-		Role: UserRole,
+		Role: "user",
 		ToolResults: []ToolResultBlock{{
 			ToolUseID: toolUseID,
 			Content:   content,
@@ -94,51 +89,43 @@ func (m *Manager) AddToolResultMessage(toolUseID, content string, isError bool) 
 
 func (m *Manager) AddToolResultsMessage(results []ToolResultBlock) {
 	m.history = append(m.history, Message{
-		Role:        UserRole,
+		Role:        "user",
 		ToolResults: results,
 	})
 }
 
 func (m *Manager) AddSystemReminder(content string) {
 	m.history = append(m.history, Message{
-		Role:    UserRole,
+		Role:    "user",
 		Content: "<system-reminder>\n" + content + "\n</system-reminder>",
 	})
 }
 
 func (m *Manager) InjectLongTermMemory(instructions, memories string) {
-	if m.longTermMemoryInjected {
+	if m.ltmInjected {
 		return
 	}
-
 	var sections []string
 	if instructions != "" {
-		sections = append(sections, "# Larky.md\nCodebase and user instructions are as follows. You MUST adhere to these instructions. IMPORTANT: these instructions OVERRIDE any previous/default instructions, you MUST follow them exactly.\n\n"+instructions)
+		sections = append(sections, "# larkyMd\nCodebase and user instructions are shown below. Be sure to adhere to these instructions. IMPORTANT: These instructions OVERRIDE any default behavior and you MUST follow them exactly as written.\n\n"+instructions)
 	}
-
 	if memories != "" {
-		sections = append(sections, "## Auto Memory\n"+memories)
+		sections = append(sections, "# autoMemory\n"+memories)
 	}
-
 	if len(sections) == 0 {
 		return
 	}
-
-	sections = append(sections, "### Current Date\nToday's date is "+time.Now().Format("2026-01-02")+".")
-
+	sections = append(sections, "# currentDate\nToday's date is "+time.Now().Format("2006-01-02")+".")
 	body := strings.Join(sections, "\n\n")
-	wrapped := "<system-reminder>\nAs you answer the user's questions, you can use the following context:\n" + body + "\n\nIMPORTANT: This context may not be relevant to your tasks. You should NOT respond to this context unless it is highly relevant to your tasks.\n</system-reminder>"
-
-	m.history = append([]Message{
-		{
-			Role: UserRole,
-			Content: wrapped,
-		},
-	}, m.history...)
-	m.longTermMemoryInjected = true
+	wrapped := "<system-reminder>\nAs you answer the user's questions, you can use the following context:\n" +
+		body +
+		"\n\n      IMPORTANT: this context may or may not be relevant to your tasks. You should not respond to this context unless it is highly relevant to your task.\n</system-reminder>"
+	m.history = append([]Message{{Role: "user", Content: wrapped}}, m.history...)
+	m.ltmInjected = true
 }
 
-
+// AppendMessages copies the given messages onto the end of the history. Used by
+// compaction to replay the recent-tail messages verbatim after the summary.
 func (m *Manager) AppendMessages(messages []Message) {
 	m.history = append(m.history, messages...)
 }
@@ -151,11 +138,9 @@ func (m *Manager) TruncateTo(index int) {
 	if index < 0 {
 		index = 0
 	}
-
 	if index > len(m.history) {
 		return
 	}
-
 	m.history = m.history[:index]
 }
 
