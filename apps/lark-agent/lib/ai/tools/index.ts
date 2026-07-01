@@ -13,7 +13,7 @@ import { getCurrentTime, queryPrometheusAlerts, retrieveDocs, execMysqlSql } fro
 export const getCurrentTimeTool = tool({
   description:
     "Get current system time in multiple formats. Returns the current time in seconds, milliseconds, microseconds, and a human-readable timestamp. Use this tool when you need current time for logging, timing, or timestamping events.",
-  parameters: getCurrentTimeSchema,
+  inputSchema: getCurrentTimeSchema,
   execute: async () => JSON.stringify(getCurrentTime()),
 });
 
@@ -21,7 +21,7 @@ export const getCurrentTimeTool = tool({
 export const mysqlCrudTool = tool({
   description:
     "Execute SQL against MySQL and return JSON results. Supports query/insert/update/delete. Results are formatted as JSON for easy parsing.",
-  parameters: mysqlCrudSchema,
+  inputSchema: mysqlCrudSchema,
   execute: async (input) =>
     JSON.stringify(await execMysqlSql(input.dsn, input.sql, input.operate_type)),
 });
@@ -30,7 +30,7 @@ export const mysqlCrudTool = tool({
 export const queryInternalDocsTool = tool({
   description:
     "Search internal documentation and knowledge base via RAG. Finds similar documents and extracts processing steps. Useful for understanding internal procedures, best practices, or step-by-step guides.",
-  parameters: queryInternalDocsSchema,
+  inputSchema: queryInternalDocsSchema,
   execute: async (input) => JSON.stringify(await retrieveDocs(input.query)),
 });
 
@@ -38,7 +38,7 @@ export const queryInternalDocsTool = tool({
 export const prometheusAlertsTool = tool({
   description:
     "Query active alerts from Prometheus alerting system. Retrieves all currently active/firing alerts including name, description, state, active_at, and duration. Same alertname only kept once.",
-  parameters: prometheusAlertsSchema,
+  inputSchema: prometheusAlertsSchema,
   execute: async () => JSON.stringify(await queryPrometheusAlerts()),
 });
 

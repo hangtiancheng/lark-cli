@@ -3,6 +3,7 @@
 import knex from "knex";
 import { retrieve } from "@/lib/milvus/retriever";
 import { config } from "@/lib/config";
+import { z } from "zod/v4";
 
 // ============ get_current_time (corresponds to get_current_time.go) ============
 export function getCurrentTime() {
@@ -24,6 +25,29 @@ function formatTimestamp(d: Date): string {
     d.getHours(),
   )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
 }
+
+// Prometheus /api/v1/alerts response schema (runtime validation via zod)
+const prometheusResponseSchema = z
+  .object({
+    data: z
+      .object({
+        alerts: z
+          .array(
+            z
+              .object({
+                labels: z.record(z.string(), z.string()).optional(),
+                annotations: z.record(z.string(), z.string()).optional(),
+                state: z.string().optional(),
+                activeAt: z.string().optional(),
+              })
+              .passthrough(),
+          )
+          .optional(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
 
 // ============ query_prometheus_alerts (corresponds to query_metrics_alerts.go) ============
 export interface SimplifiedAlert {
@@ -51,16 +75,7 @@ export async function queryPrometheusAlerts(): Promise<{
         error: `HTTP ${resp.status}`,
       };
     }
-    const result = (await resp.json()) as {
-      data?: {
-        alerts?: Array<{
-          labels?: Record<string, string>;
-          annotations?: Record<string, string>;
-          state?: string;
-          activeAt?: string;
-        }>;
-      };
-    };
+    const result = prometheusResponseSchema.parse(await resp.json());
     const all = result.data?.alerts ?? [];
     // Keep only the first occurrence for the same alertname (aligned with the source project)
     const seen = new Set<string>();

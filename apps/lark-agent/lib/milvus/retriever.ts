@@ -1,5 +1,6 @@
 // Corresponds to the source project's internal/ai/retriever/retriever.go
 // Milvus vector retrieval (TopK=1, aligned with the source project)
+import { z } from "zod/v4";
 import { getMilvusClient } from "./client";
 import { embedText, float32ToBinaryVector } from "@/lib/ai/embedder";
 import { config, MILVUS_FIELDS } from "@/lib/config";
@@ -10,6 +11,17 @@ export interface RetrievedDoc {
   metadata: Record<string, unknown>;
   score: number;
 }
+
+// Validate the runtime shape of a Milvus search result row (fields come back
+// as unknown from the SDK, so we parse with zod instead of casting).
+const searchResultSchema = z
+  .object({
+    id: z.unknown(),
+    content: z.unknown(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+    score: z.number().optional(),
+  })
+  .passthrough();
 
 export async function retrieve(query: string, topK = 1): Promise<RetrievedDoc[]> {
   const client = await getMilvusClient();
@@ -23,11 +35,11 @@ export async function retrieve(query: string, topK = 1): Promise<RetrievedDoc[]>
     output_fields: [MILVUS_FIELDS.id, MILVUS_FIELDS.content, MILVUS_FIELDS.metadata],
   });
 
-  const results = (res.results ?? []) as Array<Record<string, unknown>>;
+  const results = z.array(searchResultSchema).parse(res.results ?? []);
   return results.map((r) => ({
-    id: String(r[MILVUS_FIELDS.id] ?? ""),
-    content: String(r[MILVUS_FIELDS.content] ?? ""),
-    metadata: (r[MILVUS_FIELDS.metadata] ?? {}) as Record<string, unknown>,
-    score: Number(r.score ?? 0),
+    id: String(r.id ?? ""),
+    content: String(r.content ?? ""),
+    metadata: r.metadata ?? {},
+    score: r.score ?? 0,
   }));
 }

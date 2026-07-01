@@ -211,3 +211,4 @@ target
 glob-addon/glob-addon.*.node
 *Claude
 SuperBiz*
+!apps/lark-agent/app/api/upload
