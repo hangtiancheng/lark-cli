@@ -10,28 +10,31 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agent"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agents"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/commands"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/compact"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/filehistory"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/history"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/hooks"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/mcp"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/memory"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/memory/extractor"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/permissions"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/planfile"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/prompt"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/session"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/skills"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/teams"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/todo"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/worktree"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
+	"larky/internal/agent"
+	"larky/internal/agents"
+	"larky/internal/commands"
+	"larky/internal/compact"
+	"larky/internal/config"
+	"larky/internal/conversation"
+	"larky/internal/filehistory"
+	"larky/internal/history"
+	"larky/internal/hooks"
+	"larky/internal/llm"
+	"larky/internal/mcp"
+	"larky/internal/memory"
+	"larky/internal/memory/extractor"
+	"larky/internal/permissions"
+	"larky/internal/planfile"
+	"larky/internal/prompt"
+	"larky/internal/session"
+	"larky/internal/skills"
+	"larky/internal/teams"
+	"larky/internal/todo"
+	"larky/internal/tools"
+	"larky/internal/worktree"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -218,7 +221,7 @@ type Model struct {
 	resumeSearch    string
 	resumeScrollTop int
 
-	hasExitedPlanMode bool // 记录本次会话是否曾退出过 Plan Mode，用于重入时注入提示
+	hasExitedPlanMode bool // tracks whether this session has exited Plan Mode, used to inject a re-entry hint
 }
 
 func New(providers []config.ProviderConfig, mcpConfigs []config.MCPServerConfig, hookConfigs []hooks.Hook) Model {
@@ -1723,7 +1726,7 @@ func (m Model) executeCommand(name, args string) (tea.Model, tea.Cmd) {
 					content: fmt.Sprintf("Entered Plan mode. Plan file: %s\nExplore the codebase and design your approach.", planPath),
 				})
 
-				// 重入检测：如果本次会话曾退出过 Plan Mode 且 plan 文件已存在，注入重入提示
+				// Re-entry detection: if this session previously exited Plan Mode and the plan file exists, inject the re-entry hint
 				if m.hasExitedPlanMode && planfile.PlanExists(wd) {
 					reentryMsg := prompt.BuildPlanModeReentryReminder(planPath, true)
 					if reentryMsg != "" {
@@ -1966,7 +1969,7 @@ func (m Model) executePlanApproval() (tea.Model, tea.Cmd) {
 	planfile.ResetPlanPath()
 
 	executeMsg := prompt.BuildPlanModeExitReminder(planPath, planExists)
-	// 标记本次会话已退出过 Plan Mode，后续重入时可注入提示
+	// Mark that this session has exited Plan Mode so future re-entries can inject the hint
 	m.hasExitedPlanMode = true
 	executeMsg += "\n\nUser has approved your plan. You can now start coding."
 	if planContent != "" {
@@ -2867,7 +2870,7 @@ func renderToolBlockText(tb toolBlockInfo) string {
 func renderSubAgentBlock(sab *subAgentBlock, expanded bool) string {
 	var sb strings.Builder
 
-	agentLabel := strings.Title(sab.agentType)
+	agentLabel := cases.Title(language.English).String(sab.agentType)
 	if agentLabel == "" {
 		agentLabel = "Agent"
 	}
@@ -3758,9 +3761,9 @@ func (m Model) doResumeSession(wd, targetID string, sessions []session.SessionIn
 	boundary, after, compacted := session.FindLastCompactBoundary(msgs)
 	var replay []session.Message
 	if compacted {
-		resumeSummary := "本次会话延续自之前的对话，因上下文空间不足进行了压缩。以下是早期对话的摘要：\n\n" + boundary.Summary
+		resumeSummary := "This session continues from a previous conversation that was compacted due to context window limits. Below is a summary of the earlier conversation:\n\n" + boundary.Summary
 		if len(boundary.Keep) > 0 {
-			resumeSummary += "\n\n近期消息已原样保留。"
+			resumeSummary += "\n\nRecent messages have been preserved verbatim."
 		}
 		replay = append(replay, session.Message{Role: "user", Content: resumeSummary})
 		for _, k := range boundary.Keep {

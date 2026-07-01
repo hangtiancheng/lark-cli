@@ -1,6 +1,6 @@
 // ToolUseCard: inline tool execution indicator — Claude Code style
 // No border boxes, just a compact line: icon toolName params duration
-// Success/failure output shown as continuation text below when expanded
+// Supports expand/collapse for full params and output
 import React from "react";
 import { Box, Text } from "ink";
 
@@ -14,6 +14,8 @@ export interface ToolUseCardProps {
   readonly output?: string;
   readonly errorMessage?: string;
   readonly expanded?: boolean;
+  readonly onToggle?: () => void;
+  readonly isSubagent?: boolean;
 }
 
 // Map tool status to icon and color
@@ -49,6 +51,12 @@ function paramsPreview(params?: Record<string, unknown>): string {
     .join(" ");
 }
 
+// Render full params as pretty-printed JSON
+function paramsFull(params?: Record<string, unknown>): string {
+  if (!params || Object.keys(params).length === 0) return "";
+  return JSON.stringify(params, null, 2);
+}
+
 export function ToolUseCard({
   toolName,
   status,
@@ -57,33 +65,65 @@ export function ToolUseCard({
   output,
   errorMessage,
   expanded,
+  onToggle,
+  isSubagent,
 }: ToolUseCardProps): React.JSX.Element {
   const { icon, iconColor } = toolStatusStyle(status);
   const preview = paramsPreview(params);
   const duration = elapsedMs !== undefined ? formatDuration(elapsedMs) : "";
 
-  // Auto-expand running tools, respect explicit expanded prop for completed tools
+  // note_save special rendering: show "remembered" instead of generic output
+  if (toolName === "note_save" && status === "success") {
+    return (
+      <Box marginLeft={isSubagent ? 6 : 2}>
+        <Text color={theme.success}>{theme.indicator.toolSuccess} remembered</Text>
+        {duration ? <Text color={theme.textMuted}> {duration}</Text> : null}
+      </Box>
+    );
+  }
+
+  // Auto-expand running tools; respect explicit expanded prop for completed tools
   const isExpanded = expanded ?? status === "running";
+  const hasOutput =
+    status === "success"
+      ? (output ?? "").length > 0
+      : status === "failed" && (errorMessage ?? "").length > 0;
+  const fullParams = paramsFull(params);
+  const fullOutput = status === "failed" ? (errorMessage ?? "") : (output ?? "");
+  const marginLeft = isSubagent ? 6 : 2;
 
   return (
-    <Box flexDirection="column" marginLeft={2}>
+    <Box flexDirection="column" marginLeft={marginLeft}>
       {/* Main tool indicator line */}
       <Box>
         <Text color={iconColor}>{icon} </Text>
         <Text color={theme.toolName}>{toolName}</Text>
-        {isExpanded && preview ? <Text color={theme.textDim}> {truncate(preview, 50)}</Text> : null}
+        {!isExpanded && preview ? (
+          <Text color={theme.textDim}> {truncate(preview, 50)}</Text>
+        ) : null}
         {duration ? <Text color={theme.textMuted}> {duration}</Text> : null}
+        {!isExpanded && hasOutput && onToggle ? (
+          <Text color={theme.textMuted}> (Tab to expand)</Text>
+        ) : null}
       </Box>
 
-      {/* Output continuation (compact, no borders) - only when expanded */}
-      {isExpanded && status === "success" && output ? (
-        <Box marginLeft={3}>
-          <Text color={theme.textDim}>{truncate(output, 120)}</Text>
-        </Box>
-      ) : null}
-      {isExpanded && status === "failed" && errorMessage ? (
-        <Box marginLeft={3}>
-          <Text color={theme.error}>{truncate(errorMessage, 120)}</Text>
+      {/* Expanded view: full params + output */}
+      {isExpanded ? (
+        <Box flexDirection="column" marginLeft={2}>
+          {fullParams ? (
+            <Box flexDirection="column">
+              <Text color={theme.textDim}>params:</Text>
+              <Text color={theme.text}>{fullParams}</Text>
+            </Box>
+          ) : null}
+          {fullOutput ? (
+            <Box flexDirection="column">
+              <Text color={theme.textDim}>{status === "failed" ? "error:" : "output:"}</Text>
+              <Text color={status === "failed" ? theme.error : theme.text} wrap="wrap">
+                {fullOutput}
+              </Text>
+            </Box>
+          ) : null}
         </Box>
       ) : null}
     </Box>

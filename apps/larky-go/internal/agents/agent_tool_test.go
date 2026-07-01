@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/permissions"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/conversation"
+	"larky/internal/permissions"
+	"larky/internal/tools"
 )
 
 func TestBuildForkedConversationPreservesThinkingBlocks(t *testing.T) {

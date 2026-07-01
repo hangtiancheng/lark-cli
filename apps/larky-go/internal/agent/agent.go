@@ -9,16 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/compact"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/filehistory"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/hooks"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/permissions"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/planfile"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/prompt"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/toolresult"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/compact"
+	"larky/internal/conversation"
+	"larky/internal/filehistory"
+	"larky/internal/hooks"
+	"larky/internal/llm"
+	"larky/internal/permissions"
+	"larky/internal/planfile"
+	"larky/internal/prompt"
+	"larky/internal/toolresult"
+	"larky/internal/tools"
 )
 
 const (
@@ -560,7 +560,7 @@ func (a *Agent) executeSingleTool(ctx context.Context, eventCh chan AgentEvent, 
 		}
 		if decision.Effect == permissions.Ask {
 			respCh := make(chan PermissionResponse, 1)
-			// 使用 DescribeToolAction 生成人类可读的操作描述
+			// Use DescribeToolAction to produce a human-readable action description
 			desc := permissions.DescribeToolAction(tc.ToolName, tc.Arguments)
 			eventCh <- PermissionRequestEvent{
 				ToolName:   tc.ToolName,
@@ -583,7 +583,7 @@ func (a *Agent) executeSingleTool(ctx context.Context, eventCh chan AgentEvent, 
 				if len(content) > 60 {
 					pattern = content[:60] + "*"
 				}
-				// Layer 4b: 写入会话级放行集合（内存），同时持久化到规则引擎
+				// Layer 4b: add to session-level allowlist (in-memory) and persist to the rule engine
 				a.Checker.AddSessionAllow(tc.ToolName, pattern)
 				a.Checker.RuleEngine.AppendLocalRule(permissions.Rule{
 					ToolName: tc.ToolName,

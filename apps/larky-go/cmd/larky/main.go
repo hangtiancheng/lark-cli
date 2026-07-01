@@ -6,10 +6,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/hooks"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/remote"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tui"
+	"larky/internal/config"
+	"larky/internal/hooks"
+	"larky/internal/remote"
+	"larky/internal/tui"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 		return
 	}
 
-	// 解析 --remote 模式
+	// Parse --remote mode flags
 	remoteAddr := ""
 	for i := 1; i < len(os.Args); i++ {
 		if os.Args[i] == "--remote" {
@@ -45,7 +45,7 @@ func main() {
 		validHooks = nil
 	}
 
-	// --remote 模式：启动 HTTP + WebSocket 服务器，浏览器访问 Web UI
+	// --remote mode: start HTTP + WebSocket server, browser accesses the Web UI
 	if remoteAddr != "" {
 		srv := remote.NewServer(cfg.Providers, cfg.MCPServers, validHooks, remoteAddr)
 		if err := srv.Run(); err != nil {

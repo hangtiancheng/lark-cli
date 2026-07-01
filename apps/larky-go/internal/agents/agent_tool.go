@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agent"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/permissions"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/teams"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/toolresult"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/worktree"
+	"larky/internal/agent"
+	"larky/internal/conversation"
+	"larky/internal/llm"
+	"larky/internal/permissions"
+	"larky/internal/teams"
+	"larky/internal/toolresult"
+	"larky/internal/tools"
+	"larky/internal/worktree"
 )
 
 // sanitizeSlugSegment replaces any character outside [a-zA-Z0-9._-] with '-' and trims redundant

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
+	"larky/internal/config"
+	"larky/internal/conversation"
 
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"

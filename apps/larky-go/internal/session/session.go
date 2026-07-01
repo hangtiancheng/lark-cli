@@ -27,8 +27,8 @@ type Message struct {
 	// means a plain conversation message; TypeCompactBoundary means Content is a
 	// CompactBoundary JSON blob written by SaveCompactBoundary.
 	Type string `json:"type,omitempty"`
-	// ToolUseID 记录工具调用 ID，用于 resume 时校验 tool_use↔tool_result 配对链。
-	// 对于 assistant 的 tool_use 记录和 user 的 tool_result 记录都可能携带此字段。
+	// ToolUseID records the tool call ID, used during resume to verify tool_use/tool_result pairing.
+	// This field may be present in both assistant tool_use records and user tool_result records.
 	ToolUseID string `json:"tool_use_id,omitempty"`
 	Content   string `json:"content"`
 	Ts        int64  `json:"ts"`
@@ -110,7 +110,7 @@ type SessionInfo struct {
 func NewID() string {
 	var b [2]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		// crypto/rand 极少失败；兜底用纳秒低 16 位，仍能避免同秒同进程冲突
+		// crypto/rand rarely fails; fall back to lower 16 bits of nanoseconds to avoid same-second collisions
 		return fmt.Sprintf("%s-%04x", time.Now().Format("20060102-150405"), time.Now().UnixNano()&0xFFFF)
 	}
 	return time.Now().Format("20060102-150405") + "-" + hex.EncodeToString(b[:])
@@ -156,10 +156,13 @@ func LoadSession(workDir, sessionID string) []Message {
 			msgs = append(msgs, msg)
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return nil
+	}
 	return msgs
 }
 
-// maxSessionAgeDays 是会话的最大保留天数，超过此天数的会话会被自动清理。
+// maxSessionAgeDays is the maximum retention period for sessions; older sessions are auto-cleaned.
 const maxSessionAgeDays = 30
 
 func ListSessions(workDir string) []SessionInfo {
@@ -183,7 +186,7 @@ func ListSessions(workDir string) []SessionInfo {
 			continue
 		}
 
-		// 自动清理超过 30 天的过期会话
+		// Auto-clean sessions older than 30 days
 		if info.ModTime().Before(cutoff) {
 			os.Remove(filepath.Join(dir, e.Name()))
 			continue

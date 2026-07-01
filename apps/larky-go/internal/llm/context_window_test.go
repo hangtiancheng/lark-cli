@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
+	"larky/internal/config"
 )
 
 // TestResolveContextWindow_FetchSuccess covers layer 2 working: a healthy

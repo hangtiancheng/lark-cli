@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
+	"larky/internal/config"
+	"larky/internal/conversation"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"

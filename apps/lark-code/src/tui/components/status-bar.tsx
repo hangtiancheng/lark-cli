@@ -3,7 +3,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 
-import { theme, formatDuration } from "../theme.js";
+import { theme, formatDuration, contextBarFill, contextBarColor } from "../theme.js";
 
 export interface StatusBarProps {
   readonly runStatus: "idle" | "running" | "waiting" | "success" | "failed";
@@ -61,7 +61,10 @@ export function StatusBar({
   contextPercent,
 }: StatusBarProps): React.JSX.Element {
   const { color, label, icon } = statusInfo(runStatus);
-  const ctxPct = contextPercent !== undefined ? `${String(Math.round(contextPercent * 100))}%` : "";
+  const ctxPctNum = contextPercent ?? 0;
+  const ctxPctLabel = ctxPctNum > 0 ? `${(ctxPctNum * 100).toFixed(1)}%` : "";
+  const ctxColor = contextBarColor(ctxPctNum);
+  const ctxBar = ctxPctNum > 0 ? contextBarFill(ctxPctNum) : "";
 
   return (
     <Box paddingX={1}>
@@ -73,7 +76,14 @@ export function StatusBar({
         <Text color={theme.textDim}> tok:{totalTokens.toLocaleString()}</Text>
       ) : null}
       {elapsedMs > 0 ? <Text color={theme.textDim}> {formatDuration(elapsedMs)}</Text> : null}
-      {ctxPct ? <Text color={theme.textMuted}> ctx:{ctxPct}</Text> : null}
+      {ctxPctLabel ? (
+        <>
+          <Text color={theme.textMuted}> ctx:{ctxPctLabel} </Text>
+          <Text color={ctxColor} bold={ctxPctNum >= 0.85}>
+            {ctxBar}
+          </Text>
+        </>
+      ) : null}
     </Box>
   );
 }

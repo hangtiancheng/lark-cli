@@ -21,6 +21,7 @@
     "HITL",
     "httpx",
     "iterm",
+    "langchain",
     "larkd",
     "libuv",
     "lipgloss",
@@ -28,6 +29,7 @@
     "Moonwalking",
     "napi",
     "ollama",
+    "oxfmt",
     "persistable",
     "prefersdark",
     "pycache",
@@ -38,6 +40,7 @@
     "STDCPPFS",
     "Streamable",
     "symref",
+    "textsplitters",
     "toolu",
     "trae",
     "vdom",
@@ -53,5 +56,5 @@
     "*.vue": "vue",
     "*.gyp": "json"
   },
-  "cmake.ignoreCMakeListsMissing": true,
+  "cmake.ignoreCMakeListsMissing": true
 }

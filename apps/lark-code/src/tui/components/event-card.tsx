@@ -1,11 +1,12 @@
 // EventCard: polymorphic renderer for different agent event types
 // Claude Code style: inline indicators, no heavy borders, flowing text layout
+// Supports: subagent tree, collapsible tools, permission resolution, markdown rendering
 import React from "react";
 import { Box, Text } from "ink";
 import { marked, type MarkedExtension } from "marked";
 import { markedTerminal } from "marked-terminal";
 
-import { theme, truncate } from "../theme.js";
+import { theme, truncate, formatTimestamp } from "../theme.js";
 import { isRecord } from "../../core/bus/envelope.js";
 import { ToolUseCard } from "./tool-use-card.js";
 
@@ -20,16 +21,45 @@ export interface AgentEvent {
   readonly timestamp: string;
 }
 
+// Props passed from EventLog to EventCard for stateful rendering
+export interface EventCardContext {
+  readonly expandedToolIds: ReadonlySet<string>;
+  readonly onToggleTool: (toolUseId: string) => void;
+  readonly subagentRunIds: ReadonlySet<string>;
+  readonly permissionToolNames: ReadonlyMap<string, string>;
+}
+
+export interface EventCardProps {
+  readonly event: AgentEvent;
+  readonly context?: EventCardContext;
+}
+
+// Helper: extract string field from event data
+function str(data: Record<string, unknown>, key: string): string {
+  const val = data[key];
+  return typeof val === "string" ? val : "";
+}
+
+// Helper: extract number field from event data
+function num(data: Record<string, unknown>, key: string): number {
+  const val = data[key];
+  return typeof val === "number" ? val : 0;
+}
+
 // Render a single event as a compact styled line or inline card
-export function EventCard({ event }: { readonly event: AgentEvent }): React.JSX.Element {
+export function EventCard({ event, context }: EventCardProps): React.JSX.Element {
   const { type, data } = event;
+  const isSubagent = context
+    ? typeof data["run_id"] === "string" && context.subagentRunIds.has(data["run_id"])
+    : false;
 
   switch (type) {
     // Step separator — thin dashed line, compact
     case "step.started": {
-      const step = typeof data["step"] === "number" ? data["step"] : 0;
+      if (isSubagent) return <></>;
+      const step = num(data, "step");
       return (
-        <Box paddingX={1}>
+        <Box paddingX={1} marginTop={0}>
           <Text color={theme.accentDim}>
             {theme.indicator.step}
             {theme.indicator.step}
@@ -47,7 +77,8 @@ export function EventCard({ event }: { readonly event: AgentEvent }): React.JSX.
     }
 
     case "step.finished": {
-      const step = typeof data["step"] === "number" ? data["step"] : 0;
+      if (isSubagent) return <></>;
+      const step = num(data, "step");
       return (
         <Box paddingX={1}>
           <Text color={theme.textMuted}>
@@ -60,39 +91,85 @@ export function EventCard({ event }: { readonly event: AgentEvent }): React.JSX.
 
     // Tool calls — delegate to inline ToolUseCard (no borders)
     case "tool.call_started": {
-      const toolName = typeof data["tool_name"] === "string" ? data["tool_name"] : "unknown";
+      const toolName = str(data, "tool_name");
+      const toolUseId = str(data, "tool_use_id");
       const paramsRaw = data["params"];
       const params = isRecord(paramsRaw) ? paramsRaw : undefined;
-      return <ToolUseCard toolName={toolName} status="running" {...(params ? { params } : {})} />;
+      const expanded = context?.expandedToolIds.has(toolUseId) ?? false;
+      const onToggle = context?.onToggleTool;
+      return (
+        <ToolUseCard
+          toolName={toolName}
+          status="running"
+          {...(params ? { params } : {})}
+          {...(context ? { expanded } : {})}
+          {...(onToggle
+            ? {
+                onToggle: () => {
+                  onToggle(toolUseId);
+                },
+              }
+            : {})}
+          isSubagent={isSubagent}
+        />
+      );
     }
 
     case "tool.call_finished": {
-      const toolName = typeof data["tool_name"] === "string" ? data["tool_name"] : "unknown";
-      const elapsedMs = typeof data["elapsed_ms"] === "number" ? data["elapsed_ms"] : 0;
-      const output = typeof data["output"] === "string" ? data["output"] : "";
+      const toolName = str(data, "tool_name");
+      const toolUseId = str(data, "tool_use_id");
+      const elapsedMs = num(data, "elapsed_ms");
+      const output = str(data, "output");
+      const expanded = context?.expandedToolIds.has(toolUseId) ?? false;
+      const onToggle = context?.onToggleTool;
       return (
-        <ToolUseCard toolName={toolName} status="success" elapsedMs={elapsedMs} output={output} />
+        <ToolUseCard
+          toolName={toolName}
+          status="success"
+          elapsedMs={elapsedMs}
+          output={output}
+          {...(context ? { expanded } : {})}
+          {...(onToggle
+            ? {
+                onToggle: () => {
+                  onToggle(toolUseId);
+                },
+              }
+            : {})}
+          isSubagent={isSubagent}
+        />
       );
     }
 
     case "tool.call_failed": {
-      const toolName = typeof data["tool_name"] === "string" ? data["tool_name"] : "unknown";
-      const elapsedMs = typeof data["elapsed_ms"] === "number" ? data["elapsed_ms"] : 0;
-      const errorMessage =
-        typeof data["error_message"] === "string" ? data["error_message"] : "unknown error";
+      const toolName = str(data, "tool_name");
+      const toolUseId = str(data, "tool_use_id");
+      const elapsedMs = num(data, "elapsed_ms");
+      const errorMessage = str(data, "error_message");
+      const expanded = context?.expandedToolIds.has(toolUseId) ?? false;
+      const onToggle = context?.onToggleTool;
       return (
         <ToolUseCard
           toolName={toolName}
           status="failed"
           elapsedMs={elapsedMs}
           errorMessage={errorMessage}
+          {...(context ? { expanded } : {})}
+          {...(onToggle
+            ? {
+                onToggle: () => {
+                  onToggle(toolUseId);
+                },
+              }
+            : {})}
+          isSubagent={isSubagent}
         />
       );
     }
 
     // LLM streaming output — flowing text with markdown rendering
     case "llm.token": {
-      const token = typeof data["token"] === "string" ? data["token"] : "";
+      const token = str(data, "token");
       return (
         <Text color={theme.text} wrap="wrap">
           {token}
@@ -101,22 +178,33 @@ export function EventCard({ event }: { readonly event: AgentEvent }): React.JSX.
     }
 
     case "llm.text": {
-      const text = typeof data["text"] === "string" ? data["text"] : "";
+      const text = str(data, "text");
       const parsed = marked.parse(text);
       const rendered = typeof parsed === "string" ? parsed : "";
       return (
-        <Box paddingX={1}>
+        <Box paddingX={1} marginTop={0}>
           <Text wrap="wrap">{rendered}</Text>
+        </Box>
+      );
+    }
+
+    // Model selected — show which model is being used
+    case "llm.model_selected": {
+      const model = str(data, "model");
+      return (
+        <Box paddingX={1}>
+          <Text color={theme.info}>{theme.indicator.arrow} model: </Text>
+          <Text color={theme.textDim}>{model}</Text>
         </Box>
       );
     }
 
     // Usage summary — compact inline, no borders
     case "llm.usage": {
-      const inputTokens = typeof data["input_tokens"] === "number" ? data["input_tokens"] : 0;
-      const outputTokens = typeof data["output_tokens"] === "number" ? data["output_tokens"] : 0;
-      const contextPercent =
-        typeof data["context_percent"] === "number" ? data["context_percent"] : 0;
+      if (isSubagent) return <></>;
+      const inputTokens = num(data, "input_tokens");
+      const outputTokens = num(data, "output_tokens");
+      const contextPercent = num(data, "context_percent");
       return (
         <Box paddingX={1}>
           <Text color={theme.textMuted}>
@@ -127,13 +215,15 @@ export function EventCard({ event }: { readonly event: AgentEvent }): React.JSX.
       );
     }
 
-    // Run lifecycle — compact inline indicators
+    // Run lifecycle — compact inline indicators with visual grouping
     case "run.started": {
-      const goal = typeof data["goal"] === "string" ? data["goal"] : "";
+      const goal = str(data, "goal");
+      const runId = str(data, "run_id");
       return (
-        <Box flexDirection="column" paddingX={1}>
+        <Box flexDirection="column" paddingX={1} marginTop={1}>
           <Box>
             <Text color={theme.accentBright}>{theme.indicator.runStart} run</Text>
+            <Text color={theme.textMuted}> {truncate(runId, 16)}</Text>
           </Box>
           {goal ? (
             <Box marginLeft={2}>
@@ -145,29 +235,33 @@ export function EventCard({ event }: { readonly event: AgentEvent }): React.JSX.
     }
 
     case "run.finished": {
-      const status = typeof data["status"] === "string" ? data["status"] : "unknown";
-      const steps = typeof data["steps"] === "number" ? data["steps"] : 0;
+      const status = str(data, "status");
+      const steps = num(data, "steps");
+      const reason = str(data, "reason");
       const color = status === "success" ? theme.success : theme.error;
+      const icon = status === "success" ? theme.indicator.toolSuccess : theme.indicator.toolFailed;
       return (
-        <Box paddingX={1}>
+        <Box paddingX={1} marginBottom={1}>
           <Text color={color}>
-            {theme.indicator.runEnd} {status}
+            {icon} {status}
           </Text>
           <Text color={theme.textDim}> ({String(steps)} steps)</Text>
+          {reason ? <Text color={theme.textMuted}> {reason}</Text> : null}
         </Box>
       );
     }
 
-    // Permission request — inline warning indicator, no double border box
+    // Permission request — inline warning indicator
     case "permission.requested": {
-      const toolName = typeof data["tool_name"] === "string" ? data["tool_name"] : "unknown";
-      const paramsPreview =
-        typeof data["params_preview"] === "string" ? data["params_preview"] : "";
+      const toolName = str(data, "tool_name");
+      const paramsPreview = str(data, "params_preview");
       return (
-        <Box flexDirection="column" marginLeft={2}>
+        <Box flexDirection="column" marginLeft={2} marginTop={0}>
           <Box>
-            <Text color={theme.warning}>{theme.indicator.permission} permission: </Text>
-            <Text color={theme.toolName}>{toolName}</Text>
+            <Text color={theme.warning} bold>
+              {theme.indicator.permission} permission
+            </Text>
+            <Text color={theme.toolName}> {toolName}</Text>
           </Box>
           {paramsPreview ? (
             <Box marginLeft={3}>
@@ -178,9 +272,49 @@ export function EventCard({ event }: { readonly event: AgentEvent }): React.JSX.
       );
     }
 
+    // Permission granted — inline success indicator
+    case "permission.granted": {
+      const toolUseId = str(data, "tool_use_id");
+      const decision = str(data, "decision");
+      const toolName = context?.permissionToolNames.get(toolUseId) ?? "";
+      const label =
+        decision === "always_allow"
+          ? "always allowed"
+          : decision === "allow_once"
+            ? "allowed"
+            : decision;
+      return (
+        <Box paddingX={1}>
+          <Text color={theme.success}>{theme.indicator.toolSuccess} permission</Text>
+          {toolName ? <Text color={theme.toolName}> {toolName}</Text> : null}
+          <Text color={theme.textDim}> {label}</Text>
+        </Box>
+      );
+    }
+
+    // Permission denied — inline failure indicator
+    case "permission.denied": {
+      const toolUseId = str(data, "tool_use_id");
+      const decision = str(data, "decision");
+      const toolName = context?.permissionToolNames.get(toolUseId) ?? "";
+      const label =
+        decision === "always_deny"
+          ? "always denied"
+          : decision === "deny_once"
+            ? "denied"
+            : decision;
+      return (
+        <Box paddingX={1}>
+          <Text color={theme.error}>{theme.indicator.toolFailed} permission</Text>
+          {toolName ? <Text color={theme.toolName}> {toolName}</Text> : null}
+          <Text color={theme.textDim}> {label}</Text>
+        </Box>
+      );
+    }
+
     // Session events — compact dot indicator
     case "session.created": {
-      const sessionId = typeof data["session_id"] === "string" ? data["session_id"] : "";
+      const sessionId = str(data, "session_id");
       return (
         <Box paddingX={1}>
           <Text color={theme.info}>
@@ -192,68 +326,105 @@ export function EventCard({ event }: { readonly event: AgentEvent }): React.JSX.
 
     case "session.waiting_for_input": {
       return (
-        <Box paddingX={1}>
+        <Box paddingX={1} marginTop={1}>
           <Text color={theme.textDim}>{theme.indicator.bullet} ready for input</Text>
         </Box>
       );
     }
 
-    // Log lines — compact, color-coded by level
-    case "log.line": {
-      const level = typeof data["level"] === "string" ? data["level"] : "INFO";
-      const message = typeof data["message"] === "string" ? data["message"] : "";
-      const color =
-        level === "ERROR" ? theme.error : level === "WARN" ? theme.warning : theme.textMuted;
+    case "session.resumed": {
       return (
         <Box paddingX={1}>
-          <Text color={color}>{truncate(message, 80)}</Text>
+          <Text color={theme.info}>{theme.indicator.session} session resumed</Text>
         </Box>
       );
     }
 
-    // Subagent events — nested rendering with distinct accent color
-    case "subagent.started": {
-      const description =
-        typeof data["description"] === "string" ? data["description"] : "subagent task";
-      const runId = typeof data["run_id"] === "string" ? data["run_id"] : "";
+    case "session.message_received": {
+      const content = str(data, "content");
       return (
-        <Box flexDirection="column" marginLeft={2}>
-          <Box>
-            <Text color={theme.subagentAccent}>
-              {theme.indicator.subagent} {description}
-            </Text>
-          </Box>
-          {runId ? (
-            <Box marginLeft={3}>
-              <Text color={theme.textMuted}>{truncate(runId, 16)}</Text>
-            </Box>
-          ) : null}
+        <Box paddingX={1} marginTop={1}>
+          <Text color={theme.accentBright} bold>
+            {">"}{" "}
+          </Text>
+          <Text color={theme.text}>{truncate(content, 80)}</Text>
+        </Box>
+      );
+    }
+
+    case "session.closed": {
+      return (
+        <Box paddingX={1}>
+          <Text color={theme.textMuted}>{theme.indicator.runEnd} session closed</Text>
+        </Box>
+      );
+    }
+
+    // Log lines — compact, color-coded by level with timestamp
+    case "log.line": {
+      const level = str(data, "level") || "INFO";
+      const message = str(data, "message");
+      const color =
+        level === "ERROR"
+          ? theme.error
+          : level === "WARNING" || level === "WARN"
+            ? theme.warning
+            : theme.textMuted;
+      const ts = formatTimestamp(event.timestamp);
+      return (
+        <Box paddingX={1}>
+          {ts ? <Text color={theme.textMuted}> {ts} </Text> : null}
+          <Text color={color}>[{level}]</Text>
+          <Text color={theme.textDim}> {truncate(message, 80)}</Text>
+        </Box>
+      );
+    }
+
+    // Subagent events — tree visualization with nesting
+    case "subagent.started": {
+      const description = str(data, "description") || "subagent task";
+      const runId = str(data, "run_id");
+      const shortId = runId.slice(0, 8);
+      return (
+        <Box marginLeft={2} marginTop={0}>
+          <Text color={theme.subagentDim}>{theme.indicator.dash}</Text>
+          <Text color={theme.subagentAccent}>
+            {theme.indicator.step} {truncate(description, 72)}
+          </Text>
+          <Text color={theme.textMuted}> {shortId}</Text>
         </Box>
       );
     }
 
     case "subagent.finished": {
-      const runId = typeof data["run_id"] === "string" ? data["run_id"] : "";
-      const status = typeof data["status"] === "string" ? data["status"] : "unknown";
-      const color = status === "success" ? theme.subagentAccent : theme.error;
+      const runId = str(data, "run_id");
+      const status = str(data, "status");
+      const shortId = runId.slice(0, 8);
+      const isSuccess = status === "success";
+      const icon = isSuccess ? theme.indicator.toolSuccess : theme.indicator.toolFailed;
+      const color = isSuccess ? theme.success : theme.error;
       return (
-        <Box marginLeft={2}>
+        <Box marginLeft={2} marginBottom={0}>
+          <Text color={theme.subagentDim}>{theme.indicator.dash}</Text>
           <Text color={color}>
-            {theme.indicator.subagent} {status}
+            {theme.indicator.step} {icon}
           </Text>
-          {runId ? <Text color={theme.textDim}> ({truncate(runId, 16)})</Text> : null}
+          <Text color={theme.subagentAccent}> done</Text>
+          <Text color={theme.textMuted}> {shortId}</Text>
         </Box>
       );
     }
 
     // Skill invocation — inline indicator
     case "skill.invoked": {
-      const skillName = typeof data["skill_name"] === "string" ? data["skill_name"] : "unknown";
-      const args = typeof data["arguments"] === "string" ? data["arguments"] : "";
+      const skillName = str(data, "skill_name");
+      const args = str(data, "arguments");
       return (
-        <Box paddingX={1}>
+        <Box paddingX={1} marginTop={1}>
           <Text color={theme.info}>{theme.indicator.arrow} skill: </Text>
-          <Text color={theme.toolName}>{skillName}</Text>
+          <Text color={theme.toolName} bold>
+            /{skillName}
+          </Text>
           {args ? <Text color={theme.textDim}> {truncate(args, 40)}</Text> : null}
         </Box>
       );
@@ -261,15 +432,27 @@ export function EventCard({ event }: { readonly event: AgentEvent }): React.JSX.
 
     // Compaction events — compact indicator
     case "context.compacted": {
-      const originalTokens =
-        typeof data["original_tokens"] === "number" ? data["original_tokens"] : 0;
-      const summaryTokens = typeof data["summary_tokens"] === "number" ? data["summary_tokens"] : 0;
+      const originalTokens = num(data, "original_tokens");
+      const summaryTokens = num(data, "summary_tokens");
       const savedTokens = Math.max(0, originalTokens - summaryTokens);
       return (
-        <Box paddingX={1}>
-          <Text color={theme.info}>
-            {theme.indicator.compact} compacted (saved {String(savedTokens)} tokens)
+        <Box paddingX={1} marginTop={0}>
+          <Text color={theme.info}>{theme.indicator.compact} compacted</Text>
+          <Text color={theme.textDim}>
+            {" "}
+            (saved {String(savedTokens)} tokens: {String(originalTokens)} → {String(summaryTokens)})
           </Text>
+        </Box>
+      );
+    }
+
+    // Core started — daemon ready
+    case "core.started": {
+      const version = str(data, "version");
+      return (
+        <Box paddingX={1}>
+          <Text color={theme.success}>{theme.indicator.session} core ready</Text>
+          {version ? <Text color={theme.textMuted}> v{version}</Text> : null}
         </Box>
       );
     }

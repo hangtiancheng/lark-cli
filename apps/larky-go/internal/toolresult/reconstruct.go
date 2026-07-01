@@ -1,6 +1,6 @@
 package toolresult
 
-import "github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
+import "larky/internal/conversation"
 
 // Reconstruct rebuilds state from a transcript: seed SeenIDs with every
 // candidate tool_use_id present in messages (anything visible at this point

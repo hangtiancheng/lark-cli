@@ -1,4 +1,4 @@
-module github.com/hangtiancheng/lark-cli/apps/larky
+module larky
 
 go 1.25.0
 

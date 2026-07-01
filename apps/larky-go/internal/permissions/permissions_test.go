@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/tools"
 )
 
 type fakeTool struct {

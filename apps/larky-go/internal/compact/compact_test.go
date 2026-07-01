@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/session"
+	"larky/internal/conversation"
+	"larky/internal/llm"
+	"larky/internal/session"
 )
 
 // stubSummaryClient implements llm.Client and streams a fixed <summary> block,

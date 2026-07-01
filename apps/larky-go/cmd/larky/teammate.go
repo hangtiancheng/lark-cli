@@ -8,12 +8,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agent"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/teams"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/agent"
+	"larky/internal/config"
+	"larky/internal/conversation"
+	"larky/internal/llm"
+	"larky/internal/teams"
+	"larky/internal/tools"
 )
 
 // teammateArgs holds the values parsed off the CLI when this process is

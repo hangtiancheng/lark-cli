@@ -1,6 +1,6 @@
 package llm
 
-import "github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
+import "larky/internal/config"
 
 var modelAliases = map[string]string{
 

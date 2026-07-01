@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
+	"larky/internal/conversation"
 )
 
 // oneToolResultMsg builds a conv with a single user message carrying the

@@ -154,3 +154,91 @@ func TestParseSkillFileWithoutFrontmatter(t *testing.T) {
 		t.Errorf("expected default description, got %q", skill.Description)
 	}
 }
+
+func TestListAllWithDirIncludesProjectSkills(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create project-level skills
+	projSkillsDir := filepath.Join(tmpDir, ".lark", "skills")
+	os.MkdirAll(projSkillsDir, 0o755)
+	os.WriteFile(filepath.Join(projSkillsDir, "myproj.md"),
+		[]byte("---\ndescription: My project skill\n---\nProject skill body"), 0o644)
+	os.WriteFile(filepath.Join(projSkillsDir, "another.md"),
+		[]byte("---\ndescription: Another skill\n---\nAnother body"), 0o644)
+
+	loader := skills.NewLoader()
+	all := loader.ListAllWithDir(tmpDir)
+
+	names := make(map[string]bool)
+	for _, s := range all {
+		names[s.Name] = true
+	}
+
+	// Must include built-ins
+	for _, b := range []string{"init", "orchestrate", "review", "summarize"} {
+		if !names[b] {
+			t.Errorf("expected builtin skill %q in ListAllWithDir", b)
+		}
+	}
+	// Must include project skills
+	if !names["myproj"] {
+		t.Error("expected project skill 'myproj' in ListAllWithDir")
+	}
+	if !names["another"] {
+		t.Error("expected project skill 'another' in ListAllWithDir")
+	}
+}
+
+func TestListAllWithDirProjectOverridesBuiltin(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	projSkillsDir := filepath.Join(tmpDir, ".lark", "skills")
+	os.MkdirAll(projSkillsDir, 0o755)
+	// Override the built-in init skill with a project-level one
+	os.WriteFile(filepath.Join(projSkillsDir, "init.md"),
+		[]byte("---\ndescription: Overridden init\n---\nOverridden body"), 0o644)
+
+	loader := skills.NewLoader()
+	all := loader.ListAllWithDir(tmpDir)
+
+	var initSkill *skills.Skill
+	for _, s := range all {
+		if s.Name == "init" {
+			initSkill = s
+			break
+		}
+	}
+	if initSkill == nil {
+		t.Fatal("init skill not found")
+	}
+	if initSkill.Description != "Overridden init" {
+		t.Errorf("expected overridden description, got %q", initSkill.Description)
+	}
+}
+
+func TestListAllWithDirDirectoryStyleSkill(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Directory-style skill: <name>/SKILL.md
+	skillDir := filepath.Join(tmpDir, ".lark", "skills", "dirskill")
+	os.MkdirAll(skillDir, 0o755)
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
+		[]byte("---\ndescription: A directory-style skill\n---\nDir skill body"), 0o644)
+
+	loader := skills.NewLoader()
+	all := loader.ListAllWithDir(tmpDir)
+
+	var found *skills.Skill
+	for _, s := range all {
+		if s.Name == "dirskill" {
+			found = s
+			break
+		}
+	}
+	if found == nil {
+		t.Fatal("directory-style skill 'dirskill' not found")
+	}
+	if found.Description != "A directory-style skill" {
+		t.Errorf("expected description, got %q", found.Description)
+	}
+}

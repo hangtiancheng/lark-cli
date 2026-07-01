@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agent"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
+	"larky/internal/agent"
+	"larky/internal/conversation"
 )
 
 // LeadName is the conventional sender/recipient identifier used by the coordinator side. Teammates

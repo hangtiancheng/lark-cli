@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/conversation"
+	"larky/internal/tools"
 )
 
 // stubHost captures every SkillHost call so tests can verify the executor

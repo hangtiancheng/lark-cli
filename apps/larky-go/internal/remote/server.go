@@ -14,27 +14,27 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agent"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agents"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/commands"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/compact"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/filehistory"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/hooks"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/mcp"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/memory"
-	extractor "github.com/hangtiancheng/lark-cli/apps/larky/internal/memory/extractor"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/permissions"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/planfile"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/prompt"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/session"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/skills"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/teams"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/todo"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/worktree"
+	"larky/internal/agent"
+	"larky/internal/agents"
+	"larky/internal/commands"
+	"larky/internal/compact"
+	"larky/internal/config"
+	"larky/internal/conversation"
+	"larky/internal/filehistory"
+	"larky/internal/hooks"
+	"larky/internal/llm"
+	"larky/internal/mcp"
+	"larky/internal/memory"
+	extractor "larky/internal/memory/extractor"
+	"larky/internal/permissions"
+	"larky/internal/planfile"
+	"larky/internal/prompt"
+	"larky/internal/session"
+	"larky/internal/skills"
+	"larky/internal/teams"
+	"larky/internal/todo"
+	"larky/internal/tools"
+	"larky/internal/worktree"
 )
 
 // Downstream messages (Server -> Web UI)
@@ -378,12 +378,12 @@ func (s *Server) initMCPServers() {
 		var mcpParts []string
 		for _, srv := range result.Servers {
 			var sb strings.Builder
-			sb.WriteString(fmt.Sprintf("## %s\n", srv.Name))
+			fmt.Fprintf(&sb, "## %s\n", srv.Name)
 			if srv.Instructions != "" {
-				sb.WriteString(srv.Instructions + "\n")
+				fmt.Fprintf(&sb, "%s\n", srv.Instructions)
 			}
 			if toolNames, ok := toolsByServer[srv.Name]; ok && len(toolNames) > 0 {
-				sb.WriteString("\nAvailable tools: " + strings.Join(toolNames, ", "))
+				fmt.Fprintf(&sb, "\nAvailable tools: %s", strings.Join(toolNames, ", "))
 			}
 			mcpParts = append(mcpParts, sb.String())
 		}
@@ -654,17 +654,17 @@ func (s *Server) handleResume(args string) {
 			return
 		}
 		var sb strings.Builder
-		sb.WriteString(fmt.Sprintf("Available sessions (%d):\n\n", len(sessions)))
+		fmt.Fprintf(&sb, "Available sessions (%d):\n\n", len(sessions))
 		for i, sess := range sessions {
 			if i >= 20 {
-				sb.WriteString(fmt.Sprintf("  … and %d more\n", len(sessions)-20))
+				fmt.Fprintf(&sb, "  ... and %d more\n", len(sessions)-20)
 				break
 			}
 			first := sess.FirstMessage
 			if len(first) > 60 {
-				first = first[:60] + "…"
+				first = first[:60] + "..."
 			}
-			sb.WriteString(fmt.Sprintf("  %d. [%s] %s (%d msgs)\n", i+1, sess.ID, first, sess.MessageCount))
+			fmt.Fprintf(&sb, "  %d. [%s] %s (%d msgs)\n", i+1, sess.ID, first, sess.MessageCount)
 		}
 		sb.WriteString("\nUsage: /resume <number> or /resume <session-id>")
 		s.send(wsMessage{Type: "system", Data: map[string]string{"message": sb.String()}})
@@ -912,7 +912,7 @@ func (s *Server) send(msg wsMessage) {
 	}
 }
 
-func (s *Server) wireSkillsToAgent(wd string) {
+func (s *Server) wireSkillsToAgent(_ string) {
 	if s.skillCatalog == nil || s.ag == nil {
 		return
 	}
@@ -973,14 +973,14 @@ func buildSkillSection(catalog *skills.Catalog, wd string) string {
 	skillsDir := filepath.Join(wd, ".larky", "skills")
 	var sb strings.Builder
 	sb.WriteString("## Available Skills\n\n")
-	sb.WriteString(fmt.Sprintf("Skills are installed at: %s\n", skillsDir))
+	fmt.Fprintf(&sb, "Skills are installed at: %s\n", skillsDir)
 	sb.WriteString("When creating new skills, always place them under this directory as <skill-name>/SKILL.md.\n\n")
 	for _, meta := range metas {
 		desc := meta.Description
 		if len(desc) > 200 {
-			desc = desc[:200] + "…"
+			desc = desc[:200] + "..."
 		}
-		sb.WriteString(fmt.Sprintf("- /%s: %s\n", meta.Name, desc))
+		fmt.Fprintf(&sb, "- /%s: %s\n", meta.Name, desc)
 	}
 	return sb.String()
 }

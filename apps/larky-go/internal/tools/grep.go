@@ -97,6 +97,9 @@ func (t *GrepTool) Execute(_ context.Context, args map[string]any) ToolResult {
 				results = append(results, fmt.Sprintf("%s:%d:%s", rel, lineNum, line))
 			}
 		}
+		if err := scanner.Err(); err != nil {
+			results = append(results, fmt.Sprintf("Error reading %s: %s", fpath, err))
+		}
 		f.Close()
 	}
 

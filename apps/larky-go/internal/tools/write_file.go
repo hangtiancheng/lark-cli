@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/filehistory"
+	"larky/internal/filehistory"
 )
 
 type WriteFileTool struct {

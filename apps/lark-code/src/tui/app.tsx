@@ -44,6 +44,13 @@ export function App({ _config, client }: AppProps): React.JSX.Element {
   const isMountedRef = useRef(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
+  // Track active subagent run IDs for tree visualization (Task 3)
+  const [subagentRunIds, setSubagentRunIds] = useState<ReadonlySet<string>>(new Set());
+  // Track permission tool names for inline resolution display (Task 6)
+  const [permissionToolNames, setPermissionToolNames] = useState<ReadonlyMap<string, string>>(
+    new Map(),
+  );
+
   // Load available slash commands (builtin + skills)
   const [availableCommands] = useState(() => {
     const loader = new SkillLoader();
@@ -98,6 +105,10 @@ export function App({ _config, client }: AppProps): React.JSX.Element {
         const toolUseId = typeof event["tool_use_id"] === "string" ? event["tool_use_id"] : "";
         setPermissionRequest({ toolName, paramsPreview, toolUseId });
         setRunStatus("waiting");
+        // Store tool name for later permission resolution display (Task 6)
+        if (toolUseId && toolName !== "unknown") {
+          setPermissionToolNames((prev) => new Map([...prev, [toolUseId, toolName]]));
+        }
       } else if (event["type"] === "session.waiting_for_input") {
         setRunStatus("idle");
         setPermissionRequest(null);
@@ -115,6 +126,7 @@ export function App({ _config, client }: AppProps): React.JSX.Element {
         const runId = typeof event["run_id"] === "string" ? event["run_id"] : "";
         if (runId) {
           subagentStartTimes.current.set(runId, Date.now());
+          setSubagentRunIds((prev) => new Set([...prev, runId]));
         }
       } else if (event["type"] === "subagent.finished") {
         const runId = typeof event["run_id"] === "string" ? event["run_id"] : "";
@@ -123,6 +135,13 @@ export function App({ _config, client }: AppProps): React.JSX.Element {
           const elapsed = Date.now() - startTime;
           setElapsedMs((ms) => ms + elapsed);
           subagentStartTimes.current.delete(runId);
+        }
+        if (runId) {
+          setSubagentRunIds((prev) => {
+            const next = new Set(prev);
+            next.delete(runId);
+            return next;
+          });
         }
       }
       return Promise.resolve();
@@ -338,10 +357,18 @@ export function App({ _config, client }: AppProps): React.JSX.Element {
         connected={connected}
         sessionTitle={sessionLabel}
         errorMessage={connectionError}
+        host={_config.host}
+        port={_config.port}
+        step={step}
       />
 
       {/* Event stream — grows dynamically, no fixed height occlusion */}
-      <EventLog events={events} />
+      <EventLog
+        events={events}
+        subagentRunIds={subagentRunIds}
+        permissionToolNames={permissionToolNames}
+        showBanner={connected && events.length === 0}
+      />
 
       {/* Status + permission + input — compact bottom section */}
       <StatusBar

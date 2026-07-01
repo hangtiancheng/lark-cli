@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/tools"
 )
 
 // InstallSkillTool lets the model install a new Skill on demand from a

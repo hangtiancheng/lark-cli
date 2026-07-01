@@ -1,8 +1,13 @@
-# Larky 项目
+# Larky Project
 
-## 技术栈
-- Go
+## Tech Stack
 
-## 代码规范
-- commit message 用英文
-- 变量命名用 snake_case
+- Language: Go 1.25+
+- LLM: Anthropic Claude API, OpenAI-compatible APIs
+- TUI: Bubble Tea
+- WebSocket: gorilla/websocket
+
+## Code Standards
+
+- Commit messages in English
+- Variable naming uses snake_case

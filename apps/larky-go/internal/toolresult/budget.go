@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
+	"larky/internal/conversation"
 )
 
 // Budget thresholds. Values match the ch08 spec; ContentReplacementState
@@ -232,12 +232,12 @@ func Apply(
 	return buildManager(newMessages), records, nil
 }
 
-// previewSize 是存盘预览的最大字符数，与 Claude Code 保持一致。
+// previewSize is the max character count for spill previews, consistent with Claude Code.
 const previewSize = 2000
 
-// buildSpillPreview 构造存盘替换文本，包含前 2KB 预览。
-// 一旦写入 state.Replacements 就会逐字节回放，格式变更会导致
-// Prompt Cache 失效，不要轻易改动。
+// buildSpillPreview constructs spill replacement text with a leading 2KB preview.
+// Once written to state.Replacements it is replayed byte-by-byte; format changes will
+// invalidate the prompt cache — do not alter lightly.
 func buildSpillPreview(content string, path string) string {
 	sizeKB := len(content) / 1024
 	preview := content
@@ -248,8 +248,8 @@ func buildSpillPreview(content string, path string) string {
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "<persisted-output>\n")
-	fmt.Fprintf(&b, "输出太大（%dKB），完整内容已保存到：\n%s\n\n", sizeKB, path)
-	fmt.Fprintf(&b, "预览（前 2KB）：\n%s", preview)
+	fmt.Fprintf(&b, "Output too large (%dKB), full content saved to:\n%s\n\n", sizeKB, path)
+	fmt.Fprintf(&b, "Preview (first 2KB):\n%s", preview)
 	if hasMore {
 		b.WriteString("\n...")
 	}

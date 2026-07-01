@@ -15,9 +15,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/session"
+	"larky/internal/conversation"
+	"larky/internal/llm"
+	"larky/internal/session"
 )
 
 const (
@@ -425,12 +425,12 @@ func autoCompact(
 		session.SaveCompactBoundary(workDir, sessionID, finalSummary, keepRecords)
 	}
 
-	content := "本次会话延续自之前的对话，因上下文空间不足进行了压缩。以下是早期对话的摘要：\n\n" + finalSummary
+	content := "This session continues from a previous conversation that was compacted due to context window limits. Below is a summary of the earlier conversation:\n\n" + finalSummary
 	if len(keep) > 0 {
-		content += "\n\n近期消息已原样保留。"
+		content += "\n\nRecent messages have been preserved verbatim."
 	}
 	if sessionID != "" && workDir != "" {
-		content += fmt.Sprintf("\n\n如果你需要压缩前的具体细节（代码片段、报错信息等），请用 ReadFile 读取完整会话记录：%s", session.SessionFilePath(workDir, sessionID))
+		content += fmt.Sprintf("\n\nIf you need specific details from before compaction (code snippets, error messages, etc.), use ReadFile to load the full session transcript: %s", session.SessionFilePath(workDir, sessionID))
 	}
 	if attachment := BuildRecoveryAttachment(recovery, toolSchemas); attachment != "" {
 		content += "\n\n---\n\n" + attachment

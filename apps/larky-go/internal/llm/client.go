@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
+	"larky/internal/config"
+	"larky/internal/conversation"
 )
 
 type Client interface {

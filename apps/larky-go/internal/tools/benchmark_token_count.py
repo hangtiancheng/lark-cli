@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-延迟加载 Token 节省 Benchmark
-用真实 API 的 usage.prompt_tokens 对比全量加载 vs 延迟加载的 token 消耗。
+Deferred Loading Token Savings Benchmark.
+Compares token consumption between full loading and deferred loading
+using real API usage.prompt_tokens values.
 """
 import json
 import requests
@@ -10,7 +11,7 @@ API_KEY = "sk-cp-bXCpwMoadJIRVIjlNZHOsyJ0fsFwOjiYuurYGk-WnCdd1IjSK_ZPCExpxf2B_sZ
 BASE_URL = "https://api.minimaxi.com/v1"
 MODEL = "MiniMax-M3"
 
-# --- 构造工具 schema ---
+# --- Build tool schemas ---
 
 BUILTIN_TOOLS = [
     {"type": "function", "function": {"name": "ReadFile", "description": "Read a file from the local filesystem.", "parameters": {"type": "object", "required": ["file_path"], "properties": {"file_path": {"type": "string", "description": "The absolute path to the file to read"}, "offset": {"type": "integer", "description": "Line number to start reading from"}, "limit": {"type": "integer", "description": "Number of lines to read"}}}}},
@@ -23,7 +24,7 @@ BUILTIN_TOOLS = [
 
 TOOL_SEARCH = {"type": "function", "function": {"name": "ToolSearch", "description": "Search for and load additional tools that are not immediately available. Some tools are deferred (not loaded by default) to save context space. Use this tool to discover and load them.\n\nQuery forms:\n- \"select:ToolName,AnotherTool\" — fetch exact tools by name\n- \"keyword search\" — keyword search, returns up to max_results matches", "parameters": {"type": "object", "required": ["query"], "properties": {"query": {"type": "string", "description": "Query to find deferred tools. Use \"select:Name1,Name2\" for direct selection, or keywords to search."}, "max_results": {"type": "integer", "description": "Maximum results to return (default: 5)"}}}}}
 
-# 6 种真实 MCP 工具模板，循环生成 58 个
+# 6 real MCP tool templates, cycled to generate 58 tools.
 MCP_TEMPLATES = [
     {"name": "mcp__grafana__query_prometheus_{i:03d}", "desc": "Execute a PromQL query against the specified Prometheus datasource and return time-series or instant results. Supports range queries with configurable step and time window.", "params": {"expr": {"type": "string", "description": "PromQL query expression to evaluate against the datasource"}, "datasource": {"type": "string", "description": "Name or UID of the Prometheus datasource to query"}, "start": {"type": "string", "description": "Start of the time range in RFC3339 format or relative (e.g. 'now-1h')"}, "end": {"type": "string", "description": "End of the time range in RFC3339 format or relative (e.g. 'now')"}, "step": {"type": "string", "description": "Query resolution step width in Prometheus duration format (e.g. '15s', '1m')"}, "format": {"type": "string", "description": "Output format for results", "enum": ["table", "timeseries", "json"]}, "max_results": {"type": "integer", "description": "Maximum number of time series to return"}, "legend": {"type": "string", "description": "Legend format template for result series names"}}},
     {"name": "mcp__grafana__search_dashboards_{i:03d}", "desc": "Search for Grafana dashboards by title, tag, or folder. Returns matching dashboards with metadata including UID, title, URL, folder, and tags.", "params": {"query": {"type": "string", "description": "Search query string to match against dashboard titles"}, "tag": {"type": "array", "items": {"type": "string"}, "description": "Filter dashboards by tags (AND logic)"}, "folder": {"type": "string", "description": "Folder title or UID to restrict search scope"}, "starred": {"type": "boolean", "description": "If true, only return starred dashboards"}, "limit": {"type": "integer", "description": "Maximum number of dashboards to return"}, "sort": {"type": "string", "description": "Sort order for results", "enum": ["alpha-asc", "alpha-desc", "created-asc", "created-desc"]}}},
@@ -50,7 +51,7 @@ def make_deferred_reminder(tool_names):
             + "\n".join(tool_names))
 
 def call_api(messages, tools, system=None):
-    """调 API 拿 prompt_tokens"""
+    """Call the API and retrieve prompt_tokens."""
     body = {"model": MODEL, "messages": messages, "tools": tools, "max_tokens": 1}
     if system:
         body["messages"] = [{"role": "system", "content": system}] + body["messages"]
@@ -70,62 +71,62 @@ def main():
     mcp_tools = make_all_mcp_tools(58)
     mcp_names = [t["function"]["name"] for t in mcp_tools]
 
-    user_msg = [{"role": "user", "content": "帮我查一下 Grafana 里最近一小时 CPU 使用率超过 80% 的服务。"}]
+    user_msg = [{"role": "user", "content": "Check which services in Grafana have had CPU usage above 80% in the last hour."}]
 
     print("=" * 70)
-    print("延迟加载 Token 节省 Benchmark（真实 API token 计数）")
-    print(f"模型: {MODEL} | 内置工具: 6 | MCP工具: 58")
+    print("Deferred Loading Token Savings Benchmark (Real API token counts)")
+    print(f"Model: {MODEL} | Built-in tools: 6 | MCP tools: 58")
     print("=" * 70)
 
-    # --- 场景 1: 全量加载（64 个工具全部传入）---
+    # --- Scenario 1: Full loading (all 64 tools passed in) ---
     tools_full = BUILTIN_TOOLS + mcp_tools
-    print(f"\n[场景1] 全量加载: {len(tools_full)} 个工具全部放入 tools 参数")
+    print(f"\n[Scenario 1] Full loading: all {len(tools_full)} tools passed to the tools parameter")
     usage_full = call_api(user_msg, tools_full)
     if not usage_full:
         return
     tokens_full = usage_full["prompt_tokens"]
     print(f"  prompt_tokens = {tokens_full}")
 
-    # --- 场景 2: 延迟加载（7 个工具 + system-reminder 列名）---
+    # --- Scenario 2: Deferred loading (7 tools + system-reminder listing names) ---
     tools_deferred = BUILTIN_TOOLS + [TOOL_SEARCH]
     reminder = make_deferred_reminder(mcp_names)
-    print(f"\n[场景2] 延迟加载: {len(tools_deferred)} 个工具 + system-reminder 列出 58 个延迟工具名")
+    print(f"\n[Scenario 2] Deferred loading: {len(tools_deferred)} tools + system-reminder listing 58 deferred tool names")
     usage_deferred = call_api(user_msg, tools_deferred, system=reminder)
     if not usage_deferred:
         return
     tokens_deferred = usage_deferred["prompt_tokens"]
     print(f"  prompt_tokens = {tokens_deferred}")
 
-    # --- 场景 3: 延迟加载 + 已激活 2 个工具 ---
+    # --- Scenario 3: Deferred loading + 2 tools already activated ---
     activated = mcp_tools[5:6] + mcp_tools[20:21]
     activated_names = [t["function"]["name"] for t in activated]
     remaining_names = [n for n in mcp_names if n not in activated_names]
     tools_partial = BUILTIN_TOOLS + [TOOL_SEARCH] + activated
     reminder_partial = make_deferred_reminder(remaining_names)
-    print(f"\n[场景3] 延迟加载 + 2个已激活: {len(tools_partial)} 个工具 + system-reminder 列出 56 个延迟工具名")
+    print(f"\n[Scenario 3] Deferred loading + 2 activated: {len(tools_partial)} tools + system-reminder listing 56 deferred tool names")
     usage_partial = call_api(user_msg, tools_partial, system=reminder_partial)
     if not usage_partial:
         return
     tokens_partial = usage_partial["prompt_tokens"]
     print(f"  prompt_tokens = {tokens_partial}")
 
-    # --- 全会话对比（10 轮）---
-    # 全量: 每轮都是 tokens_full
-    # 延迟: 前2轮 tokens_deferred, 第3-5轮 tokens_partial, 第6-10轮 tokens_partial
-    # 简化: 2轮未激活 + 2轮激活1个(近似用partial) + 6轮激活2个
+    # --- Full session comparison (10 turns) ---
+    # Full loading: each turn costs tokens_full.
+    # Deferred: turns 1-2 cost tokens_deferred, turns 3-5 cost tokens_partial, turns 6-10 cost tokens_partial.
+    # Simplified: 2 turns unactivated + 2 turns with 1 activated (approximated as partial) + 6 turns with 2 activated.
     total_full = tokens_full * 10
-    total_deferred = tokens_deferred * 2 + tokens_partial * 8  # 第3轮起激活工具
+    total_deferred = tokens_deferred * 2 + tokens_partial * 8  # tools activated starting from turn 3
 
     savings = 1 - total_deferred / total_full
     print(f"\n{'=' * 70}")
-    print(f"全会话统计（10 轮对话）")
+    print(f"Full Session Statistics (10 turns)")
     print(f"{'=' * 70}")
-    print(f"  全量加载:   {tokens_full:>8} tokens/轮 × 10 = {total_full:>8} tokens")
-    print(f"  延迟加载:   {tokens_deferred:>8} tokens × 2 + {tokens_partial:>8} tokens × 8 = {total_deferred:>8} tokens")
-    print(f"  节省:       {savings*100:.1f}% ({total_full - total_deferred} tokens saved)")
-    print(f"\n单轮对比:")
-    print(f"  全量 vs 未激活:   {tokens_full} vs {tokens_deferred}  (节省 {(1-tokens_deferred/tokens_full)*100:.1f}%)")
-    print(f"  全量 vs 激活2个:  {tokens_full} vs {tokens_partial}  (节省 {(1-tokens_partial/tokens_full)*100:.1f}%)")
+    print(f"  Full loading:     {tokens_full:>8} tokens/turn x 10 = {total_full:>8} tokens")
+    print(f"  Deferred loading: {tokens_deferred:>8} tokens x 2 + {tokens_partial:>8} tokens x 8 = {total_deferred:>8} tokens")
+    print(f"  Savings:          {savings*100:.1f}% ({total_full - total_deferred} tokens saved)")
+    print(f"\nPer-turn comparison:")
+    print(f"  Full vs unactivated:    {tokens_full} vs {tokens_deferred}  (savings {(1-tokens_deferred/tokens_full)*100:.1f}%)")
+    print(f"  Full vs 2 activated:    {tokens_full} vs {tokens_partial}  (savings {(1-tokens_partial/tokens_full)*100:.1f}%)")
 
 if __name__ == "__main__":
     main()

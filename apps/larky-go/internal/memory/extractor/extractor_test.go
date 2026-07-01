@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/memory"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/conversation"
+	"larky/internal/llm"
+	"larky/internal/memory"
+	"larky/internal/tools"
 )
 
 // --- Mock infrastructure ---

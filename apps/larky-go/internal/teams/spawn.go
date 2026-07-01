@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agent"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/agent"
+	"larky/internal/llm"
+	"larky/internal/tools"
 )
 
 // TeammateSpawnConfig collects every parameter SpawnTeammate needs.

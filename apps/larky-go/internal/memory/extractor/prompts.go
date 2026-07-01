@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/memory"
+	"larky/internal/memory"
 )
 
 // Tool names used in the extraction prompt. Match Larky's tool registry (capitalized, no

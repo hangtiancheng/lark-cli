@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/tools"
 )
 
 func init() {

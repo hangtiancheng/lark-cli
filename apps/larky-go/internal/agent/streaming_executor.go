@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/permissions"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/llm"
+	"larky/internal/permissions"
+	"larky/internal/tools"
 )
 
 type StreamingExecutor struct {

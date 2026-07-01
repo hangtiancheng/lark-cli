@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/tools"
 )
 
 // SendMessageTool allows agents to send messages to named teammates.

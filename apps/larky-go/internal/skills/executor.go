@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/conversation"
+	"larky/internal/tools"
 )
 
 // SkillHost is the slice of Agent state that the Executor needs to drive

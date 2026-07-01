@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/worktree"
+	"larky/internal/worktree"
 )
 
 // EnterWorktreeTool creates an isolated git worktree and switches the session into it.

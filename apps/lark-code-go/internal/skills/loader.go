@@ -55,11 +55,83 @@ func (l *Loader) Resolve(name string, projectDir string) (*Skill, error) {
 	return nil, fmt.Errorf("skill not found: %s", name)
 }
 
-// ListAll returns all available skills.
+// ListAll returns all available skills (built-in only, for backward compatibility).
+// Use ListAllWithDir to include project and user-level skills.
 func (l *Loader) ListAll() []*Skill {
-	var skills []*Skill
-	skills = append(skills, l.listBuiltin()...)
-	return skills
+	return l.ListAllWithDir("")
+}
+
+// ListAllWithDir returns all available skills, scanning project, user, and built-in
+// directories in priority order (project > user > built-in). Deduplicates by name,
+// with higher-priority sources overriding lower ones.
+// Scans both flat files (<name>.md) and directory-style (<name>/SKILL.md) layouts.
+func (l *Loader) ListAllWithDir(projectDir string) []*Skill {
+	seen := make(map[string]*Skill)
+
+	// Build the search directory list in increasing priority so later entries override.
+	var dirs []string
+
+	// 1. Built-in skills (lowest priority)
+	dirs = append(dirs, "") // builtin placeholder; handled below
+
+	// 2. User-level ~/.lark/skills/
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		dirs = append(dirs, filepath.Join(homeDir, ".lark", "skills"))
+	}
+
+	// 3. Project-level .lark/skills/ (highest priority)
+	if projectDir != "" {
+		dirs = append(dirs, filepath.Join(projectDir, ".lark", "skills"))
+	}
+
+	for _, dir := range dirs {
+		if dir == "" {
+			// Built-in skills
+			for _, s := range l.listBuiltin() {
+				seen[s.Name] = s
+			}
+			continue
+		}
+		l.scanDir(dir, seen)
+	}
+
+	result := make([]*Skill, 0, len(seen))
+	for _, s := range seen {
+		result = append(result, s)
+	}
+	return result
+}
+
+// scanDir scans a directory for skill files and merges them into seen.
+func (l *Loader) scanDir(dir string, seen map[string]*Skill) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Directory-style skill: <name>/SKILL.md
+			skillPath := filepath.Join(dir, entry.Name(), "SKILL.md")
+			if data, err := os.ReadFile(skillPath); err == nil {
+				if s := parseSkillFile(entry.Name(), string(data)); s != nil {
+					seen[s.Name] = s
+				}
+			}
+			continue
+		}
+		// Flat file skill: <name>.md
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".md") {
+			continue
+		}
+		skillName := strings.TrimSuffix(name, ".md")
+		path := filepath.Join(dir, name)
+		if data, err := os.ReadFile(path); err == nil {
+			if s := parseSkillFile(skillName, string(data)); s != nil {
+				seen[s.Name] = s
+			}
+		}
+	}
 }
 
 // RenderPrompt renders the skill's prompt template, substituting $ARGUMENTS.

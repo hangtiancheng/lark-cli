@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/worktree"
+	"larky/internal/worktree"
 )
 
 // ExitWorktreeTool exits a worktree session created by EnterWorktree and restores the original

@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agent"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/agent"
+	"larky/internal/llm"
+	"larky/internal/tools"
 )
 
 // StartInProcessMember registers a teammate on the team and launches its long-running main loop in
@@ -37,7 +37,7 @@ func StartInProcessMember(
 	go func() {
 		defer close(eventCh)
 		defer func() {
-			// 队友退出时持久化对话记录，用于调试
+			// Persist conversation on teammate exit for debugging
 			if member.Conv != nil {
 				_, _ = SaveTranscript(team.Name, memberName, member.Conv)
 			}

@@ -13,7 +13,7 @@ func TestNewID(t *testing.T) {
 	if len(id) != 20 { // 20060102-150405-xxxx
 		t.Fatalf("unexpected ID format: %s (len=%d)", id, len(id))
 	}
-	// 同秒生成两个 ID 不应相同
+	// Two IDs generated in the same second should not be identical
 	id2 := NewID()
 	if id == id2 {
 		t.Fatalf("two IDs generated in same second collided: %s", id)

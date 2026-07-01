@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agent"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/agent"
+	"larky/internal/conversation"
+	"larky/internal/llm"
+	"larky/internal/tools"
 )
 
 type TeamMode string

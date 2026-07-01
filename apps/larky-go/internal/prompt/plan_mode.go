@@ -66,8 +66,8 @@ const planModeExitReminder = `## Exited Plan Mode
 
 You have exited plan mode. You can now make edits, run tools, and take actions.%s`
 
-// planModeReentryReminder 在用户重新进入 Plan Mode 时注入，
-// 提示模型此前已有 plan 文件，可以在现有计划基础上继续编辑。
+// planModeReentryReminder is injected when the user re-enters Plan Mode,
+// reminding the model that a plan file already exists and editing can continue from it.
 const planModeReentryReminder = `You have re-entered plan mode. Your previous plan file is at %s. Review it and continue from where you left off. You can update, refine, or restart the plan as needed. Follow the same 5-phase workflow as before.`
 
 const reminderInterval = 5
@@ -92,8 +92,8 @@ func BuildPlanModeReminder(planFilePath string, planExists bool, iteration int) 
 	return fmt.Sprintf(planModeSparseReminder, planFilePath)
 }
 
-// BuildPlanModeReentryReminder 生成重新进入 Plan Mode 时的提示。
-// 仅在已有 plan 文件时返回非空内容，提醒模型继续编辑现有计划。
+// BuildPlanModeReentryReminder generates the prompt injected on Plan Mode re-entry.
+// Returns non-empty content only when a plan file exists, prompting the model to continue editing the existing plan.
 func BuildPlanModeReentryReminder(planFilePath string, planExists bool) string {
 	if !planExists {
 		return ""

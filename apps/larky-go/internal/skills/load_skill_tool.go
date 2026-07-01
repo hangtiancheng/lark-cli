@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/tools"
 )
 
 // LoadSkillTool is the on-demand activation entry point. It's registered

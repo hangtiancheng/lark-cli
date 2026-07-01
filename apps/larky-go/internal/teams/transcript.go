@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
+	"larky/internal/conversation"
 )
 
-// transcriptEntry 是序列化到磁盘的单条对话记录。
+// transcriptEntry is a single conversation record serialized to disk.
 type transcriptEntry struct {
 	Role        string                 `json:"role"`
 	Content     string                 `json:"content,omitempty"`
@@ -28,7 +28,7 @@ type transcriptToolResult struct {
 	IsError   bool   `json:"is_error,omitempty"`
 }
 
-// serializeConversation 将对话历史序列化为可持久化的 JSON 格式。
+// serializeConversation serializes conversation history into a persistable JSON format.
 func serializeConversation(conv *conversation.Manager) []transcriptEntry {
 	var entries []transcriptEntry
 	for _, msg := range conv.GetMessages() {
@@ -52,7 +52,7 @@ func serializeConversation(conv *conversation.Manager) []transcriptEntry {
 	return entries
 }
 
-// deserializeConversation 从磁盘格式恢复对话管理器。
+// deserializeConversation restores a conversation manager from its on-disk format.
 func deserializeConversation(entries []transcriptEntry) *conversation.Manager {
 	conv := conversation.NewManager()
 	for _, e := range entries {
@@ -83,13 +83,13 @@ func deserializeConversation(entries []transcriptEntry) *conversation.Manager {
 	return conv
 }
 
-// transcriptDir 返回团队的 transcript 存储目录。
+// transcriptDir returns the transcript storage directory for the team.
 func transcriptDir(teamName string) string {
 	return filepath.Join(teamsBaseDir(), teamName, "transcripts")
 }
 
-// SaveTranscript 将队友的对话历史持久化到磁盘，用于调试和问题排查。
-// 文件路径为 .larky/teams/<team>/transcripts/<agentID>.json。
+// SaveTranscript persists a teammate's conversation history to disk for debugging and troubleshooting.
+// File path: .larky/teams/<team>/transcripts/<agentID>.json.
 func SaveTranscript(teamName, agentID string, conv *conversation.Manager) (string, error) {
 	dir := transcriptDir(teamName)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -103,8 +103,8 @@ func SaveTranscript(teamName, agentID string, conv *conversation.Manager) (strin
 	return path, os.WriteFile(path, data, 0o644)
 }
 
-// LoadTranscript 从磁盘加载队友的对话历史。
-// 返回 nil 表示文件不存在或解析失败。
+// LoadTranscript loads a teammate's conversation history from disk.
+// Returns nil if the file does not exist or parsing fails.
 func LoadTranscript(teamName, agentID string) *conversation.Manager {
 	path := filepath.Join(transcriptDir(teamName), agentID+".json")
 	data, err := os.ReadFile(path)

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/filehistory"
+	"larky/internal/filehistory"
 )
 
 type EditFileTool struct {

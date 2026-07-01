@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
+	"larky/internal/config"
+	"larky/internal/conversation"
 )
 
 func fakeAnthropicSSE(w http.ResponseWriter, r *http.Request) []byte {

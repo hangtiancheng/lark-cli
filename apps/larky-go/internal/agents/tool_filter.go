@@ -3,7 +3,7 @@ package agents
 import (
 	"strings"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/tools"
 )
 
 // AllAgentDisallowedTools Every sub-agent (built-in or custom) is blocked from using these tools,

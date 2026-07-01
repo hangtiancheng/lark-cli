@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/config"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/prompt"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/skills"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/config"
+	"larky/internal/conversation"
+	"larky/internal/llm"
+	"larky/internal/prompt"
+	"larky/internal/skills"
+	"larky/internal/tools"
 )
 
 // Live integration tests that hit the real LLM API.

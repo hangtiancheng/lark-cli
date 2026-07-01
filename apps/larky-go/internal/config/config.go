@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/hooks"
+	"larky/internal/hooks"
 )
 
 var envKeyMap = map[string]string{

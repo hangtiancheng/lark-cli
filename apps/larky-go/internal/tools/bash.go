@@ -84,10 +84,7 @@ func (t *BashTool) Execute(ctx context.Context, args map[string]any) ToolResult 
 		return ToolResult{Output: "Error: command is required", IsError: true}
 	}
 
-	timeout := intArg(args, "timeout", 120)
-	if timeout > maxTimeout {
-		timeout = maxTimeout
-	}
+	timeout := min(intArg(args, "timeout", 120), maxTimeout)
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()

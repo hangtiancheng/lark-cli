@@ -18,13 +18,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agent"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/agents"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/conversation"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/llm"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/memory"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/permissions"
-	"github.com/hangtiancheng/lark-cli/apps/larky/internal/tools"
+	"larky/internal/agent"
+	"larky/internal/agents"
+	"larky/internal/conversation"
+	"larky/internal/llm"
+	"larky/internal/memory"
+	"larky/internal/permissions"
+	"larky/internal/tools"
 )
 
 // Deps holds the external collaborators an Extractor needs. The TUI constructs one Deps value at
