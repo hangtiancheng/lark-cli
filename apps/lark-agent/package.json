@@ -1,0 +1,41 @@
+{
+  "name": "lark-agent",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "format": "oxfmt --write ./",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.4",
+    "@ai-sdk/openai-compatible": "^3.0.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@zilliz/milvus2-sdk-node": "^3.0.3",
+    "ai": "^7.0.9",
+    "dotenv": "^17.4.2",
+    "highlight.js": "^11.11.1",
+    "knex": "^3.3.0",
+    "mysql2": "^3.22.5",
+    "next": "16.2.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "oxfmt": "^0.57.0",
+    "shadcn": "^4.12.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
