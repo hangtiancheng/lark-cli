@@ -43,9 +43,3 @@ export function toTry<T extends (...args: any) => any>(fn: T, ctx?: ThisParamete
   };
 }
 ```
-
-### `ThisParameterType<T>`
-
-```ts
-
-```

@@ -24,7 +24,7 @@ System Prompt 分为 7 个模块
 
 | 来源                                         | 字段     | 原因                                          |
 | -------------------------------------------- | -------- | --------------------------------------------- |
-| 静态 System Prompt                           | system   | 始终生效, 内容稳定可以缓存                    |
+| System Prompt                           | system   | 始终生效, 内容稳定可以缓存                    |
 | 环境上下文: 操作系统、工作目录...            | system   | 每个 session 确定后不再改变, 可以缓存         |
 | 工具描述: 工具的 description, input_schema   | tools    | LLM API 规范                                  |
 | 项目指令文件: AGENTS.md (LARKY.md)           | messages | 内容可能很长, 放在 system 可能稀释 LLM 注意力 |
@@ -39,7 +39,32 @@ System Prompt 分为 7 个模块
    - AGENTS.md (LARKY.md) 和自动记忆放在 system 字段, 会频繁使得 prompt cache 缓存失效
    - 环境上下文每个 session 不同, 但是一个 session 中是稳定的, 可以使用分层缓存: 全局缓存、会画级缓存
 2. system 字段内容太长, 可能会稀释 LLM 注意力
-3. 可压缩性: messages 字段的内容, 后续可以被上下文压缩处理; 但是 system 字段的内容不会被压缩, 每次发送 LLM 请求时都会完整携带
+3. 可压缩性: messages 字段的内容, 后续可以被上下文压缩处理; 但是 system 字段的内容不会被压缩, 每次发送 LLM 请求时都会完整携带; 如果 AGENTS.md 的内容后期不再需要, /compact 可以压缩或删除, 但是 system 字段的内容不会被上下文压缩处理, 每次请求都会完整携带
+
+```js
+function assembleAPIPayload(config, conversationHistory) {
+  // system 字段: 稳定的 system prompt + 
+  const system = buildSystemPrompt(config);
+
+  // 环境上下文也放到 system 字段, 使用缓存分层管理
+  const envContext = buildEnvironmentContext(config);
+  system += "\n\n" + envContext;
+
+  const messages = [];
+
+  // 项目指令文件 (AGENTS.md, CLAUDE.md, LARKY.md)
+  const instructions = loadInstructionsFiles(config);
+  if (instructions) {
+    messages.append(systemReminder(instructions))
+  }
+
+  // 自动记忆
+  const memories = loadMemories(config);
+  if (memories) {
+    messages.append(systemReminder(memories));
+  }
+}
+```
 
 ## 权限
 
