@@ -35,7 +35,7 @@ func (c *stubSummaryClient) Stream(ctx context.Context, conv *conversation.Manag
 	return ch, errCh
 }
 
-// Layer 1 (offload + snip) tests have moved to internal/toolresult/budget_test.go
+// Layer 1 (offload + snip) tests have moved to internal/tool_result/budget_test.go
 // where the implementation now lives. compact only owns Layer 2 (autoCompact)
 // plus the formatCompactSummary helper, so this file covers those.
 

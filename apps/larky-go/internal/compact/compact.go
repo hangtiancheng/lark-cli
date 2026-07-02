@@ -5,7 +5,7 @@
 // (the /compact slash command).
 //
 // Layer 1 (per-result spill + per-message aggregate budget + stale snip)
-// lives in package toolresult and is invoked by the Agent loop directly,
+// lives in package tool_result and is invoked by the Agent loop directly,
 // because it needs a ContentReplacementState that crosses turns.
 package compact
 
@@ -187,7 +187,7 @@ func ComputeUsedTokens(messages []conversation.Message, anchor UsageAnchor) int 
 // auto-compact threshold (effectiveWindow − auto margin); once they cross the
 // hard-block line (effectiveWindow − manual margin) it forces a compaction.
 // See computeCompactThreshold. Layer 1 (tool-result budget) is invoked by the
-// caller directly via toolresult.Apply before this function — they're
+// caller directly via tool_result.Apply before this function — they're
 // independent now because Layer 1 needs to thread ContentReplacementState
 // across turns, which sits naturally on the Agent rather than buried inside
 // a compact helper.

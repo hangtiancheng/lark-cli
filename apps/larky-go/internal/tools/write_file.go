@@ -6,11 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"larky/internal/filehistory"
+	"larky/internal/file_history"
 )
 
 type WriteFileTool struct {
-	FileHistory    *filehistory.History
+	FileHistory    *file_history.History
 	FileStateCache *FileStateCache
 }
 

@@ -11,13 +11,13 @@ import (
 
 	"larky/internal/compact"
 	"larky/internal/conversation"
-	"larky/internal/filehistory"
+	"larky/internal/file_history"
 	"larky/internal/hooks"
 	"larky/internal/llm"
 	"larky/internal/permissions"
-	"larky/internal/planfile"
+	"larky/internal/plan_file"
 	"larky/internal/prompt"
-	"larky/internal/toolresult"
+	"larky/internal/tool_result"
 	"larky/internal/tools"
 )
 
@@ -57,14 +57,14 @@ type Agent struct {
 	// Replaces the original stopHooks dispatcher; failures are silent and must not block the main
 	// loop. The callback receives the live conversation — do not mutate it from another goroutine.
 	OnLoopComplete  func(conv *conversation.Manager)
-	FileHistory     *filehistory.History
+	FileHistory     *file_history.History
 	compactTracking compact.AutoCompactTrackingState
 	// ReplacementState carries the per-conversation-thread tool-result
 	// decision log across iterations. Lazily created on first Run; forks
 	// inherit a Clone() so they share the parent's frozen decisions but do
 	// not write back into the parent's maps. Exposed so external code (e.g.
 	// AgentTool fork-spawn) can pre-populate from a parent state.
-	ReplacementState *toolresult.ContentReplacementState
+	ReplacementState *tool_result.ContentReplacementState
 	// RecoveryState holds the snapshots needed to rebuild working context
 	// after Layer 2 collapses the conversation into a summary: most-recent
 	// file reads and skill invocations. The struct is concurrency-safe so
@@ -126,7 +126,7 @@ func New(client llm.Client, registry *tools.Registry, protocol string) *Agent {
 		WorkDir:          wd,
 		MaxIterations:    0,
 		ContextWindow:    200000,
-		ReplacementState: toolresult.New(),
+		ReplacementState: tool_result.New(),
 		RecoveryState:    compact.NewRecoveryState(),
 	}
 }
@@ -203,11 +203,11 @@ func (a *Agent) Run(ctx context.Context, conv *conversation.Manager) <-chan Agen
 
 			// Plan mode: inject structured workflow reminder.
 			if a.Checker != nil && a.Checker.Mode == permissions.ModePlan {
-				planPath := planfile.GetOrCreatePlanPath(a.WorkDir)
+				planPath := plan_file.GetOrCreatePlanPath(a.WorkDir)
 				// Sync PlanFilePath onto the Checker on every turn so the Layer 0 plan-file write exception
 				// works regardless of how Plan Mode was entered (Shift+Tab, SetPermissionMode, /plan).
 				a.Checker.PlanFilePath = planPath
-				planExists := planfile.PlanExists(a.WorkDir)
+				planExists := plan_file.PlanExists(a.WorkDir)
 				reminder := prompt.BuildPlanModeReminder(planPath, planExists, iteration)
 				conv.AddSystemReminder(reminder)
 			}
@@ -238,12 +238,12 @@ func (a *Agent) Run(ctx context.Context, conv *conversation.Manager) <-chan Agen
 			// earlier in this iteration (system reminders, plan-mode hints,
 			// active-skill SOPs) are reflected in apiConv because Apply
 			// runs after them and rebuilds the manager from conv.GetMessages().
-			apiConv, newRecords, _ := toolresult.Apply(conv, a.WorkDir, a.ReplacementState)
+			apiConv, newRecords, _ := tool_result.Apply(conv, a.WorkDir, a.ReplacementState)
 			if len(newRecords) > 0 {
 				// Best-effort persistence; failure is non-fatal because the
 				// in-memory state already has the canonical decisions for
 				// this process lifetime.
-				_ = toolresult.AppendRecords(a.WorkDir, newRecords)
+				_ = tool_result.AppendRecords(a.WorkDir, newRecords)
 			}
 
 			events, errs := a.Client.Stream(ctx, apiConv, toolSchemas)

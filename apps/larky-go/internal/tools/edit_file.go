@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"larky/internal/filehistory"
+	"larky/internal/file_history"
 )
 
 type EditFileTool struct {
-	FileHistory    *filehistory.History
+	FileHistory    *file_history.History
 	FileStateCache *FileStateCache
 }
 

@@ -131,7 +131,7 @@ func (c *anthropicClient) Stream(ctx context.Context, conv *conversation.Manager
 		// prompt. Marked once here, plus once on the tool list and once on
 		// the tail of the final user message below — Anthropic caches up to
 		// each breakpoint and re-checks byte-identity on the next request.
-		// ContentReplacementState in package toolresult is what keeps the
+		// ContentReplacementState in package tool_result is what keeps the
 		// tool_result content past these breakpoints byte-stable.
 		params := anthropic.MessageNewParams{
 			Model:     c.model,
@@ -310,7 +310,7 @@ func (c *anthropicClient) Stream(ctx context.Context, conv *conversation.Manager
 // last content block of the final user-role message. Anthropic caches the
 // prefix up to (and including) this block; subsequent requests with a
 // byte-identical prefix hit the cache. ContentReplacementState (package
-// toolresult) is what guarantees byte-stability for tool_result content
+// tool_result) is what guarantees byte-stability for tool_result content
 // past this breakpoint.
 //
 // Mutates `messages` in place. No-op if there's no user message or the

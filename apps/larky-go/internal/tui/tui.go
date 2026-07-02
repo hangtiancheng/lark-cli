@@ -19,7 +19,7 @@ import (
 	"larky/internal/compact"
 	"larky/internal/config"
 	"larky/internal/conversation"
-	"larky/internal/filehistory"
+	"larky/internal/file_history"
 	"larky/internal/history"
 	"larky/internal/hooks"
 	"larky/internal/llm"
@@ -27,7 +27,7 @@ import (
 	"larky/internal/memory"
 	"larky/internal/memory/extractor"
 	"larky/internal/permissions"
-	"larky/internal/planfile"
+	"larky/internal/plan_file"
 	"larky/internal/prompt"
 	"larky/internal/session"
 	"larky/internal/skills"
@@ -181,7 +181,7 @@ type Model struct {
 	historyDraft   string
 
 	sessionID    string
-	fileHistory  *filehistory.History
+	fileHistory  *file_history.History
 	defaultTools tools.DefaultTools
 	prePlanMode  permissions.PermissionMode
 
@@ -190,7 +190,7 @@ type Model struct {
 	planApprovalInput  string
 
 	rewindDialog       bool
-	rewindSnapshots    []filehistory.Snapshot
+	rewindSnapshots    []file_history.Snapshot
 	rewindCursor       int
 	rewindPhase        int // 0=select checkpoint, 1=select restore option
 	rewindOptionCursor int
@@ -398,7 +398,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.client = client
 		m.sessionID = session.NewID()
-		m.fileHistory = filehistory.New(wd, m.sessionID)
+		m.fileHistory = file_history.New(wd, m.sessionID)
 		m.defaultTools.EditFile.FileHistory = m.fileHistory
 		m.defaultTools.WriteFile.FileHistory = m.fileHistory
 		m.registerAgentTools(client, p, p.Protocol, wd)
@@ -711,7 +711,7 @@ func (m *Model) registerAgentTools(client llm.Client, providerCfg *config.Provid
 		},
 		PlanExists: func() bool {
 			wd, _ := os.Getwd()
-			return planfile.PlanExists(wd)
+			return plan_file.PlanExists(wd)
 		},
 	})
 	m.registry.Register(&todo.TaskCreateTool{List: m.todoList})
@@ -1202,7 +1202,7 @@ func (m Model) handleProviderSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.client = client
 		m.sessionID = session.NewID()
-		m.fileHistory = filehistory.New(wd, m.sessionID)
+		m.fileHistory = file_history.New(wd, m.sessionID)
 		m.defaultTools.EditFile.FileHistory = m.fileHistory
 		m.defaultTools.WriteFile.FileHistory = m.fileHistory
 		m.registerAgentTools(client, p, p.Protocol, wd)
@@ -1719,7 +1719,7 @@ func (m Model) executeCommand(name, args string) (tea.Model, tea.Cmd) {
 			if m.ag != nil && m.ag.Checker != nil {
 				m.prePlanMode = m.ag.Checker.Mode
 				m.ag.Checker.Mode = permissions.ModePlan
-				planPath := planfile.GetOrCreatePlanPath(wd)
+				planPath := plan_file.GetOrCreatePlanPath(wd)
 				m.ag.Checker.PlanFilePath = planPath
 				m.chatMessages = append(m.chatMessages, chatMessage{
 					role:    "system",
@@ -1727,7 +1727,7 @@ func (m Model) executeCommand(name, args string) (tea.Model, tea.Cmd) {
 				})
 
 				// Re-entry detection: if this session previously exited Plan Mode and the plan file exists, inject the re-entry hint
-				if m.hasExitedPlanMode && planfile.PlanExists(wd) {
+				if m.hasExitedPlanMode && plan_file.PlanExists(wd) {
 					reentryMsg := prompt.BuildPlanModeReentryReminder(planPath, true)
 					if reentryMsg != "" {
 						m.chatMessages = append(m.chatMessages, chatMessage{
@@ -1963,10 +1963,10 @@ func (m Model) executePlanApproval() (tea.Model, tea.Cmd) {
 	})
 
 	// Load the plan and send it as context for the agent to start executing
-	planPath := planfile.GetPlanFilePath(wd)
-	planContent, _ := planfile.LoadPlan(wd)
-	planExists := planfile.PlanExists(wd)
-	planfile.ResetPlanPath()
+	planPath := plan_file.GetPlanFilePath(wd)
+	planContent, _ := plan_file.LoadPlan(wd)
+	planExists := plan_file.PlanExists(wd)
+	plan_file.ResetPlanPath()
 
 	executeMsg := prompt.BuildPlanModeExitReminder(planPath, planExists)
 	// Mark that this session has exited Plan Mode so future re-entries can inject the hint
@@ -1993,7 +1993,7 @@ func (m Model) sendPlanFeedback(feedback string, alsoExit bool) (tea.Model, tea.
 			m.ag.Checker.Mode = restoreMode
 			m.ag.Checker.PlanFilePath = ""
 		}
-		planfile.ResetPlanPath()
+		plan_file.ResetPlanPath()
 		m.chatMessages = append(m.chatMessages, chatMessage{
 			role:    "system",
 			content: "Exiting plan mode with feedback. Edits will require confirmation.",

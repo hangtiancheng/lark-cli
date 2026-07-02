@@ -1,4 +1,4 @@
-package toolresult
+package tool_result
 
 import "larky/internal/conversation"
 

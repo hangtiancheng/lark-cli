@@ -315,10 +315,10 @@ async function doCompact(
   // Rebuild: summary user message (no assistant ack), then
   // the verbatim recent tail. The summary only covers messages[:keepStart].
   let summaryContent =
-    "This session continues from a previous conversation and has been compressed due to context space limitations. Here is a summary of the earlier discussion:\n\n" +
+    "This session continues from a previous conversation that was compacted due to context size limits. Below is a summary of the earlier discussion:\n\n" +
     summary;
   if (toKeep.length > 0) {
-    summaryContent += "\n\nRecent messages have been preserved verbatim.";
+    summaryContent += "\n\nRecent messages have been preserved as-is.";
   }
   if (sessionFilePath) {
     summaryContent += `\n\nIf you need specific details from before the compression (such as code snippets or error messages), please use ReadFile to access the full session log at: ${sessionFilePath}`;

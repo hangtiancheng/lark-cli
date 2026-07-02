@@ -1,4 +1,4 @@
-package filehistory
+package file_history
 
 import (
 	"crypto/sha256"

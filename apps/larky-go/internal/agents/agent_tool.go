@@ -15,7 +15,7 @@ import (
 	"larky/internal/llm"
 	"larky/internal/permissions"
 	"larky/internal/teams"
-	"larky/internal/toolresult"
+	"larky/internal/tool_result"
 	"larky/internal/tools"
 	"larky/internal/worktree"
 )
@@ -80,7 +80,7 @@ type AgentTool struct {
 	// prompt-cache prefix stability across parent/child). Non-fork
 	// sub-agents (subagent_type=*) start with a fresh state — they have no
 	// shared history, so they have no shared cache prefix to preserve.
-	ParentReplacementState *toolresult.ContentReplacementState
+	ParentReplacementState *tool_result.ContentReplacementState
 
 	// QuerySource identifies the spawning agent for nested-fork detection. Empty for the main thread;
 	// set to ForkQuerySource (or "agent:builtin:<type>") when the AgentTool instance lives inside a

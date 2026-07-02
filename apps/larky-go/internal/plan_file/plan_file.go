@@ -1,4 +1,4 @@
-package planfile
+package plan_file
 
 import (
 	"fmt"

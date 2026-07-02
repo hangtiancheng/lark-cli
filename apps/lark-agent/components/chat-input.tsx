@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
+import { MoreHorizontal, Paperclip, ChevronDown, Send } from "lucide-react";
 import type { Mode } from "@/hooks/use-chat";
 
 interface ChatInputProps {
@@ -54,11 +55,7 @@ export default function ChatInput({
             className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-100"
             aria-label="Tools"
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-              <circle cx="12" cy="12" r="1.5" />
-              <circle cx="19" cy="12" r="1.5" />
-              <circle cx="5" cy="12" r="1.5" />
-            </svg>
+            <MoreHorizontal className="h-5 w-5" />
           </button>
           {showTools && (
             <div className="absolute bottom-full left-0 mb-2 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg">
@@ -69,15 +66,7 @@ export default function ChatInput({
                 }}
                 className="flex w-48 items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-800 hover:bg-zinc-100"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                </svg>
+                <Paperclip className="h-5 w-5" />
                 <span>Upload file</span>
               </button>
             </div>
@@ -90,19 +79,7 @@ export default function ChatInput({
               className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800"
             >
               <span>{mode === "quick" ? "Quick" : "Stream"}</span>
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  d="M6 9l6 6 6-6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <ChevronDown className="h-4 w-4" />
             </button>
             {showMode && (
               <div className="absolute bottom-full right-0 mb-2 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
@@ -131,19 +108,7 @@ export default function ChatInput({
             className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition hover:bg-zinc-200 disabled:opacity-40 disabled:hover:bg-zinc-100"
             aria-label="Send"
           >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <Send className="h-5 w-5" />
           </button>
         </div>
       </div>

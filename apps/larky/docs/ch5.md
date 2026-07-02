@@ -24,7 +24,7 @@ System Prompt 分为 7 个模块
 
 | 来源                                         | 字段     | 原因                                          |
 | -------------------------------------------- | -------- | --------------------------------------------- |
-| System Prompt                           | system   | 始终生效, 内容稳定可以缓存                    |
+| System Prompt                                | system   | 始终生效, 内容稳定可以缓存                    |
 | 环境上下文: 操作系统、工作目录...            | system   | 每个 session 确定后不再改变, 可以缓存         |
 | 工具描述: 工具的 description, input_schema   | tools    | LLM API 规范                                  |
 | 项目指令文件: AGENTS.md (LARKY.md)           | messages | 内容可能很长, 放在 system 可能稀释 LLM 注意力 |
@@ -43,7 +43,7 @@ System Prompt 分为 7 个模块
 
 ```js
 function assembleAPIPayload(config, conversationHistory) {
-  // system 字段: 稳定的 system prompt + 
+  // system 字段: 稳定的 system prompt +
   const system = buildSystemPrompt(config);
 
   // 环境上下文也放到 system 字段, 使用缓存分层管理
@@ -55,7 +55,7 @@ function assembleAPIPayload(config, conversationHistory) {
   // 项目指令文件 (AGENTS.md, CLAUDE.md, LARKY.md)
   const instructions = loadInstructionsFiles(config);
   if (instructions) {
-    messages.append(systemReminder(instructions))
+    messages.append(systemReminder(instructions));
   }
 
   // 自动记忆

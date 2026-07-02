@@ -1,5 +1,6 @@
 "use client";
 import type { ChatHistory } from "@/hooks/use-chat";
+import { Plus, X } from "lucide-react";
 
 interface SidebarProps {
   histories: ChatHistory[];
@@ -26,15 +27,7 @@ export default function Sidebar({
           onClick={onNewChat}
           className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
         >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-          </svg>
+          <Plus className="h-5 w-5" />
           <span>New chat</span>
         </button>
         <div className="mt-4 flex-1 overflow-y-auto">
@@ -60,15 +53,7 @@ export default function Sidebar({
                   className="ml-2 text-zinc-400 opacity-0 transition hover:text-red-500 group-hover:opacity-100"
                   aria-label="Delete"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-                  </svg>
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             ))}

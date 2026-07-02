@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import type { ChatMessage } from "@/hooks/use-chat";
 import MdRender from "./md-render";
+import { Sparkles } from "lucide-react";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -51,9 +52,7 @@ function MessageItem({
   return (
     <div className="mb-6 flex items-start gap-3">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-green-500">
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="white">
-          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-        </svg>
+        <Sparkles className="h-5 w-5 text-white" />
       </div>
       <div className="min-w-0 flex-1">
         {message.detail && message.detail.length > 0 && (

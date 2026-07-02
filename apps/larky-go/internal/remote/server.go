@@ -20,14 +20,14 @@ import (
 	"larky/internal/compact"
 	"larky/internal/config"
 	"larky/internal/conversation"
-	"larky/internal/filehistory"
+	"larky/internal/file_history"
 	"larky/internal/hooks"
 	"larky/internal/llm"
 	"larky/internal/mcp"
 	"larky/internal/memory"
-	extractor "larky/internal/memory/extractor"
+ "larky/internal/memory/extractor"
 	"larky/internal/permissions"
-	"larky/internal/planfile"
+	"larky/internal/plan_file"
 	"larky/internal/prompt"
 	"larky/internal/session"
 	"larky/internal/skills"
@@ -83,7 +83,7 @@ type Server struct {
 	defaultTools tools.DefaultTools
 	client       llm.Client
 	sessionID    string
-	fileHistory  *filehistory.History
+	fileHistory  *file_history.History
 
 	streaming    bool
 	cancelStream context.CancelFunc
@@ -246,7 +246,7 @@ func (s *Server) initAgent() error {
 	s.client = client
 	s.conv = conversation.NewManager()
 	s.sessionID = session.NewID()
-	s.fileHistory = filehistory.New(wd, s.sessionID)
+	s.fileHistory = file_history.New(wd, s.sessionID)
 	s.defaultTools.EditFile.FileHistory = s.fileHistory
 	s.defaultTools.WriteFile.FileHistory = s.fileHistory
 
@@ -618,7 +618,7 @@ func (s *Server) handlePlan(args string) {
 		return
 	}
 	s.ag.Checker.Mode = permissions.ModePlan
-	planPath := planfile.GetOrCreatePlanPath(wd)
+	planPath := plan_file.GetOrCreatePlanPath(wd)
 	s.ag.Checker.PlanFilePath = planPath
 	s.send(wsMessage{Type: "system", Data: map[string]string{
 		"message": fmt.Sprintf("Entered Plan mode. Plan file: %s\nExplore the codebase and design your approach.", planPath),

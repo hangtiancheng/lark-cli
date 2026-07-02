@@ -1,9 +1,9 @@
-// Package toolresult implements Larky's Design-B tool-result budget:
+// Package tool_result implements Larky's Design-B tool-result budget:
 // every replacement decision is recorded in ContentReplacementState and
 // applied to a freshly-built *conversation.Manager so the input conversation
 // is never mutated. State across turns is what makes the model-visible
 // prefix byte-stable for Anthropic prompt cache.
-package toolresult
+package tool_result
 
 // ContentReplacementState is the per-conversation-thread decision log.
 //
