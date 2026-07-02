@@ -1,4 +1,4 @@
-// Plan-Execute-Replan event types (inspired by mewcode-typescript/src/agent/events.ts).
+// Plan-Execute-Replan event types
 export type PlanExecuteEvent =
   | { type: "plan_created"; steps: string[] }
   | { type: "step_start"; index: number; step: string }

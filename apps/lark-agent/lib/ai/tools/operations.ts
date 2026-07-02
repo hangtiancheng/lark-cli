@@ -28,26 +28,23 @@ function formatTimestamp(d: Date): string {
 
 // Prometheus /api/v1/alerts response schema (runtime validation via zod)
 const prometheusResponseSchema = z
-  .object({
+  .looseObject({
     data: z
-      .object({
+      .looseObject({
         alerts: z
           .array(
             z
-              .object({
+              .looseObject({
                 labels: z.record(z.string(), z.string()).optional(),
                 annotations: z.record(z.string(), z.string()).optional(),
                 state: z.string().optional(),
                 activeAt: z.string().optional(),
-              })
-              .passthrough(),
+              }),
           )
           .optional(),
       })
-      .passthrough()
       .optional(),
-  })
-  .passthrough();
+  });
 
 // ============ query_prometheus_alerts (corresponds to query_metrics_alerts.go) ============
 export interface SimplifiedAlert {

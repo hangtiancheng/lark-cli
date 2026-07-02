@@ -32,7 +32,6 @@ AI intelligent OnCall assistant, migrated from SuperBizAgent (Go + cloudwego/ein
 
 - Styles use only Tailwind v4 atomic classes; do not create custom CSS classes (no styles.css).
 - Tool definitions follow a three-layer split: `lib/ai/tools/schemas.ts` (zod) → `operations.ts` (pure functions) → `index.ts` (AI SDK `tool` wrapper).
-- plan-execute-replan follows mewcode's event-stream pattern (AsyncGenerator<Event>).
 - API responses are wrapped as `{ message, data }`, mirroring the source project's ResponseMiddleware.
 - Configuration is read via `.env` + `lib/config.ts`; no yaml.
 - Strict typing: validate runtime-unknown data with zod (`safeParse`/`parse`); no unnecessary type assertions, no `@ts-ignore` / `eslint-disable`.

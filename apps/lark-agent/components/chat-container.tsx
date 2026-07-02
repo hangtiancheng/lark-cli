@@ -1,7 +1,7 @@
 "use client";
-import type { ChatMessage, Mode } from "@/hooks/useChat";
-import MessageList from "./MessageList";
-import ChatInput from "./ChatInput";
+import type { ChatMessage, Mode } from "@/hooks/use-chat";
+import MessageList from "./msg-list";
+import ChatInput from "./chat-input";
 
 interface ChatContainerProps {
   messages: ChatMessage[];
@@ -29,10 +29,13 @@ export default function ChatContainer({
     >
       {centered ? (
         <div className="px-6 text-center text-sky-600">
-          <p className="text-2xl">Hello! I am the lark-agent OnCall assistant</p>
+          <p className="text-2xl">
+            Hello! I am the lark-agent OnCall assistant
+          </p>
           <p className="mt-3 text-sm text-zinc-500">
-            If this is your first time, upload a file from the docs directory via the
-            &quot;...&quot; menu before chatting, otherwise you may get a search error.
+            If this is your first time, upload a file from the docs directory
+            via the &quot;...&quot; menu before chatting, otherwise you may get
+            a search error.
           </p>
         </div>
       ) : (

@@ -1,7 +1,7 @@
 // Corresponds to plan_execute_replan (plan_execute_replan.go, planner.go,
 // executor.go, replan.go).
 // Planner (think) → Executor (quick + tools) → Replanner (think) loop,
-// MaxIterations=20. Inspired by mewcode-typescript/src/agent's AsyncGenerator
+// MaxIterations=20.
 // event-stream pattern.
 import { generateObject, type Tool } from "ai";
 import { z } from "zod/v4";

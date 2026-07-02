@@ -1,5 +1,5 @@
 "use client";
-import type { ChatHistory } from "@/hooks/useChat";
+import type { ChatHistory } from "@/hooks/use-chat";
 
 interface SidebarProps {
   histories: ChatHistory[];

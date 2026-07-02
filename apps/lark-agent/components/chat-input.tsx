@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
-import type { Mode } from "@/hooks/useChat";
+import type { Mode } from "@/hooks/use-chat";
 
 interface ChatInputProps {
   isStreaming: boolean;
@@ -97,7 +97,11 @@ export default function ChatInput({
                 stroke="currentColor"
                 strokeWidth={2}
               >
-                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M6 9l6 6 6-6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
             {showMode && (
@@ -110,7 +114,9 @@ export default function ChatInput({
                       setShowMode(false);
                     }}
                     className={`block w-40 rounded-lg px-3 py-2 text-left text-sm ${
-                      m === mode ? "bg-sky-50 text-sky-600" : "text-zinc-800 hover:bg-zinc-100"
+                      m === mode
+                        ? "bg-sky-50 text-sky-600"
+                        : "text-zinc-800 hover:bg-zinc-100"
                     }`}
                   >
                     {m === "quick" ? "Quick" : "Stream"}

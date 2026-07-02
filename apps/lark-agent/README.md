@@ -40,4 +40,3 @@ Open http://localhost:3000.
 - On first use, upload a doc file via the "..." menu so the RAG knowledge base has content; otherwise retrieval returns empty.
 - Embeddings are stored as BinaryVector (float32 bytes reinterpreted as binary, HAMMING metric), matching the source project.
 - Tool definitions follow a three-layer split: `schemas.ts` (zod) → `operations.ts` (pure functions) → `index.ts` (AI SDK `tool` wrapper).
-- The plan-execute-replan pipeline uses an `AsyncGenerator` event stream, inspired by mewcode-typescript.

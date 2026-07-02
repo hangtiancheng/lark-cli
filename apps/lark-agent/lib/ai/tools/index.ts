@@ -12,7 +12,7 @@ import { getCurrentTime, queryPrometheusAlerts, retrieveDocs, execMysqlSql } fro
 // get_current_time
 export const getCurrentTimeTool = tool({
   description:
-    "Get current system time in multiple formats. Returns the current time in seconds, milliseconds, microseconds, and a human-readable timestamp. Use this tool when you need current time for logging, timing, or timestamping events.",
+    "Get current system time in multiple formats. Returns the current time in seconds, milliseconds, microseconds, and a human-readable timestamp. Use this tool when you need current time for logging, timing, or timestamp events.",
   inputSchema: getCurrentTimeSchema,
   execute: async () => JSON.stringify(getCurrentTime()),
 });
@@ -37,7 +37,7 @@ export const queryInternalDocsTool = tool({
 // query_prometheus_alerts
 export const prometheusAlertsTool = tool({
   description:
-    "Query active alerts from Prometheus alerting system. Retrieves all currently active/firing alerts including name, description, state, active_at, and duration. Same alertname only kept once.",
+    "Query active alerts from Prometheus alerting system. Retrieves all currently active/firing alerts including name, description, state, active_at, and duration. Same alert name only kept once.",
   inputSchema: prometheusAlertsSchema,
   execute: async () => JSON.stringify(await queryPrometheusAlerts()),
 });

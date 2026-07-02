@@ -1,4 +1,4 @@
-// Step executor (inspired by mewcode-typescript/src/agent/streaming-executor.ts).
+// Step executor
 // Uses AI SDK generateText with tools + stopWhen for multi-step tool execution
 // within a single plan step.
 import { generateText, isStepCount, type Tool } from "ai";

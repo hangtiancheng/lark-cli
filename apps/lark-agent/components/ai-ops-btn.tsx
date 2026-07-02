@@ -4,7 +4,7 @@ interface AIOpsButtonProps {
   disabled: boolean;
 }
 
-export default function AIOpsButton({ onClick, disabled }: AIOpsButtonProps) {
+export default function AIOpsBtn({ onClick, disabled }: AIOpsButtonProps) {
   return (
     <button
       onClick={onClick}

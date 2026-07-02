@@ -6,7 +6,7 @@ interface LoadingOverlayProps {
 export default function LoadingOverlay({ overlay }: LoadingOverlayProps) {
   if (!overlay.show) return null;
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70 backdrop-blur">
       <div className="rounded-2xl bg-white/95 px-12 py-10 text-center shadow-2xl">
         <div className="mx-auto mb-5 h-12 w-12 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500" />
         <div className="text-lg font-semibold text-sky-600">{overlay.text}</div>

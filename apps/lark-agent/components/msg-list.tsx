@@ -1,14 +1,17 @@
 "use client";
 import { useEffect, useRef } from "react";
-import type { ChatMessage } from "@/hooks/useChat";
-import MarkdownRenderer from "./MarkdownRenderer";
+import type { ChatMessage } from "@/hooks/use-chat";
+import MdRender from "./md-render";
 
 interface MessageListProps {
   messages: ChatMessage[];
   isStreaming: boolean;
 }
 
-export default function MessageList({ messages, isStreaming }: MessageListProps) {
+export default function MessageList({
+  messages,
+  isStreaming,
+}: MessageListProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
@@ -20,14 +23,22 @@ export default function MessageList({ messages, isStreaming }: MessageListProps)
         <MessageItem
           key={i}
           message={m}
-          streaming={isStreaming && i === messages.length - 1 && m.type === "assistant"}
+          streaming={
+            isStreaming && i === messages.length - 1 && m.type === "assistant"
+          }
         />
       ))}
     </div>
   );
 }
 
-function MessageItem({ message, streaming }: { message: ChatMessage; streaming: boolean }) {
+function MessageItem({
+  message,
+  streaming,
+}: {
+  message: ChatMessage;
+  streaming: boolean;
+}) {
   if (message.type === "user") {
     return (
       <div className="mb-6 flex flex-col items-end">
@@ -39,7 +50,7 @@ function MessageItem({ message, streaming }: { message: ChatMessage; streaming: 
   }
   return (
     <div className="mb-6 flex items-start gap-3">
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-green-500">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-green-500">
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="white">
           <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
         </svg>
@@ -63,8 +74,10 @@ function MessageItem({ message, streaming }: { message: ChatMessage; streaming: 
           </details>
         )}
         <div className="text-sm text-zinc-800">
-          <MarkdownRenderer content={message.content} />
-          {streaming && <span className="ml-1 animate-pulse text-sky-500">▋</span>}
+          <MdRender content={message.content} />
+          {streaming && (
+            <span className="ml-1 animate-pulse text-sky-500">|</span>
+          )}
         </div>
       </div>
     </div>

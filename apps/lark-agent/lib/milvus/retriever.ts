@@ -15,13 +15,12 @@ export interface RetrievedDoc {
 // Validate the runtime shape of a Milvus search result row (fields come back
 // as unknown from the SDK, so we parse with zod instead of casting).
 const searchResultSchema = z
-  .object({
+  .looseObject({
     id: z.unknown(),
     content: z.unknown(),
     metadata: z.record(z.string(), z.unknown()).optional(),
     score: z.number().optional(),
-  })
-  .passthrough();
+  });
 
 export async function retrieve(query: string, topK = 1): Promise<RetrievedDoc[]> {
   const client = await getMilvusClient();

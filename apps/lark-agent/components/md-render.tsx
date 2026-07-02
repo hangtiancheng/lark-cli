@@ -4,11 +4,11 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import hljs from "highlight.js";
 
-interface MarkdownRendererProps {
+interface MdRenderProps {
   content: string;
 }
 
-export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
+export default function MdRender({ content }: MdRenderProps) {
   const components = useMemo<Components>(
     () => ({
       pre: ({ children }) => (
@@ -22,7 +22,9 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
         // No language- class => inline code.
         if (!match) {
           return (
-            <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs">{children}</code>
+            <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs">
+              {children}
+            </code>
           );
         }
         const lang = match[1];
@@ -34,7 +36,12 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
         } catch {
           html = text;
         }
-        return <code className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+        return (
+          <code
+            className={className}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
       },
     }),
     [],

@@ -1,12 +1,16 @@
 "use client";
 import { useCallback } from "react";
-import { useChat, type ChatMessage, type NotificationType } from "@/hooks/useChat";
-import Sidebar from "./Sidebar";
-import ChatContainer from "./ChatContainer";
-import AIOpsButton from "./AIOpsButton";
-import LoadingOverlay from "./LoadingOverlay";
+import {
+  useChat,
+  type ChatMessage,
+  type NotificationType,
+} from "@/hooks/use-chat";
+import Sidebar from "./sidebar";
+import ChatContainer from "./chat-container";
+import AIOpsBtn from "./ai-ops-btn";
+import LoadingOverlay from "./loading-overlay";
 
-const NOTIF_COLORS: Record<NotificationType, string> = {
+const NOTIFY_COLORS: Record<NotificationType, string> = {
   info: "bg-sky-500",
   success: "bg-green-500",
   warning: "bg-amber-500",
@@ -18,7 +22,10 @@ export default function ChatApp() {
 
   const handleAIOps = useCallback(async () => {
     if (chat.isStreaming) {
-      chat.showNotification("Please wait for the current operation to finish", "warning");
+      chat.showNotification(
+        "Please wait for the current operation to finish",
+        "warning",
+      );
       return;
     }
     chat.newChat();
@@ -51,7 +58,7 @@ export default function ChatApp() {
         onDelete={chat.deleteChatHistory}
       />
       <main className="relative flex flex-1 flex-col overflow-hidden bg-white">
-        <AIOpsButton onClick={handleAIOps} disabled={chat.isStreaming} />
+        <AIOpsBtn onClick={handleAIOps} disabled={chat.isStreaming} />
         <ChatContainer
           messages={chat.messages}
           isStreaming={chat.isStreaming}
@@ -64,8 +71,8 @@ export default function ChatApp() {
       <LoadingOverlay overlay={chat.overlay} />
       {chat.notification && (
         <div
-          className={`fixed right-5 top-5 z-[10000] max-w-xs rounded-lg p-4 text-sm font-medium text-white shadow-lg ${
-            NOTIF_COLORS[chat.notification.type]
+          className={`fixed right-5 top-5 z-10000 max-w-xs rounded-lg p-4 text-sm font-medium text-white shadow-lg ${
+            NOTIFY_COLORS[chat.notification.type]
           }`}
         >
           {chat.notification.message}
