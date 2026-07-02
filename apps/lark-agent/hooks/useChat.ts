@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { z } from "zod/v4";
 import { chatResponseSchema, aiOpsResponseSchema, uploadResponseSchema } from "@/lib/api-schemas";
 
 export type Mode = "quick" | "stream";
@@ -35,6 +36,24 @@ interface OverlayState {
 const MAX_HISTORIES = 50;
 const STORAGE_KEY = "lark-agent-chatHistories";
 
+// Zod schemas for validating the localStorage-persisted chat history shape,
+// so JSON.parse results are checked instead of type-asserted.
+const chatMessageSchema = z.object({
+  type: z.enum(["user", "assistant"]),
+  content: z.string(),
+  detail: z.array(z.string()).optional(),
+});
+
+const chatHistorySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  messages: z.array(chatMessageSchema),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const chatHistoriesSchema = z.array(chatHistorySchema);
+
 function generateSessionId(): string {
   return "session_" + Math.random().toString(36).slice(2, 11) + "_" + Date.now();
 }
@@ -43,7 +62,9 @@ function loadHistories(): ChatHistory[] {
   if (typeof localStorage === "undefined") return [];
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? (JSON.parse(stored) as ChatHistory[]) : [];
+    if (!stored) return [];
+    const parsed = chatHistoriesSchema.safeParse(JSON.parse(stored));
+    return parsed.success ? parsed.data : [];
   } catch {
     return [];
   }
