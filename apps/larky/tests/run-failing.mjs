@@ -170,7 +170,7 @@ function notContainsAny(output, value) {
 async function main() {
   console.log("=== T05-01 Identity ===");
   await startSession();
-  const output = await sendAndWait("你是谁？你叫什么名字？你能做哪些事情？", 30);
+  const output = await sendAndWait("Who are you? What is your name? What can you do?", 30);
   if (containsCi(output, "larky")) {
     console.log("[assertion] CONTAINS_CI larky: PASS");
   } else {
@@ -200,11 +200,11 @@ async function main() {
   await startSession();
 
   console.log("[step 1] Write version 1...");
-  await sendAndWait('在 /tmp/larky-rewind-test.txt 写入内容 "version 1: hello world"', 60);
+  await sendAndWait('Write "version 1: hello world" to /tmp/larky-rewind-test.txt', 60);
   console.log(`File after step 1: ${catFile(rewindFile)}`);
 
   console.log("[step 2] Edit to version 2...");
-  await sendAndWait('把 /tmp/larky-rewind-test.txt 的内容改成 "version 2: modified content"', 60);
+  await sendAndWait('Change the content of /tmp/larky-rewind-test.txt to "version 2: modified content"', 60);
   console.log(`File after step 2: ${catFile(rewindFile)}`);
 
   console.log("[step 3] /rewind...");
