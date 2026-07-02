@@ -37,7 +37,7 @@ const SYSTEM_PROMPT = `# 角色:对话小助手
 `;
 
 function buildSystemPrompt(documents: string): string {
-  return SYSTEM_PROMPT.replace("{date}", new Date().toLocaleString("zh-CN")).replace(
+  return SYSTEM_PROMPT.replace("{date}", new Date().toLocaleString("en-US")).replace(
     "{documents}",
     documents,
   );

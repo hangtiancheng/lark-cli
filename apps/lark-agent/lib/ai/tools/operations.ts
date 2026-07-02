@@ -104,7 +104,7 @@ export async function queryPrometheusAlerts(): Promise<{
       success: false,
       alerts: [],
       message: "Failed to query Prometheus alerts",
-      error: (e as Error).message,
+      error: e instanceof Error ? e.message : String(e),
     };
   }
 }

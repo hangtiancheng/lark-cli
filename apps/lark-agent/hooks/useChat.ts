@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { chatResponseSchema, aiOpsResponseSchema, uploadResponseSchema } from "@/lib/api-schemas";
 
 export type Mode = "quick" | "stream";
 
@@ -162,14 +163,13 @@ export function useChat() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: sessionId, question: text }),
           });
-          const data = (await resp.json()) as {
-            message: string;
-            data?: { answer?: string };
-          };
-          if (data.message === "OK" && data.data?.answer) {
-            setMessages((prev) => [...prev, { type: "assistant", content: data.data!.answer! }]);
+          const parsed = chatResponseSchema.safeParse(await resp.json());
+          if (!parsed.success) throw new Error("invalid chat response");
+          const answer = parsed.data.data?.answer;
+          if (parsed.data.message === "OK" && answer) {
+            setMessages((prev) => [...prev, { type: "assistant", content: answer }]);
           } else {
-            throw new Error(data.message || "Unknown error");
+            throw new Error(parsed.data.message || "Unknown error");
           }
         } else {
           const resp = await fetch("/api/chat_stream", {
@@ -237,17 +237,16 @@ export function useChat() {
     });
     try {
       const resp = await fetch("/api/ai_ops", { method: "POST" });
-      const data = (await resp.json()) as {
-        message: string;
-        data?: { result?: string; detail?: string[] };
-      };
-      if (data.message === "OK" && data.data?.result) {
+      const parsed = aiOpsResponseSchema.safeParse(await resp.json());
+      if (!parsed.success) throw new Error("invalid ai ops response");
+      const result = parsed.data.data?.result;
+      if (parsed.data.message === "OK" && result) {
         return {
-          result: data.data.result,
-          detail: data.data.detail ?? [],
+          result,
+          detail: parsed.data.data?.detail ?? [],
         };
       }
-      throw new Error(data.message || "Unknown error");
+      throw new Error(parsed.data.message || "Unknown error");
     } catch (e) {
       showNotification("AI Ops failed: " + (e instanceof Error ? e.message : String(e)), "error");
       return null;
@@ -275,11 +274,12 @@ export function useChat() {
         const fd = new FormData();
         fd.append("file", file);
         const resp = await fetch("/api/upload", { method: "POST", body: fd });
-        const data = (await resp.json()) as { message: string; data?: unknown };
-        if (data.message === "OK" && data.data) {
+        const parsed = uploadResponseSchema.safeParse(await resp.json());
+        if (!parsed.success) throw new Error("invalid upload response");
+        if (parsed.data.message === "OK" && parsed.data.data !== undefined) {
           return `${file.name} uploaded to knowledge base`;
         }
-        throw new Error(data.message || "Upload failed");
+        throw new Error(parsed.data.message || "Upload failed");
       } catch (e) {
         showNotification("Upload failed: " + (e instanceof Error ? e.message : String(e)), "error");
         return null;
